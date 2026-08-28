@@ -3,6 +3,7 @@ export type NodeEnv = 'dev' | 'local' | 'prod';
 export interface Config {
   nodeEnv: NodeEnv;
   port: number;
+  corsOrigin: string;
 }
 
 const VALID_NODE_ENVS: NodeEnv[] = ['dev', 'local', 'prod'];
@@ -28,6 +29,11 @@ export function loadConfig(): Config {
     missing.push('PORT');
   }
 
+  const rawCorsOrigin = process.env.CORS_ORIGIN;
+  if (!rawCorsOrigin) {
+    missing.push('CORS_ORIGIN');
+  }
+
   if (missing.length > 0) {
     throw new Error(`Missing required environment variable(s): ${missing.join(', ')}`);
   }
@@ -40,5 +46,6 @@ export function loadConfig(): Config {
   return {
     nodeEnv: rawNodeEnv as NodeEnv,
     port,
+    corsOrigin: rawCorsOrigin as string,
   };
 }
