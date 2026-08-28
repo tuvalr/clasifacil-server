@@ -6,9 +6,9 @@
     "node": ">=22.12"
   },
   "scripts": {
-    "dev": "cross-env NODE_ENV=dev ts-node src/index.ts",
-    "dev:local": "cross-env NODE_ENV=local ts-node src/index.ts",
-    "dev:prod": "cross-env NODE_ENV=prod ts-node src/index.ts",
+    "dev": "cross-env NODE_ENV=dev nodemon --exec ts-node src/index.ts",
+    "dev:local": "cross-env NODE_ENV=local nodemon --exec ts-node src/index.ts",
+    "dev:prod": "cross-env NODE_ENV=prod nodemon --exec ts-node src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
