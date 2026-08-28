@@ -1,8 +1,17 @@
-import { Pool, QueryResultRow } from 'pg';
+import { Pool, QueryResultRow, types } from 'pg';
 import { inject, injectable } from 'inversify';
 import { TYPES } from '../container/types';
 import { Config } from '../config/env';
 import { Logger } from '../logger/logger';
+import { BaseEntity, EntityDescriptor } from '../entities/base.entity';
+import { snakeToCamel } from '../utils/case-mapper';
+
+// pg returns BIGINT/NUMERIC as strings by default, since values beyond
+// Number.MAX_SAFE_INTEGER (2^53) would silently lose precision as JS
+// numbers. BaseEntity.id is typed as `number` for simpler call sites, so
+// BIGINT (OID 20) is parsed as a JS number here instead — this is only
+// safe as long as no id (or other bigint column) actually exceeds 2^53.
+types.setTypeParser(20, (value: string) => Number(value));
 
 const IDENTIFIER_PATTERN = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
 
@@ -44,20 +53,20 @@ export class PostgresHandler {
 		return result.rows;
 	}
 
-	public async softDelete(table: string, id: string | number): Promise<void> {
-		assertValidIdentifier(table);
-		await this.pool.query(`UPDATE "${table}" SET is_deleted = TRUE, deleted_at = NOW() WHERE id = $1`, [id]);
+	public async delete<T extends BaseEntity>(entity: EntityDescriptor<T>, id: string | number): Promise<void> {
+		assertValidIdentifier(entity.tableName);
+		await this.pool.query(`UPDATE "${entity.tableName}" SET is_deleted = TRUE, deleted_at = NOW() WHERE id = $1`, [id]);
 	}
 
-	public async restore(table: string, id: string | number): Promise<void> {
-		assertValidIdentifier(table);
-		await this.pool.query(`UPDATE "${table}" SET is_deleted = FALSE, deleted_at = NULL WHERE id = $1`, [id]);
+	public async unDelete<T extends BaseEntity>(entity: EntityDescriptor<T>, id: string | number): Promise<void> {
+		assertValidIdentifier(entity.tableName);
+		await this.pool.query(`UPDATE "${entity.tableName}" SET is_deleted = FALSE, deleted_at = NULL WHERE id = $1`, [id]);
 	}
 
-	public async queryActive<T extends QueryResultRow>(table: string, where?: string, params?: unknown[]): Promise<T[]> {
-		assertValidIdentifier(table);
+	public async queryActive<T extends BaseEntity>(entity: EntityDescriptor<T>, where?: string, params?: unknown[]): Promise<T[]> {
+		assertValidIdentifier(entity.tableName);
 		const whereClause = where ? `AND (${where})` : '';
-		const result = await this.pool.query<T>(`SELECT * FROM "${table}" WHERE is_deleted = FALSE ${whereClause}`, params);
-		return result.rows;
+		const result = await this.pool.query(`SELECT * FROM "${entity.tableName}" WHERE is_deleted = FALSE ${whereClause}`, params);
+		return result.rows.map((row: Record<string, unknown>) => snakeToCamel<T>(row));
 	}
 }
