@@ -11,15 +11,13 @@ if (result.error) {
 import { loadConfig } from './config/env';
 import { createApp } from './app';
 import { container } from './container/inversify.config';
+import { TYPES } from './container/types';
+import { Logger } from './logger/logger';
 
 const config = loadConfig();
 const app = createApp(config);
-
-// container is initialized here so future bindings are resolvable
-// before the server starts accepting requests.
-void container;
+const logger = container.get<Logger>(TYPES.Logger);
 
 app.listen(config.port, () => {
-	// eslint-disable-next-line no-console -- no logger set up yet
-	console.log(`[${config.nodeEnv}] server listening on port ${config.port}`);
+	logger.info('server listening', { nodeEnv: config.nodeEnv, port: config.port });
 });
