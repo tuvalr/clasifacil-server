@@ -6,11 +6,11 @@
     "node": ">=22.12"
   },
   "scripts": {
-    "dev": "cross-env NODE_ENV=dev nodemon --exec ts-node src/index.ts",
-    "dev:local": "cross-env NODE_ENV=local nodemon --exec ts-node src/index.ts",
-    "dev:prod": "cross-env NODE_ENV=prod nodemon --exec ts-node src/index.ts",
+    "dev": "cross-env NODE_ENV=dev nodemon --exec ts-node src/container/inversify.config.ts",
+    "dev:local": "cross-env NODE_ENV=local nodemon --exec ts-node src/container/inversify.config.ts",
+    "dev:prod": "cross-env NODE_ENV=prod nodemon --exec ts-node src/container/inversify.config.ts",
     "build": "tsc",
-    "start": "node dist/index.js",
+    "start": "node dist/container/inversify.config.js",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "test": "echo \"Error: no test specified\" && exit 1"
