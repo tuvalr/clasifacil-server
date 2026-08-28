@@ -6,11 +6,10 @@ import { Logger } from '../logger/logger';
 import { BaseEntity, EntityDescriptor } from '../entities/base.entity';
 import { snakeToCamel } from '../utils/case-mapper';
 
-// pg returns BIGINT/NUMERIC as strings by default, since values beyond
-// Number.MAX_SAFE_INTEGER (2^53) would silently lose precision as JS
-// numbers. BaseEntity.id is typed as `number` for simpler call sites, so
-// BIGINT (OID 20) is parsed as a JS number here instead — this is only
-// safe as long as no id (or other bigint column) actually exceeds 2^53.
+// pg returns BIGINT/NUMERIC as strings by default, since values beyond Number.
+// MAX_SAFE_INTEGER (2^53) would silently lose precision as JS numbers.
+// BaseEntity.id is typed as `number` for simpler call sites, so BIGINT (OID 20) is parsed as a JS number here instead —
+// this is only safe as long as no id (or other bigint column) actually exceeds 2^53.
 types.setTypeParser(20, (value: string) => Number(value));
 
 const IDENTIFIER_PATTERN = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
