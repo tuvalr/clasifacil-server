@@ -15,6 +15,7 @@ import { Logger } from '../logger/logger';
 import { PinoLogger } from '../logger/pino-logger';
 import { App } from '../app';
 import { Server } from '../server';
+import { PostgresHandler } from '../services/postgres-handler';
 
 const config = loadConfig();
 
@@ -23,6 +24,7 @@ const container = new Container();
 container.bind<Config>(TYPES.Config).toConstantValue(config);
 container.bind<Logger>(TYPES.Logger).to(PinoLogger).inSingletonScope();
 container.bind<App>(TYPES.App).to(App).inSingletonScope();
+container.bind<PostgresHandler>(TYPES.PostgresHandler).to(PostgresHandler).inSingletonScope();
 container.bind<Server>(TYPES.Server).to(Server).inSingletonScope();
 
 // Further bindings are added here as services/repositories are introduced, e.g.:
@@ -30,4 +32,11 @@ container.bind<Server>(TYPES.Server).to(Server).inSingletonScope();
 
 export { container };
 
-container.get<Server>(TYPES.Server).start();
+const logger = container.get<Logger>(TYPES.Logger);
+container
+	.get<Server>(TYPES.Server)
+	.start()
+	.catch((error: unknown) => {
+		logger.error('server failed to start', { error });
+		process.exit(1);
+	});

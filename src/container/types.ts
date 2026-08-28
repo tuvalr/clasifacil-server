@@ -6,4 +6,5 @@ export const TYPES = {
 	Config: Symbol.for('Config'),
 	App: Symbol.for('App'),
 	Server: Symbol.for('Server'),
+	PostgresHandler: Symbol.for('PostgresHandler'),
 };
