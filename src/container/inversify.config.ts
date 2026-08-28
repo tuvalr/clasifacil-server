@@ -16,27 +16,32 @@ import { PinoLogger } from '../logger/pino-logger';
 import { App } from '../app';
 import { Server } from '../server';
 import { PostgresHandler } from '../services/postgres-handler';
+import { EnvHandler } from '../services/env-handler';
 
-const config = loadConfig();
+async function bootstrap(): Promise<void> {
+	const logger: Logger = new PinoLogger();
+	const envHandler = new EnvHandler(logger);
+	await envHandler.load();
 
-const container = new Container();
+	const config = loadConfig();
 
-container.bind<Config>(TYPES.Config).toConstantValue(config);
-container.bind<Logger>(TYPES.Logger).to(PinoLogger).inSingletonScope();
-container.bind<App>(TYPES.App).to(App).inSingletonScope();
-container.bind<PostgresHandler>(TYPES.PostgresHandler).to(PostgresHandler).inSingletonScope();
-container.bind<Server>(TYPES.Server).to(Server).inSingletonScope();
+	const container = new Container();
 
-// Further bindings are added here as services/repositories are introduced, e.g.:
-//   container.bind<SomeService>(TYPES.SomeService).to(SomeServiceImpl);
+	container.bind<Config>(TYPES.Config).toConstantValue(config);
+	container.bind<Logger>(TYPES.Logger).toConstantValue(logger);
+	container.bind<EnvHandler>(TYPES.EnvHandler).toConstantValue(envHandler);
+	container.bind<App>(TYPES.App).to(App).inSingletonScope();
+	container.bind<PostgresHandler>(TYPES.PostgresHandler).to(PostgresHandler).inSingletonScope();
+	container.bind<Server>(TYPES.Server).to(Server).inSingletonScope();
 
-export { container };
+	// Further bindings are added here as services/repositories are introduced, e.g.:
+	//   container.bind<SomeService>(TYPES.SomeService).to(SomeServiceImpl);
 
-const logger = container.get<Logger>(TYPES.Logger);
-container
-	.get<Server>(TYPES.Server)
-	.start()
-	.catch((error: unknown) => {
-		logger.error('server failed to start', { error });
-		process.exit(1);
-	});
+	await container.get<Server>(TYPES.Server).start();
+}
+
+bootstrap().catch((error: unknown) => {
+	// eslint-disable-next-line no-console -- logger may not be available if bootstrap failed before it was constructed
+	console.error('server failed to start', error);
+	process.exit(1);
+});
