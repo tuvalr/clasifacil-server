@@ -5,7 +5,7 @@ import path from 'path';
 const envFile = `.env.${process.env.NODE_ENV ?? 'dev'}`;
 const result = dotenv.config({ path: path.resolve(process.cwd(), envFile) });
 if (result.error) {
-  throw new Error(`Failed to load env file "${envFile}": ${result.error.message}`);
+	throw new Error(`Failed to load env file "${envFile}": ${result.error.message}`);
 }
 
 import { loadConfig } from './config/env';
@@ -20,5 +20,6 @@ const app = createApp(config);
 void container;
 
 app.listen(config.port, () => {
-  console.log(`[${config.nodeEnv}] server listening on port ${config.port}`);
+	// eslint-disable-next-line no-console -- no logger set up yet
+	console.log(`[${config.nodeEnv}] server listening on port ${config.port}`);
 });
