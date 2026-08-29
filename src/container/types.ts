@@ -15,6 +15,9 @@ export const TYPES = {
 	SessionRepository: Symbol.for('SessionRepository'),
 	EnrollmentAndCreditRepository: Symbol.for('EnrollmentAndCreditRepository'),
 	InvoiceAndPaymentRepository: Symbol.for('InvoiceAndPaymentRepository'),
+	UserRepository: Symbol.for('UserRepository'),
+
+	AdminOperatorsController: Symbol.for('AdminOperatorsController'),
 
 	OperatorHouseholdsController: Symbol.for('OperatorHouseholdsController'),
 	OperatorSessionsController: Symbol.for('OperatorSessionsController'),

@@ -4,6 +4,7 @@ import cors from 'cors';
 import { inject, injectable } from 'inversify';
 import { TYPES } from './container/types';
 import { Config } from './config/env';
+import { AdminOperatorsController } from './controllers/admin/operators.controller';
 import { OperatorHouseholdsController } from './controllers/operator/households.controller';
 import { OperatorSessionsController } from './controllers/operator/sessions.controller';
 import { OperatorAttendanceCreditsController } from './controllers/operator/attendance-credits.controller';
@@ -22,6 +23,7 @@ export class App {
 
 	public constructor(
 		@inject(TYPES.Config) private readonly config: Config,
+		@inject(TYPES.AdminOperatorsController) private readonly adminOperators: AdminOperatorsController,
 		@inject(TYPES.OperatorHouseholdsController) private readonly operatorHouseholds: OperatorHouseholdsController,
 		@inject(TYPES.OperatorSessionsController) private readonly operatorSessions: OperatorSessionsController,
 		@inject(TYPES.OperatorAttendanceCreditsController) private readonly operatorAttendanceCredits: OperatorAttendanceCreditsController,
@@ -50,6 +52,8 @@ export class App {
 	}
 
 	private routes(): void {
+		this.internalExpress.use('/api/admin/operators', this.adminOperators.router);
+
 		this.internalExpress.use('/api/operator/households', this.operatorHouseholds.router);
 		this.internalExpress.use('/api/operator/sessions', this.operatorSessions.router);
 		this.internalExpress.use('/api/operator/attendance-credits', this.operatorAttendanceCredits.router);

@@ -23,6 +23,8 @@ import { OperatorRepository } from '../repositories/operator.repository';
 import { SessionRepository } from '../repositories/session.repository';
 import { EnrollmentAndCreditRepository } from '../repositories/enrollment-and-credit.repository';
 import { InvoiceAndPaymentRepository } from '../repositories/invoice-and-payment.repository';
+import { UserRepository } from '../repositories/user.repository';
+import { AdminOperatorsController } from '../controllers/admin/operators.controller';
 import { OperatorHouseholdsController } from '../controllers/operator/households.controller';
 import { OperatorSessionsController } from '../controllers/operator/sessions.controller';
 import { OperatorAttendanceCreditsController } from '../controllers/operator/attendance-credits.controller';
@@ -55,6 +57,9 @@ async function bootstrap(): Promise<void> {
 	container.bind<SessionRepository>(TYPES.SessionRepository).to(SessionRepository).inSingletonScope();
 	container.bind<EnrollmentAndCreditRepository>(TYPES.EnrollmentAndCreditRepository).to(EnrollmentAndCreditRepository).inSingletonScope();
 	container.bind<InvoiceAndPaymentRepository>(TYPES.InvoiceAndPaymentRepository).to(InvoiceAndPaymentRepository).inSingletonScope();
+	container.bind<UserRepository>(TYPES.UserRepository).to(UserRepository).inSingletonScope();
+
+	container.bind<AdminOperatorsController>(TYPES.AdminOperatorsController).to(AdminOperatorsController).inSingletonScope();
 
 	container.bind<OperatorHouseholdsController>(TYPES.OperatorHouseholdsController).to(OperatorHouseholdsController).inSingletonScope();
 	container.bind<OperatorSessionsController>(TYPES.OperatorSessionsController).to(OperatorSessionsController).inSingletonScope();
