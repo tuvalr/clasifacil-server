@@ -1,0 +1,41 @@
+{
+	"version": "0.2.0",
+	"configurations": [
+		{
+			"name": "Debug Server (dev)",
+			"type": "node",
+			"request": "launch",
+			"program": "${workspaceFolder}/src/container/inversify.config.ts",
+			"runtimeArgs": ["-r", "ts-node/register"],
+			"envFile": "${workspaceFolder}/.env.dev",
+			"console": "integratedTerminal",
+			"outputCapture": "std",
+			"skipFiles": ["<node_internals>/**"],
+			"restart": false
+		},
+		{
+			"name": "Debug Server (local)",
+			"type": "node",
+			"request": "launch",
+			"program": "${workspaceFolder}/src/container/inversify.config.ts",
+			"runtimeArgs": ["-r", "ts-node/register"],
+			"envFile": "${workspaceFolder}/.env.local",
+			"console": "integratedTerminal",
+			"outputCapture": "std",
+			"skipFiles": ["<node_internals>/**"],
+			"restart": false
+		},
+		{
+			"name": "Debug Server (prod)",
+			"type": "node",
+			"request": "launch",
+			"program": "${workspaceFolder}/src/container/inversify.config.ts",
+			"runtimeArgs": ["-r", "ts-node/register"],
+			"envFile": "${workspaceFolder}/.env.prod",
+			"console": "integratedTerminal",
+			"outputCapture": "std",
+			"skipFiles": ["<node_internals>/**"],
+			"restart": false
+		}
+	]
+}
