@@ -4,7 +4,7 @@ import { TYPES } from '../container/types';
 import { Config } from '../config/env';
 import { Logger } from '../logger/logger';
 import { BaseEntity, EntityDescriptor } from '../entities/base.entity';
-import { snakeToCamel } from '../utils/case-mapper';
+import { snakeToCamel, camelToSnake } from '../utils/case-mapper';
 
 // pg returns BIGINT/NUMERIC as strings by default, since values beyond Number.
 // MAX_SAFE_INTEGER (2^53) would silently lose precision as JS numbers.
@@ -67,5 +67,39 @@ export class PostgresHandler {
 		const whereClause = where ? `AND (${where})` : '';
 		const result = await this.pool.query(`SELECT * FROM "${entity.tableName}" WHERE is_deleted = FALSE ${whereClause}`, params);
 		return result.rows.map((row: Record<string, unknown>) => snakeToCamel<T>(row));
+	}
+
+	public async findById<T extends BaseEntity>(entity: EntityDescriptor<T>, id: string | number): Promise<T | null> {
+		const rows = await this.queryActive(entity, 'id = $1', [id]);
+		return rows[0] ?? null;
+	}
+
+	// `data` uses camelCase keys matching T's TypeScript properties (e.g.
+	// { isDeleted: false }), converted to snake_case columns here — callers
+	// never need to know or write the underlying column names.
+	public async insert<T extends BaseEntity>(entity: EntityDescriptor<T>, data: Record<string, unknown>): Promise<T> {
+		assertValidIdentifier(entity.tableName);
+		const columns = camelToSnake(data);
+		const columnNames = Object.keys(columns);
+		columnNames.forEach(assertValidIdentifier);
+		const placeholders = columnNames.map((_: string, index: number) => `$${index + 1}`);
+		const values = columnNames.map((columnName: string) => columns[columnName]);
+
+		const sql = `INSERT INTO "${entity.tableName}" (${columnNames.map((name: string) => `"${name}"`).join(', ')}) VALUES (${placeholders.join(', ')}) RETURNING *`;
+		const result = await this.pool.query(sql, values);
+		return snakeToCamel<T>(result.rows[0] as Record<string, unknown>);
+	}
+
+	public async update<T extends BaseEntity>(entity: EntityDescriptor<T>, id: string | number, data: Record<string, unknown>): Promise<T | null> {
+		assertValidIdentifier(entity.tableName);
+		const columns = camelToSnake(data);
+		const columnNames = Object.keys(columns);
+		columnNames.forEach(assertValidIdentifier);
+		const setClause = columnNames.map((name: string, index: number) => `"${name}" = $${index + 2}`).join(', ');
+		const values = columnNames.map((columnName: string) => columns[columnName]);
+
+		const sql = `UPDATE "${entity.tableName}" SET ${setClause}, updated_at = NOW() WHERE id = $1 RETURNING *`;
+		const result = await this.pool.query(sql, [id, ...values]);
+		return result.rows[0] ? snakeToCamel<T>(result.rows[0] as Record<string, unknown>) : null;
 	}
 }
