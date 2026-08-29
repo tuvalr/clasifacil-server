@@ -1,30 +1,25 @@
-import { Router, Request, Response } from 'express';
+import { Request, Response } from 'express';
 import { inject, injectable } from 'inversify';
 import { TYPES } from '../../container/types';
 import { EnrollmentAndCreditRepository } from '../../repositories/enrollment-and-credit.repository';
 import { SessionRepository } from '../../repositories/session.repository';
 import { EnrollmentAndCredit } from '../../entities/enrollment-and-credit.entity';
 import { RouteHandlers } from '../shared/route-handlers';
+import { BaseController } from '../shared/base.controller';
 
 const CREDIT_EXPIRY_DAYS = 90;
 
 // UC3: Attendance Tracking & Automated Make-Up Credit State Machine
 // (parent side — cancelling a booking, viewing credit balance).
 @injectable()
-export class ParentAttendanceCreditsController {
-	private readonly internalRouter: Router;
-
+export class ParentAttendanceCreditsController extends BaseController {
 	public constructor(
 		@inject(TYPES.EnrollmentAndCreditRepository) private readonly enrollments: EnrollmentAndCreditRepository,
 		@inject(TYPES.SessionRepository) private readonly sessions: SessionRepository,
 	) {
-		this.internalRouter = Router();
+		super();
 		this.internalRouter.post('/:enrollmentId/cancel', RouteHandlers.wrap(this.cancel.bind(this)));
 		this.internalRouter.get('/households/:householdId/credits', RouteHandlers.wrap(this.listCredits.bind(this)));
-	}
-
-	public get router(): Router {
-		return this.internalRouter;
 	}
 
 	private async listCredits(req: Request, res: Response): Promise<void> {

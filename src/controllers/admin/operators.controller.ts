@@ -1,28 +1,23 @@
-import { Router, Request, Response } from 'express';
+import { Request, Response } from 'express';
 import { inject, injectable } from 'inversify';
 import { TYPES } from '../../container/types';
 import { PostgresHandler, TransactionHandle } from '../../services/postgres-handler';
 import { OperatorRepository } from '../../repositories/operator.repository';
 import { UserRepository } from '../../repositories/user.repository';
 import { RouteHandlers } from '../shared/route-handlers';
+import { BaseController } from '../shared/base.controller';
 
 @injectable()
-export class AdminOperatorsController {
-	private readonly internalRouter: Router;
-
+export class AdminOperatorsController extends BaseController {
 	public constructor(
 		@inject(TYPES.PostgresHandler) private readonly db: PostgresHandler,
 		@inject(TYPES.OperatorRepository) private readonly operators: OperatorRepository,
 		@inject(TYPES.UserRepository) private readonly users: UserRepository,
 	) {
-		this.internalRouter = Router();
+		super();
 		this.internalRouter.get('/', RouteHandlers.wrap(this.list.bind(this)));
 		this.internalRouter.get('/:id', RouteHandlers.wrap(this.getById.bind(this)));
 		this.internalRouter.post('/', RouteHandlers.wrap(this.create.bind(this)));
-	}
-
-	public get router(): Router {
-		return this.internalRouter;
 	}
 
 	private async list(_req: Request, res: Response): Promise<void> {

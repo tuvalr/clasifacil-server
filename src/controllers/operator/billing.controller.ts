@@ -1,16 +1,15 @@
-import { Router, Request, Response } from 'express';
+import { Request, Response } from 'express';
 import { inject, injectable } from 'inversify';
 import { TYPES } from '../../container/types';
 import { InvoiceAndPaymentRepository } from '../../repositories/invoice-and-payment.repository';
 import { RouteHandlers } from '../shared/route-handlers';
+import { BaseController } from '../shared/base.controller';
 
 // UC4: Flexible Multi-Tier Payment & Billing Engine (operator side).
 @injectable()
-export class OperatorBillingController {
-	private readonly internalRouter: Router;
-
+export class OperatorBillingController extends BaseController {
 	public constructor(@inject(TYPES.InvoiceAndPaymentRepository) private readonly invoices: InvoiceAndPaymentRepository) {
-		this.internalRouter = Router();
+		super();
 		this.internalRouter.get('/', RouteHandlers.wrap(this.list.bind(this)));
 		this.internalRouter.get('/:id', RouteHandlers.wrap(this.getById.bind(this)));
 		// Model 2: Cash / Offline Payment Recording. PRD requires logging
@@ -29,10 +28,6 @@ export class OperatorBillingController {
 		// installed and operators.stripe_account_id, while present, isn't
 		// wired to any payment flow yet.
 		this.internalRouter.post('/stripe/connect', RouteHandlers.notImplemented);
-	}
-
-	public get router(): Router {
-		return this.internalRouter;
 	}
 
 	private async list(req: Request, res: Response): Promise<void> {

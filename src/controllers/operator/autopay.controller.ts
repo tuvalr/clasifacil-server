@@ -1,6 +1,6 @@
-import { Router } from 'express';
 import { injectable } from 'inversify';
 import { RouteHandlers } from '../shared/route-handlers';
+import { BaseController } from '../shared/base.controller';
 
 // UC6: Parent Autopay Opt-Out & Operator Notice Controls (operator side —
 // configuring the notice-period policy).
@@ -9,16 +9,10 @@ import { RouteHandlers } from '../shared/route-handlers';
 // vs. 14 days notice before the next billing cycle", global or
 // per-household).
 @injectable()
-export class OperatorAutopayController {
-	private readonly internalRouter: Router;
-
+export class OperatorAutopayController extends BaseController {
 	public constructor() {
-		this.internalRouter = Router();
+		super();
 		this.internalRouter.put('/policy', RouteHandlers.notImplemented);
 		this.internalRouter.put('/policy/:householdId', RouteHandlers.notImplemented);
-	}
-
-	public get router(): Router {
-		return this.internalRouter;
 	}
 }

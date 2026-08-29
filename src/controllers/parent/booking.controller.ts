@@ -1,20 +1,19 @@
-import { Router, Request, Response } from 'express';
+import { Request, Response } from 'express';
 import { inject, injectable } from 'inversify';
 import { TYPES } from '../../container/types';
 import { SessionRepository } from '../../repositories/session.repository';
 import { EnrollmentAndCreditRepository } from '../../repositories/enrollment-and-credit.repository';
 import { RouteHandlers } from '../shared/route-handlers';
+import { BaseController } from '../shared/base.controller';
 
 // UC2: Automated Session Booking & Capacity Hard Limits (parent side).
 @injectable()
-export class ParentBookingController {
-	private readonly internalRouter: Router;
-
+export class ParentBookingController extends BaseController {
 	public constructor(
 		@inject(TYPES.SessionRepository) private readonly sessions: SessionRepository,
 		@inject(TYPES.EnrollmentAndCreditRepository) private readonly enrollments: EnrollmentAndCreditRepository,
 	) {
-		this.internalRouter = Router();
+		super();
 		this.internalRouter.get('/sessions', RouteHandlers.notImplemented); // TODO: browse-by-availability listing, not yet designed
 		this.internalRouter.post('/sessions/:sessionId/book', RouteHandlers.wrap(this.book.bind(this)));
 		this.internalRouter.get('/households/:householdId/enrollments', RouteHandlers.wrap(this.listEnrollments.bind(this)));
@@ -24,10 +23,6 @@ export class ParentBookingController {
 		// -text column with no queue-position or claim-deadline tracking.
 		this.internalRouter.get('/sessions/:sessionId/waitlist', RouteHandlers.notImplemented);
 		this.internalRouter.post('/waitlist/:enrollmentId/claim', RouteHandlers.notImplemented);
-	}
-
-	public get router(): Router {
-		return this.internalRouter;
 	}
 
 	private async listEnrollments(req: Request, res: Response): Promise<void> {

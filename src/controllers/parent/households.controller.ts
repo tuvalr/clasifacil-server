@@ -1,20 +1,19 @@
-import { Router, Request, Response } from 'express';
+import { Request, Response } from 'express';
 import { inject, injectable } from 'inversify';
 import { TYPES } from '../../container/types';
 import { HouseholdRepository } from '../../repositories/household.repository';
 import { StudentRepository } from '../../repositories/student.repository';
 import { RouteHandlers } from '../shared/route-handlers';
+import { BaseController } from '../shared/base.controller';
 
 // UC1: Household & Multi-Child Account Management (parent side).
 @injectable()
-export class ParentHouseholdsController {
-	private readonly internalRouter: Router;
-
+export class ParentHouseholdsController extends BaseController {
 	public constructor(
 		@inject(TYPES.HouseholdRepository) private readonly households: HouseholdRepository,
 		@inject(TYPES.StudentRepository) private readonly students: StudentRepository,
 	) {
-		this.internalRouter = Router();
+		super();
 		this.internalRouter.get('/:id', RouteHandlers.wrap(this.getById.bind(this)));
 		this.internalRouter.put('/:id', RouteHandlers.wrap(this.update.bind(this)));
 		this.internalRouter.get('/:id/students', RouteHandlers.wrap(this.listStudents.bind(this)));
@@ -30,10 +29,6 @@ export class ParentHouseholdsController {
 		// email invite") — no such table exists yet.
 		this.internalRouter.get('/:id/co-parents', RouteHandlers.notImplemented);
 		this.internalRouter.post('/:id/co-parents/invite', RouteHandlers.notImplemented);
-	}
-
-	public get router(): Router {
-		return this.internalRouter;
 	}
 
 	private async getById(req: Request, res: Response): Promise<void> {

@@ -1,6 +1,6 @@
-import { Router } from 'express';
 import { injectable } from 'inversify';
 import { RouteHandlers } from '../shared/route-handlers';
+import { BaseController } from '../shared/base.controller';
 
 // UC5: Automated Payment Reminders & Consolidated Invoicing.
 // TODO: entirely unsupported by the current schema — no table for
@@ -10,18 +10,12 @@ import { RouteHandlers } from '../shared/route-handlers';
 // tracking for broadcasts). Routes below exist to establish the API
 // surface; none are backed by real logic.
 @injectable()
-export class OperatorRemindersController {
-	private readonly internalRouter: Router;
-
+export class OperatorRemindersController extends BaseController {
 	public constructor() {
-		this.internalRouter = Router();
+		super();
 		this.internalRouter.put('/config', RouteHandlers.notImplemented);
 		this.internalRouter.get('/dunning-status/:householdId', RouteHandlers.notImplemented);
 		this.internalRouter.post('/broadcast', RouteHandlers.notImplemented);
 		this.internalRouter.get('/broadcast/:id/delivery-receipts', RouteHandlers.notImplemented);
-	}
-
-	public get router(): Router {
-		return this.internalRouter;
 	}
 }

@@ -1,20 +1,19 @@
-import { Router, Request, Response } from 'express';
+import { Request, Response } from 'express';
 import { inject, injectable } from 'inversify';
 import { TYPES } from '../../container/types';
 import { HouseholdRepository } from '../../repositories/household.repository';
 import { StudentRepository } from '../../repositories/student.repository';
 import { RouteHandlers } from '../shared/route-handlers';
+import { BaseController } from '../shared/base.controller';
 
 // UC1: Household & Multi-Child Account Management (operator side).
 @injectable()
-export class OperatorHouseholdsController {
-	private readonly internalRouter: Router;
-
+export class OperatorHouseholdsController extends BaseController {
 	public constructor(
 		@inject(TYPES.HouseholdRepository) private readonly households: HouseholdRepository,
 		@inject(TYPES.StudentRepository) private readonly students: StudentRepository,
 	) {
-		this.internalRouter = Router();
+		super();
 		this.internalRouter.get('/', RouteHandlers.wrap(this.list.bind(this)));
 		this.internalRouter.get('/:id', RouteHandlers.wrap(this.getById.bind(this)));
 		this.internalRouter.get('/:id/students', RouteHandlers.wrap(this.listStudents.bind(this)));
@@ -24,10 +23,6 @@ export class OperatorHouseholdsController {
 		// secondary view/booking access to a co-parent via email invite") —
 		// no such table exists yet.
 		this.internalRouter.post('/:id/invite-co-parent', RouteHandlers.notImplemented);
-	}
-
-	public get router(): Router {
-		return this.internalRouter;
 	}
 
 	private async list(req: Request, res: Response): Promise<void> {

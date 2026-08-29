@@ -1,31 +1,26 @@
-import { Router, Request, Response } from 'express';
+import { Request, Response } from 'express';
 import { inject, injectable } from 'inversify';
 import { TYPES } from '../../container/types';
 import { SessionRepository } from '../../repositories/session.repository';
 import { EnrollmentAndCreditRepository } from '../../repositories/enrollment-and-credit.repository';
 import { RouteHandlers } from '../shared/route-handlers';
+import { BaseController } from '../shared/base.controller';
 
 // UC2: Automated Session Booking & Capacity Hard Limits (operator side —
 // creating/managing sessions; booking itself is the parent side, see
 // ParentBookingController).
 @injectable()
-export class OperatorSessionsController {
-	private readonly internalRouter: Router;
-
+export class OperatorSessionsController extends BaseController {
 	public constructor(
 		@inject(TYPES.SessionRepository) private readonly sessions: SessionRepository,
 		@inject(TYPES.EnrollmentAndCreditRepository) private readonly enrollments: EnrollmentAndCreditRepository,
 	) {
-		this.internalRouter = Router();
+		super();
 		this.internalRouter.get('/', RouteHandlers.wrap(this.list.bind(this)));
 		this.internalRouter.get('/:id', RouteHandlers.wrap(this.getById.bind(this)));
 		this.internalRouter.get('/:id/roster', RouteHandlers.wrap(this.roster.bind(this)));
 		this.internalRouter.post('/', RouteHandlers.wrap(this.create.bind(this)));
 		this.internalRouter.post('/:id/cancel', RouteHandlers.wrap(this.cancel.bind(this)));
-	}
-
-	public get router(): Router {
-		return this.internalRouter;
 	}
 
 	private async list(req: Request, res: Response): Promise<void> {
