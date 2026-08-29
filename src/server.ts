@@ -3,7 +3,7 @@ import { TYPES } from './container/types';
 import { App } from './app';
 import { Logger } from './logger/logger';
 import { Config } from './config/env';
-import { PostgresHandler } from './services/postgres-handler';
+import { PostgresHandler } from './handlers/postgres-handler';
 
 @injectable()
 export class Server {

@@ -1,6 +1,6 @@
 import { inject, injectable } from 'inversify';
 import { TYPES } from '../container/types';
-import { PostgresHandler } from '../services/postgres-handler';
+import { PostgresHandler } from '../handlers/postgres-handler';
 import { Household, HouseholdEntity } from '../entities/household.entity';
 
 @injectable()

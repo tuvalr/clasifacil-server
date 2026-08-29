@@ -1,6 +1,6 @@
 import { inject, injectable } from 'inversify';
 import { TYPES } from '../container/types';
-import { PostgresHandler, TransactionHandle } from '../services/postgres-handler';
+import { PostgresHandler, TransactionHandle } from '../handlers/postgres-handler';
 import { OperatorRepository } from '../repositories/operator.repository';
 import { UserRepository } from '../repositories/user.repository';
 import { Operator } from '../entities/operator.entity';
