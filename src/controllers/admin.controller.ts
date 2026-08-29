@@ -14,9 +14,82 @@ export class AdminController extends BaseController {
 
 	private operatorsRouter(): Router {
 		const router = Router();
+
+		/**
+		 * @openapi
+		 * /api/admin/operators:
+		 *   get:
+		 *     summary: List operators
+		 *     tags: [Admin]
+		 *     responses:
+		 *       200:
+		 *         description: OK
+		 *         content:
+		 *           application/json:
+		 *             schema: { type: array, items: { $ref: '#/components/schemas/Operator' } }
+		 *       400: { $ref: '#/components/responses/BadRequest' }
+		 *       401: { $ref: '#/components/responses/Unauthorized' }
+		 *       500: { $ref: '#/components/responses/InternalError' }
+		 */
 		router.get('/', RouteHandlers.wrap(this.listOperators.bind(this)));
+
+		/**
+		 * @openapi
+		 * /api/admin/operators/{id}:
+		 *   get:
+		 *     summary: Get operator by ID
+		 *     tags: [Admin]
+		 *     parameters:
+		 *       - in: path
+		 *         name: id
+		 *         required: true
+		 *         schema: { type: integer }
+		 *     responses:
+		 *       200:
+		 *         description: OK
+		 *         content:
+		 *           application/json:
+		 *             schema: { $ref: '#/components/schemas/Operator' }
+		 *       400: { $ref: '#/components/responses/BadRequest' }
+		 *       401: { $ref: '#/components/responses/Unauthorized' }
+		 *       404: { description: Not found }
+		 *       500: { $ref: '#/components/responses/InternalError' }
+		 */
 		router.get('/:id', RouteHandlers.wrap(this.getOperatorById.bind(this)));
+
+		/**
+		 * @openapi
+		 * /api/admin/operators:
+		 *   post:
+		 *     summary: Create an operator and its login user
+		 *     tags: [Admin]
+		 *     requestBody:
+		 *       required: true
+		 *       content:
+		 *         application/json:
+		 *           schema:
+		 *             type: object
+		 *             required: [name, email, authUid]
+		 *             properties:
+		 *               name: { type: string }
+		 *               email: { type: string }
+		 *               authUid: { type: string }
+		 *     responses:
+		 *       201:
+		 *         description: Created
+		 *         content:
+		 *           application/json:
+		 *             schema:
+		 *               type: object
+		 *               properties:
+		 *                 operator: { $ref: '#/components/schemas/Operator' }
+		 *                 user: { $ref: '#/components/schemas/User' }
+		 *       400: { $ref: '#/components/responses/BadRequest' }
+		 *       401: { $ref: '#/components/responses/Unauthorized' }
+		 *       500: { $ref: '#/components/responses/InternalError' }
+		 */
 		router.post('/', RouteHandlers.wrap(this.createOperator.bind(this)));
+
 		return router;
 	}
 

@@ -28,15 +28,181 @@ export class ParentController extends BaseController {
 
 	private householdsRouter(): Router {
 		const router = Router();
+
+		/**
+		 * @openapi
+		 * /api/parent/households/{id}:
+		 *   get:
+		 *     summary: Get own household
+		 *     tags: [Parent - Households]
+		 *     parameters:
+		 *       - in: path
+		 *         name: id
+		 *         required: true
+		 *         schema: { type: integer }
+		 *     responses:
+		 *       200:
+		 *         description: OK
+		 *         content:
+		 *           application/json:
+		 *             schema: { $ref: '#/components/schemas/Household' }
+		 *       400: { $ref: '#/components/responses/BadRequest' }
+		 *       401: { $ref: '#/components/responses/Unauthorized' }
+		 *       404: { description: Not found }
+		 *       500: { $ref: '#/components/responses/InternalError' }
+		 */
 		router.get('/:id', RouteHandlers.wrap(this.getHouseholdById.bind(this)));
+
+		/**
+		 * @openapi
+		 * /api/parent/households/{id}:
+		 *   put:
+		 *     summary: Update own household
+		 *     tags: [Parent - Households]
+		 *     parameters:
+		 *       - in: path
+		 *         name: id
+		 *         required: true
+		 *         schema: { type: integer }
+		 *     requestBody:
+		 *       content:
+		 *         application/json:
+		 *           schema:
+		 *             type: object
+		 *             properties:
+		 *               name: { type: string }
+		 *               email: { type: string }
+		 *     responses:
+		 *       200:
+		 *         description: OK
+		 *         content:
+		 *           application/json:
+		 *             schema: { $ref: '#/components/schemas/Household' }
+		 *       400: { $ref: '#/components/responses/BadRequest' }
+		 *       401: { $ref: '#/components/responses/Unauthorized' }
+		 *       404: { description: Not found }
+		 *       500: { $ref: '#/components/responses/InternalError' }
+		 */
 		router.put('/:id', RouteHandlers.wrap(this.updateHousehold.bind(this)));
+
+		/**
+		 * @openapi
+		 * /api/parent/households/{id}/students:
+		 *   get:
+		 *     summary: List own students
+		 *     tags: [Parent - Households]
+		 *     parameters:
+		 *       - in: path
+		 *         name: id
+		 *         required: true
+		 *         schema: { type: integer }
+		 *     responses:
+		 *       200:
+		 *         description: OK
+		 *         content:
+		 *           application/json:
+		 *             schema: { type: array, items: { $ref: '#/components/schemas/Student' } }
+		 *       400: { $ref: '#/components/responses/BadRequest' }
+		 *       401: { $ref: '#/components/responses/Unauthorized' }
+		 *       500: { $ref: '#/components/responses/InternalError' }
+		 */
 		router.get('/:id/students', RouteHandlers.wrap(this.listStudents.bind(this)));
+
+		/**
+		 * @openapi
+		 * /api/parent/households/{id}/students:
+		 *   post:
+		 *     summary: Add a student to own household
+		 *     tags: [Parent - Households]
+		 *     parameters:
+		 *       - in: path
+		 *         name: id
+		 *         required: true
+		 *         schema: { type: integer }
+		 *     requestBody:
+		 *       required: true
+		 *       content:
+		 *         application/json:
+		 *           schema:
+		 *             type: object
+		 *             required: [fullName]
+		 *             properties:
+		 *               fullName: { type: string }
+		 *               dateOfBirth: { type: string, format: date-time, nullable: true }
+		 *               notes: { type: string, nullable: true }
+		 *     responses:
+		 *       201:
+		 *         description: Created
+		 *         content:
+		 *           application/json:
+		 *             schema: { $ref: '#/components/schemas/Student' }
+		 *       400: { $ref: '#/components/responses/BadRequest' }
+		 *       401: { $ref: '#/components/responses/Unauthorized' }
+		 *       500: { $ref: '#/components/responses/InternalError' }
+		 */
 		router.post('/:id/students', RouteHandlers.wrap(this.createStudent.bind(this)));
+
+		/**
+		 * @openapi
+		 * /api/parent/households/{id}/students/{studentId}:
+		 *   put:
+		 *     summary: Update own student
+		 *     tags: [Parent - Households]
+		 *     parameters:
+		 *       - in: path
+		 *         name: id
+		 *         required: true
+		 *         schema: { type: integer }
+		 *       - in: path
+		 *         name: studentId
+		 *         required: true
+		 *         schema: { type: integer }
+		 *     requestBody:
+		 *       content:
+		 *         application/json:
+		 *           schema:
+		 *             type: object
+		 *             properties:
+		 *               fullName: { type: string }
+		 *               notes: { type: string, nullable: true }
+		 *     responses:
+		 *       200:
+		 *         description: OK
+		 *         content:
+		 *           application/json:
+		 *             schema: { $ref: '#/components/schemas/Student' }
+		 *       400: { $ref: '#/components/responses/BadRequest' }
+		 *       401: { $ref: '#/components/responses/Unauthorized' }
+		 *       404: { description: Not found }
+		 *       500: { $ref: '#/components/responses/InternalError' }
+		 */
 		router.put('/:id/students/:studentId', RouteHandlers.wrap(this.updateStudent.bind(this)));
+
 		// PRD UC1 edge case: "Archiving a Child Profile" — retain
 		// historical attendance/invoice logs, remove from active roster
 		// selectors. This is exactly PostgresHandler's soft-delete, so it
 		// IS implemented.
+		/**
+		 * @openapi
+		 * /api/parent/households/{id}/students/{studentId}/archive:
+		 *   post:
+		 *     summary: Archive own student
+		 *     tags: [Parent - Households]
+		 *     parameters:
+		 *       - in: path
+		 *         name: id
+		 *         required: true
+		 *         schema: { type: integer }
+		 *       - in: path
+		 *         name: studentId
+		 *         required: true
+		 *         schema: { type: integer }
+		 *     responses:
+		 *       204: { description: Archived }
+		 *       400: { $ref: '#/components/responses/BadRequest' }
+		 *       401: { $ref: '#/components/responses/Unauthorized' }
+		 *       500: { $ref: '#/components/responses/InternalError' }
+		 */
 		router.post('/:id/students/:studentId/archive', RouteHandlers.wrap(this.archiveStudent.bind(this)));
 		// TODO: requires a co-parent/secondary-adult table (PRD: "grant
 		// secondary view/booking access to a co-parent or caregiver via
@@ -101,7 +267,71 @@ export class ParentController extends BaseController {
 	private bookingRouter(): Router {
 		const router = Router();
 		router.get('/sessions', RouteHandlers.notImplemented); // TODO: browse-by-availability listing, not yet designed
+
+		/**
+		 * @openapi
+		 * /api/parent/booking/sessions/{sessionId}/book:
+		 *   post:
+		 *     summary: Book a session
+		 *     tags: [Parent - Booking]
+		 *     parameters:
+		 *       - in: path
+		 *         name: sessionId
+		 *         required: true
+		 *         schema: { type: integer }
+		 *     requestBody:
+		 *       required: true
+		 *       content:
+		 *         application/json:
+		 *           schema:
+		 *             type: object
+		 *             required: [studentId, householdId]
+		 *             properties:
+		 *               studentId: { type: integer }
+		 *               householdId: { type: integer }
+		 *     responses:
+		 *       201:
+		 *         description: Booked
+		 *         content:
+		 *           application/json:
+		 *             schema: { $ref: '#/components/schemas/EnrollmentAndCredit' }
+		 *       400: { $ref: '#/components/responses/BadRequest' }
+		 *       401: { $ref: '#/components/responses/Unauthorized' }
+		 *       404: { description: Session not found }
+		 *       409:
+		 *         description: Session at capacity
+		 *         content:
+		 *           application/json:
+		 *             schema:
+		 *               type: object
+		 *               properties:
+		 *                 error: { type: string }
+		 *                 waitlisted: { type: boolean }
+		 *       500: { $ref: '#/components/responses/InternalError' }
+		 */
 		router.post('/sessions/:sessionId/book', RouteHandlers.wrap(this.book.bind(this)));
+
+		/**
+		 * @openapi
+		 * /api/parent/booking/households/{householdId}/enrollments:
+		 *   get:
+		 *     summary: List own household's enrollments
+		 *     tags: [Parent - Booking]
+		 *     parameters:
+		 *       - in: path
+		 *         name: householdId
+		 *         required: true
+		 *         schema: { type: integer }
+		 *     responses:
+		 *       200:
+		 *         description: OK
+		 *         content:
+		 *           application/json:
+		 *             schema: { type: array, items: { $ref: '#/components/schemas/EnrollmentAndCredit' } }
+		 *       400: { $ref: '#/components/responses/BadRequest' }
+		 *       401: { $ref: '#/components/responses/Unauthorized' }
+		 *       500: { $ref: '#/components/responses/InternalError' }
+		 */
 		router.get('/households/:householdId/enrollments', RouteHandlers.wrap(this.listEnrollments.bind(this)));
 		// TODO: requires a real waitlist (PRD: "queue-based waitlist
 		// ordered strictly by timestamp", automated promotion with a
@@ -137,8 +367,54 @@ export class ParentController extends BaseController {
 
 	private attendanceCreditsRouter(): Router {
 		const router = Router();
+
+		/**
+		 * @openapi
+		 * /api/parent/attendance-credits/{enrollmentId}/cancel:
+		 *   post:
+		 *     summary: Cancel an enrollment
+		 *     tags: [Parent - Attendance Credits]
+		 *     parameters:
+		 *       - in: path
+		 *         name: enrollmentId
+		 *         required: true
+		 *         schema: { type: integer }
+		 *     responses:
+		 *       200:
+		 *         description: OK
+		 *         content:
+		 *           application/json:
+		 *             schema: { $ref: '#/components/schemas/EnrollmentAndCredit' }
+		 *       400: { $ref: '#/components/responses/BadRequest' }
+		 *       401: { $ref: '#/components/responses/Unauthorized' }
+		 *       404: { description: Not found }
+		 *       500: { $ref: '#/components/responses/InternalError' }
+		 */
 		router.post('/:enrollmentId/cancel', RouteHandlers.wrap(this.cancelEnrollment.bind(this)));
+
+		/**
+		 * @openapi
+		 * /api/parent/attendance-credits/households/{householdId}/credits:
+		 *   get:
+		 *     summary: List own household's credits
+		 *     tags: [Parent - Attendance Credits]
+		 *     parameters:
+		 *       - in: path
+		 *         name: householdId
+		 *         required: true
+		 *         schema: { type: integer }
+		 *     responses:
+		 *       200:
+		 *         description: OK
+		 *         content:
+		 *           application/json:
+		 *             schema: { type: array, items: { $ref: '#/components/schemas/EnrollmentAndCredit' } }
+		 *       400: { $ref: '#/components/responses/BadRequest' }
+		 *       401: { $ref: '#/components/responses/Unauthorized' }
+		 *       500: { $ref: '#/components/responses/InternalError' }
+		 */
 		router.get('/households/:householdId/credits', RouteHandlers.wrap(this.listCredits.bind(this)));
+
 		return router;
 	}
 
@@ -161,6 +437,28 @@ export class ParentController extends BaseController {
 
 	private billingRouter(): Router {
 		const router = Router();
+
+		/**
+		 * @openapi
+		 * /api/parent/billing/households/{householdId}/invoices:
+		 *   get:
+		 *     summary: List own household's invoices
+		 *     tags: [Parent - Billing]
+		 *     parameters:
+		 *       - in: path
+		 *         name: householdId
+		 *         required: true
+		 *         schema: { type: integer }
+		 *     responses:
+		 *       200:
+		 *         description: OK
+		 *         content:
+		 *           application/json:
+		 *             schema: { type: array, items: { $ref: '#/components/schemas/InvoiceAndPayment' } }
+		 *       400: { $ref: '#/components/responses/BadRequest' }
+		 *       401: { $ref: '#/components/responses/Unauthorized' }
+		 *       500: { $ref: '#/components/responses/InternalError' }
+		 */
 		router.get('/households/:householdId/invoices', RouteHandlers.wrap(this.listInvoices.bind(this)));
 		// Model 1: Pay-Per-Class (Drop-in) card checkout. TODO: requires a
 		// payment-processor integration (Stripe) — no Stripe SDK is

@@ -29,10 +29,108 @@ export class OperatorController extends BaseController {
 
 	private householdsRouter(): Router {
 		const router = Router();
+
+		/**
+		 * @openapi
+		 * /api/operator/households:
+		 *   get:
+		 *     summary: List households
+		 *     tags: [Operator - Households]
+		 *     responses:
+		 *       200:
+		 *         description: OK
+		 *         content:
+		 *           application/json:
+		 *             schema: { type: array, items: { $ref: '#/components/schemas/Household' } }
+		 *       400: { $ref: '#/components/responses/BadRequest' }
+		 *       401: { $ref: '#/components/responses/Unauthorized' }
+		 *       500: { $ref: '#/components/responses/InternalError' }
+		 */
 		router.get('/', RouteHandlers.wrap(this.listHouseholds.bind(this)));
+
+		/**
+		 * @openapi
+		 * /api/operator/households/{id}:
+		 *   get:
+		 *     summary: Get household by ID
+		 *     tags: [Operator - Households]
+		 *     parameters:
+		 *       - in: path
+		 *         name: id
+		 *         required: true
+		 *         schema: { type: integer }
+		 *     responses:
+		 *       200:
+		 *         description: OK
+		 *         content:
+		 *           application/json:
+		 *             schema: { $ref: '#/components/schemas/Household' }
+		 *       400: { $ref: '#/components/responses/BadRequest' }
+		 *       401: { $ref: '#/components/responses/Unauthorized' }
+		 *       404: { description: Not found }
+		 *       500: { $ref: '#/components/responses/InternalError' }
+		 */
 		router.get('/:id', RouteHandlers.wrap(this.getHouseholdById.bind(this)));
+
+		/**
+		 * @openapi
+		 * /api/operator/households/{id}/students:
+		 *   get:
+		 *     summary: List a household's students
+		 *     tags: [Operator - Households]
+		 *     parameters:
+		 *       - in: path
+		 *         name: id
+		 *         required: true
+		 *         schema: { type: integer }
+		 *     responses:
+		 *       200:
+		 *         description: OK
+		 *         content:
+		 *           application/json:
+		 *             schema: { type: array, items: { $ref: '#/components/schemas/Student' } }
+		 *       400: { $ref: '#/components/responses/BadRequest' }
+		 *       401: { $ref: '#/components/responses/Unauthorized' }
+		 *       500: { $ref: '#/components/responses/InternalError' }
+		 */
 		router.get('/:id/students', RouteHandlers.wrap(this.listStudents.bind(this)));
+
+		/**
+		 * @openapi
+		 * /api/operator/households/{id}/archive:
+		 *   post:
+		 *     summary: Archive a household
+		 *     tags: [Operator - Households]
+		 *     parameters:
+		 *       - in: path
+		 *         name: id
+		 *         required: true
+		 *         schema: { type: integer }
+		 *     responses:
+		 *       204: { description: Archived }
+		 *       400: { $ref: '#/components/responses/BadRequest' }
+		 *       401: { $ref: '#/components/responses/Unauthorized' }
+		 *       500: { $ref: '#/components/responses/InternalError' }
+		 */
 		router.post('/:id/archive', RouteHandlers.wrap(this.archiveHousehold.bind(this)));
+
+		/**
+		 * @openapi
+		 * /api/operator/households/{id}/restore:
+		 *   post:
+		 *     summary: Restore an archived household
+		 *     tags: [Operator - Households]
+		 *     parameters:
+		 *       - in: path
+		 *         name: id
+		 *         required: true
+		 *         schema: { type: integer }
+		 *     responses:
+		 *       204: { description: Restored }
+		 *       400: { $ref: '#/components/responses/BadRequest' }
+		 *       401: { $ref: '#/components/responses/Unauthorized' }
+		 *       500: { $ref: '#/components/responses/InternalError' }
+		 */
 		router.post('/:id/restore', RouteHandlers.wrap(this.restoreHousehold.bind(this)));
 		// TODO: requires a co-parent/secondary-adult table (PRD UC1: "grant
 		// secondary view/booking access to a co-parent via email invite") —
@@ -74,11 +172,126 @@ export class OperatorController extends BaseController {
 
 	private sessionsRouter(): Router {
 		const router = Router();
+
+		/**
+		 * @openapi
+		 * /api/operator/sessions:
+		 *   get:
+		 *     summary: List sessions for an operator
+		 *     tags: [Operator - Sessions]
+		 *     parameters:
+		 *       - in: query
+		 *         name: operatorId
+		 *         required: true
+		 *         schema: { type: integer }
+		 *     responses:
+		 *       200:
+		 *         description: OK
+		 *         content:
+		 *           application/json:
+		 *             schema: { type: array, items: { $ref: '#/components/schemas/Session' } }
+		 *       400: { $ref: '#/components/responses/BadRequest' }
+		 *       401: { $ref: '#/components/responses/Unauthorized' }
+		 *       500: { $ref: '#/components/responses/InternalError' }
+		 */
 		router.get('/', RouteHandlers.wrap(this.listSessions.bind(this)));
+
+		/**
+		 * @openapi
+		 * /api/operator/sessions/{id}:
+		 *   get:
+		 *     summary: Get session by ID
+		 *     tags: [Operator - Sessions]
+		 *     parameters:
+		 *       - in: path
+		 *         name: id
+		 *         required: true
+		 *         schema: { type: integer }
+		 *     responses:
+		 *       200:
+		 *         description: OK
+		 *         content:
+		 *           application/json:
+		 *             schema: { $ref: '#/components/schemas/Session' }
+		 *       400: { $ref: '#/components/responses/BadRequest' }
+		 *       401: { $ref: '#/components/responses/Unauthorized' }
+		 *       404: { description: Not found }
+		 *       500: { $ref: '#/components/responses/InternalError' }
+		 */
 		router.get('/:id', RouteHandlers.wrap(this.getSessionById.bind(this)));
+
+		/**
+		 * @openapi
+		 * /api/operator/sessions/{id}/roster:
+		 *   get:
+		 *     summary: Get a session's roster
+		 *     tags: [Operator - Sessions]
+		 *     parameters:
+		 *       - in: path
+		 *         name: id
+		 *         required: true
+		 *         schema: { type: integer }
+		 *     responses:
+		 *       200:
+		 *         description: OK
+		 *         content:
+		 *           application/json:
+		 *             schema: { type: array, items: { $ref: '#/components/schemas/EnrollmentAndCredit' } }
+		 *       400: { $ref: '#/components/responses/BadRequest' }
+		 *       401: { $ref: '#/components/responses/Unauthorized' }
+		 *       500: { $ref: '#/components/responses/InternalError' }
+		 */
 		router.get('/:id/roster', RouteHandlers.wrap(this.getRoster.bind(this)));
+
+		/**
+		 * @openapi
+		 * /api/operator/sessions:
+		 *   post:
+		 *     summary: Create a session
+		 *     tags: [Operator - Sessions]
+		 *     requestBody:
+		 *       required: true
+		 *       content:
+		 *         application/json:
+		 *           schema:
+		 *             type: object
+		 *             required: [operatorId, title, startTime, capacityLimit]
+		 *             properties:
+		 *               operatorId: { type: integer }
+		 *               title: { type: string }
+		 *               startTime: { type: string, format: date-time }
+		 *               capacityLimit: { type: integer }
+		 *     responses:
+		 *       201:
+		 *         description: Created
+		 *         content:
+		 *           application/json:
+		 *             schema: { $ref: '#/components/schemas/Session' }
+		 *       400: { $ref: '#/components/responses/BadRequest' }
+		 *       401: { $ref: '#/components/responses/Unauthorized' }
+		 *       500: { $ref: '#/components/responses/InternalError' }
+		 */
 		router.post('/', RouteHandlers.wrap(this.createSession.bind(this)));
+
+		/**
+		 * @openapi
+		 * /api/operator/sessions/{id}/cancel:
+		 *   post:
+		 *     summary: Cancel a session
+		 *     tags: [Operator - Sessions]
+		 *     parameters:
+		 *       - in: path
+		 *         name: id
+		 *         required: true
+		 *         schema: { type: integer }
+		 *     responses:
+		 *       204: { description: Cancelled }
+		 *       400: { $ref: '#/components/responses/BadRequest' }
+		 *       401: { $ref: '#/components/responses/Unauthorized' }
+		 *       500: { $ref: '#/components/responses/InternalError' }
+		 */
 		router.post('/:id/cancel', RouteHandlers.wrap(this.cancelSession.bind(this)));
+
 		return router;
 	}
 
@@ -122,6 +335,28 @@ export class OperatorController extends BaseController {
 
 	private attendanceCreditsRouter(): Router {
 		const router = Router();
+
+		/**
+		 * @openapi
+		 * /api/operator/attendance-credits/session/{sessionId}:
+		 *   get:
+		 *     summary: List enrollments/credits for a session
+		 *     tags: [Operator - Attendance Credits]
+		 *     parameters:
+		 *       - in: path
+		 *         name: sessionId
+		 *         required: true
+		 *         schema: { type: integer }
+		 *     responses:
+		 *       200:
+		 *         description: OK
+		 *         content:
+		 *           application/json:
+		 *             schema: { type: array, items: { $ref: '#/components/schemas/EnrollmentAndCredit' } }
+		 *       400: { $ref: '#/components/responses/BadRequest' }
+		 *       401: { $ref: '#/components/responses/Unauthorized' }
+		 *       500: { $ref: '#/components/responses/InternalError' }
+		 */
 		router.get('/session/:sessionId', RouteHandlers.wrap(this.listCreditsBySession.bind(this)));
 		// TODO: requires a cancellation-policy-window column (PRD: "e.g.
 		// >24 hours before session start") on operators or sessions — no
@@ -144,8 +379,76 @@ export class OperatorController extends BaseController {
 
 	private billingRouter(): Router {
 		const router = Router();
+
+		/**
+		 * @openapi
+		 * /api/operator/billing:
+		 *   get:
+		 *     summary: List invoices for an operator
+		 *     tags: [Operator - Billing]
+		 *     parameters:
+		 *       - in: query
+		 *         name: operatorId
+		 *         required: true
+		 *         schema: { type: integer }
+		 *     responses:
+		 *       200:
+		 *         description: OK
+		 *         content:
+		 *           application/json:
+		 *             schema: { type: array, items: { $ref: '#/components/schemas/InvoiceAndPayment' } }
+		 *       400: { $ref: '#/components/responses/BadRequest' }
+		 *       401: { $ref: '#/components/responses/Unauthorized' }
+		 *       500: { $ref: '#/components/responses/InternalError' }
+		 */
 		router.get('/', RouteHandlers.wrap(this.listInvoices.bind(this)));
+
+		/**
+		 * @openapi
+		 * /api/operator/billing/{id}:
+		 *   get:
+		 *     summary: Get invoice by ID
+		 *     tags: [Operator - Billing]
+		 *     parameters:
+		 *       - in: path
+		 *         name: id
+		 *         required: true
+		 *         schema: { type: integer }
+		 *     responses:
+		 *       200:
+		 *         description: OK
+		 *         content:
+		 *           application/json:
+		 *             schema: { $ref: '#/components/schemas/InvoiceAndPayment' }
+		 *       400: { $ref: '#/components/responses/BadRequest' }
+		 *       401: { $ref: '#/components/responses/Unauthorized' }
+		 *       404: { description: Not found }
+		 *       500: { $ref: '#/components/responses/InternalError' }
+		 */
 		router.get('/:id', RouteHandlers.wrap(this.getInvoiceById.bind(this)));
+
+		/**
+		 * @openapi
+		 * /api/operator/billing/{id}/record-offline-payment:
+		 *   post:
+		 *     summary: Record an offline (cash) payment
+		 *     tags: [Operator - Billing]
+		 *     parameters:
+		 *       - in: path
+		 *         name: id
+		 *         required: true
+		 *         schema: { type: integer }
+		 *     responses:
+		 *       200:
+		 *         description: OK
+		 *         content:
+		 *           application/json:
+		 *             schema: { $ref: '#/components/schemas/InvoiceAndPayment' }
+		 *       400: { $ref: '#/components/responses/BadRequest' }
+		 *       401: { $ref: '#/components/responses/Unauthorized' }
+		 *       404: { description: Not found }
+		 *       500: { $ref: '#/components/responses/InternalError' }
+		 */
 		router.post('/:id/record-offline-payment', RouteHandlers.wrap(this.recordOfflinePayment.bind(this)));
 		// TODO: requires a class-pack balance table (PRD Model 3: "10-class
 		// pack for €130", decremented per booking) — no such table exists

@@ -9,8 +9,12 @@ export class PinoLogger implements Logger {
 	public constructor() {
 		const isPrettyEnv = process.env.NODE_ENV === 'dev' || process.env.NODE_ENV === 'local';
 
-		this.pino = pino(
-			isPrettyEnv
+		this.pino = pino({
+			// pino's default base bindings add { pid, hostname } to every
+			// log line — dropped so only the explicit "server listening"
+			// call (which passes pid itself) shows a process ID.
+			base: null,
+			...(isPrettyEnv
 				? {
 						transport: {
 							target: 'pino-pretty',
@@ -19,8 +23,8 @@ export class PinoLogger implements Logger {
 							},
 						},
 					}
-				: {},
-		);
+				: {}),
+		});
 	}
 
 	public info(message: string, meta?: Record<string, unknown>): void {

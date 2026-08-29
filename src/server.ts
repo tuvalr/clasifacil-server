@@ -18,7 +18,7 @@ export class Server {
 		await this.postgresHandler.connect();
 
 		this.app.express.listen(this.config.port, () => {
-			this.logger.info('server listening', { nodeEnv: this.config.nodeEnv, port: this.config.port });
+			this.logger.info('server listening', { nodeEnv: this.config.nodeEnv, port: this.config.port, processId: process.pid });
 		});
 	}
 }
