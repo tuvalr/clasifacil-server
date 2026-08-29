@@ -17,18 +17,15 @@ export const TYPES = {
 	InvoiceAndPaymentRepository: Symbol.for('InvoiceAndPaymentRepository'),
 	UserRepository: Symbol.for('UserRepository'),
 
-	AdminOperatorsController: Symbol.for('AdminOperatorsController'),
+	HouseholdsServer: Symbol.for('HouseholdsServer'),
+	SessionsServer: Symbol.for('SessionsServer'),
+	AttendanceCreditsServer: Symbol.for('AttendanceCreditsServer'),
+	BillingServer: Symbol.for('BillingServer'),
+	AutopayServer: Symbol.for('AutopayServer'),
+	RemindersServer: Symbol.for('RemindersServer'),
+	OperatorsServer: Symbol.for('OperatorsServer'),
 
-	OperatorHouseholdsController: Symbol.for('OperatorHouseholdsController'),
-	OperatorSessionsController: Symbol.for('OperatorSessionsController'),
-	OperatorAttendanceCreditsController: Symbol.for('OperatorAttendanceCreditsController'),
-	OperatorBillingController: Symbol.for('OperatorBillingController'),
-	OperatorRemindersController: Symbol.for('OperatorRemindersController'),
-	OperatorAutopayController: Symbol.for('OperatorAutopayController'),
-
-	ParentHouseholdsController: Symbol.for('ParentHouseholdsController'),
-	ParentBookingController: Symbol.for('ParentBookingController'),
-	ParentAttendanceCreditsController: Symbol.for('ParentAttendanceCreditsController'),
-	ParentBillingController: Symbol.for('ParentBillingController'),
-	ParentAutopayController: Symbol.for('ParentAutopayController'),
+	AdminController: Symbol.for('AdminController'),
+	OperatorController: Symbol.for('OperatorController'),
+	ParentController: Symbol.for('ParentController'),
 };

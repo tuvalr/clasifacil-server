@@ -24,18 +24,16 @@ import { SessionRepository } from '../repositories/session.repository';
 import { EnrollmentAndCreditRepository } from '../repositories/enrollment-and-credit.repository';
 import { InvoiceAndPaymentRepository } from '../repositories/invoice-and-payment.repository';
 import { UserRepository } from '../repositories/user.repository';
-import { AdminOperatorsController } from '../controllers/admin/operators.controller';
-import { OperatorHouseholdsController } from '../controllers/operator/households.controller';
-import { OperatorSessionsController } from '../controllers/operator/sessions.controller';
-import { OperatorAttendanceCreditsController } from '../controllers/operator/attendance-credits.controller';
-import { OperatorBillingController } from '../controllers/operator/billing.controller';
-import { OperatorRemindersController } from '../controllers/operator/reminders.controller';
-import { OperatorAutopayController } from '../controllers/operator/autopay.controller';
-import { ParentHouseholdsController } from '../controllers/parent/households.controller';
-import { ParentBookingController } from '../controllers/parent/booking.controller';
-import { ParentAttendanceCreditsController } from '../controllers/parent/attendance-credits.controller';
-import { ParentBillingController } from '../controllers/parent/billing.controller';
-import { ParentAutopayController } from '../controllers/parent/autopay.controller';
+import { HouseholdsServer } from '../servers/households.server';
+import { SessionsServer } from '../servers/sessions.server';
+import { AttendanceCreditsServer } from '../servers/attendance-credits.server';
+import { BillingServer } from '../servers/billing.server';
+import { AutopayServer } from '../servers/autopay.server';
+import { RemindersServer } from '../servers/reminders.server';
+import { OperatorsServer } from '../servers/operators.server';
+import { AdminController } from '../controllers/admin.controller';
+import { OperatorController } from '../controllers/operator.controller';
+import { ParentController } from '../controllers/parent.controller';
 
 async function bootstrap(): Promise<void> {
 	const logger: Logger = new PinoLogger();
@@ -59,20 +57,17 @@ async function bootstrap(): Promise<void> {
 	container.bind<InvoiceAndPaymentRepository>(TYPES.InvoiceAndPaymentRepository).to(InvoiceAndPaymentRepository).inSingletonScope();
 	container.bind<UserRepository>(TYPES.UserRepository).to(UserRepository).inSingletonScope();
 
-	container.bind<AdminOperatorsController>(TYPES.AdminOperatorsController).to(AdminOperatorsController).inSingletonScope();
+	container.bind<HouseholdsServer>(TYPES.HouseholdsServer).to(HouseholdsServer).inSingletonScope();
+	container.bind<SessionsServer>(TYPES.SessionsServer).to(SessionsServer).inSingletonScope();
+	container.bind<AttendanceCreditsServer>(TYPES.AttendanceCreditsServer).to(AttendanceCreditsServer).inSingletonScope();
+	container.bind<BillingServer>(TYPES.BillingServer).to(BillingServer).inSingletonScope();
+	container.bind<AutopayServer>(TYPES.AutopayServer).to(AutopayServer).inSingletonScope();
+	container.bind<RemindersServer>(TYPES.RemindersServer).to(RemindersServer).inSingletonScope();
+	container.bind<OperatorsServer>(TYPES.OperatorsServer).to(OperatorsServer).inSingletonScope();
 
-	container.bind<OperatorHouseholdsController>(TYPES.OperatorHouseholdsController).to(OperatorHouseholdsController).inSingletonScope();
-	container.bind<OperatorSessionsController>(TYPES.OperatorSessionsController).to(OperatorSessionsController).inSingletonScope();
-	container.bind<OperatorAttendanceCreditsController>(TYPES.OperatorAttendanceCreditsController).to(OperatorAttendanceCreditsController).inSingletonScope();
-	container.bind<OperatorBillingController>(TYPES.OperatorBillingController).to(OperatorBillingController).inSingletonScope();
-	container.bind<OperatorRemindersController>(TYPES.OperatorRemindersController).to(OperatorRemindersController).inSingletonScope();
-	container.bind<OperatorAutopayController>(TYPES.OperatorAutopayController).to(OperatorAutopayController).inSingletonScope();
-
-	container.bind<ParentHouseholdsController>(TYPES.ParentHouseholdsController).to(ParentHouseholdsController).inSingletonScope();
-	container.bind<ParentBookingController>(TYPES.ParentBookingController).to(ParentBookingController).inSingletonScope();
-	container.bind<ParentAttendanceCreditsController>(TYPES.ParentAttendanceCreditsController).to(ParentAttendanceCreditsController).inSingletonScope();
-	container.bind<ParentBillingController>(TYPES.ParentBillingController).to(ParentBillingController).inSingletonScope();
-	container.bind<ParentAutopayController>(TYPES.ParentAutopayController).to(ParentAutopayController).inSingletonScope();
+	container.bind<AdminController>(TYPES.AdminController).to(AdminController).inSingletonScope();
+	container.bind<OperatorController>(TYPES.OperatorController).to(OperatorController).inSingletonScope();
+	container.bind<ParentController>(TYPES.ParentController).to(ParentController).inSingletonScope();
 
 	container.bind<App>(TYPES.App).to(App).inSingletonScope();
 	container.bind<Server>(TYPES.Server).to(Server).inSingletonScope();

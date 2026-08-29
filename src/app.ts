@@ -7,41 +7,20 @@ import { Config } from './config/env';
 import { Logger } from './logger/logger';
 import { RequestContext } from './controllers/shared/request-context';
 import { RouteHandlers } from './controllers/shared/route-handlers';
-import { AdminOperatorsController } from './controllers/admin/operators.controller';
-import { OperatorHouseholdsController } from './controllers/operator/households.controller';
-import { OperatorSessionsController } from './controllers/operator/sessions.controller';
-import { OperatorAttendanceCreditsController } from './controllers/operator/attendance-credits.controller';
-import { OperatorBillingController } from './controllers/operator/billing.controller';
-import { OperatorRemindersController } from './controllers/operator/reminders.controller';
-import { OperatorAutopayController } from './controllers/operator/autopay.controller';
-import { ParentHouseholdsController } from './controllers/parent/households.controller';
-import { ParentBookingController } from './controllers/parent/booking.controller';
-import { ParentAttendanceCreditsController } from './controllers/parent/attendance-credits.controller';
-import { ParentBillingController } from './controllers/parent/billing.controller';
-import { ParentAutopayController } from './controllers/parent/autopay.controller';
+import { AdminController } from './controllers/admin.controller';
+import { OperatorController } from './controllers/operator.controller';
+import { ParentController } from './controllers/parent.controller';
 
 @injectable()
 export class App {
 	private readonly internalExpress: Express;
 
 	public constructor(
-		// General app dependencies
 		@inject(TYPES.Config) private readonly config: Config,
 		@inject(TYPES.Logger) private readonly logger: Logger,
-
-		// Controllers - routers
-		@inject(TYPES.AdminOperatorsController) private readonly adminOperators: AdminOperatorsController,
-		@inject(TYPES.OperatorHouseholdsController) private readonly operatorHouseholds: OperatorHouseholdsController,
-		@inject(TYPES.OperatorSessionsController) private readonly operatorSessions: OperatorSessionsController,
-		@inject(TYPES.OperatorAttendanceCreditsController) private readonly operatorAttendanceCredits: OperatorAttendanceCreditsController,
-		@inject(TYPES.OperatorBillingController) private readonly operatorBilling: OperatorBillingController,
-		@inject(TYPES.OperatorRemindersController) private readonly operatorReminders: OperatorRemindersController,
-		@inject(TYPES.OperatorAutopayController) private readonly operatorAutopay: OperatorAutopayController,
-		@inject(TYPES.ParentHouseholdsController) private readonly parentHouseholds: ParentHouseholdsController,
-		@inject(TYPES.ParentBookingController) private readonly parentBooking: ParentBookingController,
-		@inject(TYPES.ParentAttendanceCreditsController) private readonly parentAttendanceCredits: ParentAttendanceCreditsController,
-		@inject(TYPES.ParentBillingController) private readonly parentBilling: ParentBillingController,
-		@inject(TYPES.ParentAutopayController) private readonly parentAutopay: ParentAutopayController,
+		@inject(TYPES.AdminController) private readonly adminController: AdminController,
+		@inject(TYPES.OperatorController) private readonly operatorController: OperatorController,
+		@inject(TYPES.ParentController) private readonly parentController: ParentController,
 	) {
 		this.internalExpress = express();
 		this.middleware();
@@ -61,20 +40,9 @@ export class App {
 	}
 
 	private routes(): void {
-		this.internalExpress.use('/api/admin/operators', this.adminOperators.router);
-
-		this.internalExpress.use('/api/operator/households', this.operatorHouseholds.router);
-		this.internalExpress.use('/api/operator/sessions', this.operatorSessions.router);
-		this.internalExpress.use('/api/operator/attendance-credits', this.operatorAttendanceCredits.router);
-		this.internalExpress.use('/api/operator/billing', this.operatorBilling.router);
-		this.internalExpress.use('/api/operator/reminders', this.operatorReminders.router);
-		this.internalExpress.use('/api/operator/autopay', this.operatorAutopay.router);
-
-		this.internalExpress.use('/api/parent/households', this.parentHouseholds.router);
-		this.internalExpress.use('/api/parent/booking', this.parentBooking.router);
-		this.internalExpress.use('/api/parent/attendance-credits', this.parentAttendanceCredits.router);
-		this.internalExpress.use('/api/parent/billing', this.parentBilling.router);
-		this.internalExpress.use('/api/parent/autopay', this.parentAutopay.router);
+		this.internalExpress.use('/api/admin', this.adminController.router);
+		this.internalExpress.use('/api/operator', this.operatorController.router);
+		this.internalExpress.use('/api/parent', this.parentController.router);
 	}
 
 	// Must be mounted after every route —
