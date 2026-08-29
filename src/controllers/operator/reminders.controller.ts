@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { injectable } from 'inversify';
-import { notImplemented } from '../shared/not-implemented';
+import { RouteHandlers } from '../shared/route-handlers';
 
 // UC5: Automated Payment Reminders & Consolidated Invoicing.
 // TODO: entirely unsupported by the current schema — no table for
@@ -15,10 +15,10 @@ export class OperatorRemindersController {
 
 	public constructor() {
 		this.internalRouter = Router();
-		this.internalRouter.put('/config', notImplemented);
-		this.internalRouter.get('/dunning-status/:householdId', notImplemented);
-		this.internalRouter.post('/broadcast', notImplemented);
-		this.internalRouter.get('/broadcast/:id/delivery-receipts', notImplemented);
+		this.internalRouter.put('/config', RouteHandlers.notImplemented);
+		this.internalRouter.get('/dunning-status/:householdId', RouteHandlers.notImplemented);
+		this.internalRouter.post('/broadcast', RouteHandlers.notImplemented);
+		this.internalRouter.get('/broadcast/:id/delivery-receipts', RouteHandlers.notImplemented);
 	}
 
 	public get router(): Router {

@@ -3,8 +3,7 @@ import { inject, injectable } from 'inversify';
 import { TYPES } from '../../container/types';
 import { SessionRepository } from '../../repositories/session.repository';
 import { EnrollmentAndCreditRepository } from '../../repositories/enrollment-and-credit.repository';
-import { notImplemented } from '../shared/not-implemented';
-import { asyncHandler } from '../shared/async-handler';
+import { RouteHandlers } from '../shared/route-handlers';
 
 // UC2: Automated Session Booking & Capacity Hard Limits (parent side).
 @injectable()
@@ -16,15 +15,15 @@ export class ParentBookingController {
 		@inject(TYPES.EnrollmentAndCreditRepository) private readonly enrollments: EnrollmentAndCreditRepository,
 	) {
 		this.internalRouter = Router();
-		this.internalRouter.get('/sessions', notImplemented); // TODO: browse-by-availability listing, not yet designed
-		this.internalRouter.post('/sessions/:sessionId/book', asyncHandler(this.book.bind(this)));
-		this.internalRouter.get('/households/:householdId/enrollments', asyncHandler(this.listEnrollments.bind(this)));
+		this.internalRouter.get('/sessions', RouteHandlers.notImplemented); // TODO: browse-by-availability listing, not yet designed
+		this.internalRouter.post('/sessions/:sessionId/book', RouteHandlers.wrap(this.book.bind(this)));
+		this.internalRouter.get('/households/:householdId/enrollments', RouteHandlers.wrap(this.listEnrollments.bind(this)));
 		// TODO: requires a real waitlist (PRD: "queue-based waitlist
 		// ordered strictly by timestamp", automated promotion with a
 		// time-sensitive claim window on cancellation) — status is a free
 		// -text column with no queue-position or claim-deadline tracking.
-		this.internalRouter.get('/sessions/:sessionId/waitlist', notImplemented);
-		this.internalRouter.post('/waitlist/:enrollmentId/claim', notImplemented);
+		this.internalRouter.get('/sessions/:sessionId/waitlist', RouteHandlers.notImplemented);
+		this.internalRouter.post('/waitlist/:enrollmentId/claim', RouteHandlers.notImplemented);
 	}
 
 	public get router(): Router {

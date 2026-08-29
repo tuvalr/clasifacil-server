@@ -4,7 +4,7 @@ import { TYPES } from '../../container/types';
 import { PostgresHandler, TransactionHandle } from '../../services/postgres-handler';
 import { OperatorRepository } from '../../repositories/operator.repository';
 import { UserRepository } from '../../repositories/user.repository';
-import { asyncHandler } from '../shared/async-handler';
+import { RouteHandlers } from '../shared/route-handlers';
 
 @injectable()
 export class AdminOperatorsController {
@@ -16,9 +16,9 @@ export class AdminOperatorsController {
 		@inject(TYPES.UserRepository) private readonly users: UserRepository,
 	) {
 		this.internalRouter = Router();
-		this.internalRouter.get('/', asyncHandler(this.list.bind(this)));
-		this.internalRouter.get('/:id', asyncHandler(this.getById.bind(this)));
-		this.internalRouter.post('/', asyncHandler(this.create.bind(this)));
+		this.internalRouter.get('/', RouteHandlers.wrap(this.list.bind(this)));
+		this.internalRouter.get('/:id', RouteHandlers.wrap(this.getById.bind(this)));
+		this.internalRouter.post('/', RouteHandlers.wrap(this.create.bind(this)));
 	}
 
 	public get router(): Router {

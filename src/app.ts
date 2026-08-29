@@ -5,8 +5,8 @@ import { inject, injectable } from 'inversify';
 import { TYPES } from './container/types';
 import { Config } from './config/env';
 import { Logger } from './logger/logger';
-import { requestIdMiddleware } from './controllers/shared/request-id.middleware';
-import { createErrorHandler } from './controllers/shared/error-handler';
+import { RequestContext } from './controllers/shared/request-context';
+import { RouteHandlers } from './controllers/shared/route-handlers';
 import { AdminOperatorsController } from './controllers/admin/operators.controller';
 import { OperatorHouseholdsController } from './controllers/operator/households.controller';
 import { OperatorSessionsController } from './controllers/operator/sessions.controller';
@@ -25,8 +25,11 @@ export class App {
 	private readonly internalExpress: Express;
 
 	public constructor(
+		// General app dependencies
 		@inject(TYPES.Config) private readonly config: Config,
 		@inject(TYPES.Logger) private readonly logger: Logger,
+
+		// Controllers - routers
 		@inject(TYPES.AdminOperatorsController) private readonly adminOperators: AdminOperatorsController,
 		@inject(TYPES.OperatorHouseholdsController) private readonly operatorHouseholds: OperatorHouseholdsController,
 		@inject(TYPES.OperatorSessionsController) private readonly operatorSessions: OperatorSessionsController,
@@ -51,7 +54,7 @@ export class App {
 	}
 
 	private middleware(): void {
-		this.internalExpress.use(requestIdMiddleware);
+		this.internalExpress.use(RequestContext.middleware);
 		this.internalExpress.use(helmet());
 		this.internalExpress.use(cors({ origin: this.config.corsOrigin }));
 		this.internalExpress.use(express.json());
@@ -74,10 +77,9 @@ export class App {
 		this.internalExpress.use('/api/parent/autopay', this.parentAutopay.router);
 	}
 
-	// Must be mounted after every route — Express only invokes 4-param
-	// (error-handling) middleware for errors forwarded by something
-	// registered before it.
+	// Must be mounted after every route —
+	// Express only invokes 4-param (error-handling) middleware for errors forwarded by something registered before it.
 	private errorHandling(): void {
-		this.internalExpress.use(createErrorHandler(this.logger));
+		this.internalExpress.use(RouteHandlers.errorHandler(this.logger));
 	}
 }

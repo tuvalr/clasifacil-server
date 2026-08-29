@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { injectable } from 'inversify';
-import { notImplemented } from '../shared/not-implemented';
+import { RouteHandlers } from '../shared/route-handlers';
 
 // UC6: Parent Autopay Opt-Out & Operator Notice Controls (parent side).
 // TODO: entirely unsupported by the current schema — no
@@ -13,8 +13,8 @@ export class ParentAutopayController {
 
 	public constructor() {
 		this.internalRouter = Router();
-		this.internalRouter.get('/households/:householdId/autopay', notImplemented);
-		this.internalRouter.put('/households/:householdId/autopay', notImplemented);
+		this.internalRouter.get('/households/:householdId/autopay', RouteHandlers.notImplemented);
+		this.internalRouter.put('/households/:householdId/autopay', RouteHandlers.notImplemented);
 	}
 
 	public get router(): Router {

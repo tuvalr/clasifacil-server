@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { injectable } from 'inversify';
-import { notImplemented } from '../shared/not-implemented';
+import { RouteHandlers } from '../shared/route-handlers';
 
 // UC6: Parent Autopay Opt-Out & Operator Notice Controls (operator side —
 // configuring the notice-period policy).
@@ -14,8 +14,8 @@ export class OperatorAutopayController {
 
 	public constructor() {
 		this.internalRouter = Router();
-		this.internalRouter.put('/policy', notImplemented);
-		this.internalRouter.put('/policy/:householdId', notImplemented);
+		this.internalRouter.put('/policy', RouteHandlers.notImplemented);
+		this.internalRouter.put('/policy/:householdId', RouteHandlers.notImplemented);
 	}
 
 	public get router(): Router {

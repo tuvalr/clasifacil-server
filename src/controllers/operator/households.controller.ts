@@ -3,8 +3,7 @@ import { inject, injectable } from 'inversify';
 import { TYPES } from '../../container/types';
 import { HouseholdRepository } from '../../repositories/household.repository';
 import { StudentRepository } from '../../repositories/student.repository';
-import { notImplemented } from '../shared/not-implemented';
-import { asyncHandler } from '../shared/async-handler';
+import { RouteHandlers } from '../shared/route-handlers';
 
 // UC1: Household & Multi-Child Account Management (operator side).
 @injectable()
@@ -16,15 +15,15 @@ export class OperatorHouseholdsController {
 		@inject(TYPES.StudentRepository) private readonly students: StudentRepository,
 	) {
 		this.internalRouter = Router();
-		this.internalRouter.get('/', asyncHandler(this.list.bind(this)));
-		this.internalRouter.get('/:id', asyncHandler(this.getById.bind(this)));
-		this.internalRouter.get('/:id/students', asyncHandler(this.listStudents.bind(this)));
-		this.internalRouter.post('/:id/archive', asyncHandler(this.archive.bind(this)));
-		this.internalRouter.post('/:id/restore', asyncHandler(this.restore.bind(this)));
+		this.internalRouter.get('/', RouteHandlers.wrap(this.list.bind(this)));
+		this.internalRouter.get('/:id', RouteHandlers.wrap(this.getById.bind(this)));
+		this.internalRouter.get('/:id/students', RouteHandlers.wrap(this.listStudents.bind(this)));
+		this.internalRouter.post('/:id/archive', RouteHandlers.wrap(this.archive.bind(this)));
+		this.internalRouter.post('/:id/restore', RouteHandlers.wrap(this.restore.bind(this)));
 		// TODO: requires a co-parent/secondary-adult table (PRD UC1: "grant
 		// secondary view/booking access to a co-parent via email invite") —
 		// no such table exists yet.
-		this.internalRouter.post('/:id/invite-co-parent', notImplemented);
+		this.internalRouter.post('/:id/invite-co-parent', RouteHandlers.notImplemented);
 	}
 
 	public get router(): Router {

@@ -3,8 +3,7 @@ import { inject, injectable } from 'inversify';
 import { TYPES } from '../../container/types';
 import { HouseholdRepository } from '../../repositories/household.repository';
 import { StudentRepository } from '../../repositories/student.repository';
-import { notImplemented } from '../shared/not-implemented';
-import { asyncHandler } from '../shared/async-handler';
+import { RouteHandlers } from '../shared/route-handlers';
 
 // UC1: Household & Multi-Child Account Management (parent side).
 @injectable()
@@ -16,21 +15,21 @@ export class ParentHouseholdsController {
 		@inject(TYPES.StudentRepository) private readonly students: StudentRepository,
 	) {
 		this.internalRouter = Router();
-		this.internalRouter.get('/:id', asyncHandler(this.getById.bind(this)));
-		this.internalRouter.put('/:id', asyncHandler(this.update.bind(this)));
-		this.internalRouter.get('/:id/students', asyncHandler(this.listStudents.bind(this)));
-		this.internalRouter.post('/:id/students', asyncHandler(this.createStudent.bind(this)));
-		this.internalRouter.put('/:id/students/:studentId', asyncHandler(this.updateStudent.bind(this)));
+		this.internalRouter.get('/:id', RouteHandlers.wrap(this.getById.bind(this)));
+		this.internalRouter.put('/:id', RouteHandlers.wrap(this.update.bind(this)));
+		this.internalRouter.get('/:id/students', RouteHandlers.wrap(this.listStudents.bind(this)));
+		this.internalRouter.post('/:id/students', RouteHandlers.wrap(this.createStudent.bind(this)));
+		this.internalRouter.put('/:id/students/:studentId', RouteHandlers.wrap(this.updateStudent.bind(this)));
 		// PRD UC1 edge case: "Archiving a Child Profile" — retain
 		// historical attendance/invoice logs, remove from active roster
 		// selectors. This is exactly PostgresHandler's soft-delete, so it
 		// IS implemented.
-		this.internalRouter.post('/:id/students/:studentId/archive', asyncHandler(this.archiveStudent.bind(this)));
+		this.internalRouter.post('/:id/students/:studentId/archive', RouteHandlers.wrap(this.archiveStudent.bind(this)));
 		// TODO: requires a co-parent/secondary-adult table (PRD: "grant
 		// secondary view/booking access to a co-parent or caregiver via
 		// email invite") — no such table exists yet.
-		this.internalRouter.get('/:id/co-parents', notImplemented);
-		this.internalRouter.post('/:id/co-parents/invite', notImplemented);
+		this.internalRouter.get('/:id/co-parents', RouteHandlers.notImplemented);
+		this.internalRouter.post('/:id/co-parents/invite', RouteHandlers.notImplemented);
 	}
 
 	public get router(): Router {

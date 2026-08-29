@@ -2,8 +2,7 @@ import { Router, Request, Response } from 'express';
 import { inject, injectable } from 'inversify';
 import { TYPES } from '../../container/types';
 import { InvoiceAndPaymentRepository } from '../../repositories/invoice-and-payment.repository';
-import { notImplemented } from '../shared/not-implemented';
-import { asyncHandler } from '../shared/async-handler';
+import { RouteHandlers } from '../shared/route-handlers';
 
 // UC4: Flexible Multi-Tier Payment & Billing Engine (operator side).
 @injectable()
@@ -12,24 +11,24 @@ export class OperatorBillingController {
 
 	public constructor(@inject(TYPES.InvoiceAndPaymentRepository) private readonly invoices: InvoiceAndPaymentRepository) {
 		this.internalRouter = Router();
-		this.internalRouter.get('/', asyncHandler(this.list.bind(this)));
-		this.internalRouter.get('/:id', asyncHandler(this.getById.bind(this)));
+		this.internalRouter.get('/', RouteHandlers.wrap(this.list.bind(this)));
+		this.internalRouter.get('/:id', RouteHandlers.wrap(this.getById.bind(this)));
 		// Model 2: Cash / Offline Payment Recording. PRD requires logging
 		// WHO recorded the payment "to prevent unrecorded revenue" — the
 		// invoices_and_payments table has operator_id (who the invoice
 		// belongs to) but no separate recorded_by_user_id column, so this
 		// only marks the invoice paid; it can't yet record which staff
 		// member logged it.
-		this.internalRouter.post('/:id/record-offline-payment', asyncHandler(this.recordOfflinePayment.bind(this)));
+		this.internalRouter.post('/:id/record-offline-payment', RouteHandlers.wrap(this.recordOfflinePayment.bind(this)));
 		// TODO: requires a class-pack balance table (PRD Model 3: "10-class
 		// pack for €130", decremented per booking) — no such table exists
 		// yet.
-		this.internalRouter.get('/class-packs/:householdId', notImplemented);
+		this.internalRouter.get('/class-packs/:householdId', RouteHandlers.notImplemented);
 		// TODO: requires Stripe Connect integration (PRD Model 4: split
 		// payouts to the operator's connected account) — no Stripe SDK is
 		// installed and operators.stripe_account_id, while present, isn't
 		// wired to any payment flow yet.
-		this.internalRouter.post('/stripe/connect', notImplemented);
+		this.internalRouter.post('/stripe/connect', RouteHandlers.notImplemented);
 	}
 
 	public get router(): Router {
