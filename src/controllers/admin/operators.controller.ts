@@ -24,7 +24,7 @@ export class AdminOperatorsController {
 		return this.internalRouter;
 	}
 
-	private async list(req: Request, res: Response): Promise<void> {
+	private async list(_req: Request, res: Response): Promise<void> {
 		const operators = await this.operators.findAll();
 		res.json(operators);
 	}
@@ -38,16 +38,17 @@ export class AdminOperatorsController {
 		res.json(operator);
 	}
 
-	// Creates the operators row and its login-capable users row (role:
-	// 'operator', associatedEntityId: the new operator's id) together —
-	// if either insert fails, both roll back, so an operator can never
-	// be left without a way to log in.
+	// Creates the operators row and its login-capable users row (role: 'operator', associatedEntityId: the new operator's id) together —
+	// if either insert fails, both roll back, so an operator can never be left without a way to log in.
 	private async create(req: Request, res: Response): Promise<void> {
 		const { name, email, authUid } = req.body as { name: string; email: string; authUid: string };
 
-		const result = await this.db.transaction(async (tx: TransactionHandle) => {
-			const operator = await this.operators.create({ name, email }, tx);
-			const user = await this.users.create({ authUid, email, role: 'operator', associatedEntityId: operator.id }, tx);
+		// TODO: create Auth user with authUid and email, and ensure that the authUid is unique (i.e., not already in use by another user).
+		// If the Auth user creation fails, we should not create the operator or user rows in the database.
+
+		const result = await this.db.transaction(async (transaction: TransactionHandle) => {
+			const operator = await this.operators.create({ name, email }, transaction);
+			const user = await this.users.create({ authUid, email, role: 'operator', associatedEntityId: operator.id }, transaction);
 			return { operator, user };
 		});
 

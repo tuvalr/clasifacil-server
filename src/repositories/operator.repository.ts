@@ -15,9 +15,7 @@ export class OperatorRepository {
 		return this.db.findById(OperatorEntity, id);
 	}
 
-	// Accepts an optional TransactionHandle — see UserRepository.create()
-	// for why (AdminOperatorsController creates an operator + its user
-	// account atomically).
+	// Accepts an optional TransactionHandle — see UserRepository.create() for why (AdminOperatorsController creates an operator + its user account atomically).
 	public async create(data: { name: string; email: string }, tx?: TransactionHandle): Promise<Operator> {
 		const db = tx ?? this.db;
 		return db.insert(OperatorEntity, { ...data, isDeleted: false });
