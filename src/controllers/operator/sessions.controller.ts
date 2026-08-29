@@ -3,6 +3,7 @@ import { inject, injectable } from 'inversify';
 import { TYPES } from '../../container/types';
 import { SessionRepository } from '../../repositories/session.repository';
 import { EnrollmentAndCreditRepository } from '../../repositories/enrollment-and-credit.repository';
+import { asyncHandler } from '../shared/async-handler';
 
 // UC2: Automated Session Booking & Capacity Hard Limits (operator side —
 // creating/managing sessions; booking itself is the parent side, see
@@ -16,11 +17,11 @@ export class OperatorSessionsController {
 		@inject(TYPES.EnrollmentAndCreditRepository) private readonly enrollments: EnrollmentAndCreditRepository,
 	) {
 		this.internalRouter = Router();
-		this.internalRouter.get('/', this.list.bind(this));
-		this.internalRouter.get('/:id', this.getById.bind(this));
-		this.internalRouter.get('/:id/roster', this.roster.bind(this));
-		this.internalRouter.post('/', this.create.bind(this));
-		this.internalRouter.post('/:id/cancel', this.cancel.bind(this));
+		this.internalRouter.get('/', asyncHandler(this.list.bind(this)));
+		this.internalRouter.get('/:id', asyncHandler(this.getById.bind(this)));
+		this.internalRouter.get('/:id/roster', asyncHandler(this.roster.bind(this)));
+		this.internalRouter.post('/', asyncHandler(this.create.bind(this)));
+		this.internalRouter.post('/:id/cancel', asyncHandler(this.cancel.bind(this)));
 	}
 
 	public get router(): Router {

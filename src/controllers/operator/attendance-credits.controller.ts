@@ -3,6 +3,7 @@ import { inject, injectable } from 'inversify';
 import { TYPES } from '../../container/types';
 import { EnrollmentAndCreditRepository } from '../../repositories/enrollment-and-credit.repository';
 import { notImplemented } from '../shared/not-implemented';
+import { asyncHandler } from '../shared/async-handler';
 
 // UC3: Attendance Tracking & Automated Make-Up Credit State Machine
 // (operator side — configuring policy, viewing state).
@@ -12,7 +13,7 @@ export class OperatorAttendanceCreditsController {
 
 	public constructor(@inject(TYPES.EnrollmentAndCreditRepository) private readonly enrollments: EnrollmentAndCreditRepository) {
 		this.internalRouter = Router();
-		this.internalRouter.get('/session/:sessionId', this.listBySession.bind(this));
+		this.internalRouter.get('/session/:sessionId', asyncHandler(this.listBySession.bind(this)));
 		// TODO: requires a cancellation-policy-window column (PRD: "e.g.
 		// >24 hours before session start") on operators or sessions — no
 		// such column exists yet.

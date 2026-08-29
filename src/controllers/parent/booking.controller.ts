@@ -4,6 +4,7 @@ import { TYPES } from '../../container/types';
 import { SessionRepository } from '../../repositories/session.repository';
 import { EnrollmentAndCreditRepository } from '../../repositories/enrollment-and-credit.repository';
 import { notImplemented } from '../shared/not-implemented';
+import { asyncHandler } from '../shared/async-handler';
 
 // UC2: Automated Session Booking & Capacity Hard Limits (parent side).
 @injectable()
@@ -16,8 +17,8 @@ export class ParentBookingController {
 	) {
 		this.internalRouter = Router();
 		this.internalRouter.get('/sessions', notImplemented); // TODO: browse-by-availability listing, not yet designed
-		this.internalRouter.post('/sessions/:sessionId/book', this.book.bind(this));
-		this.internalRouter.get('/households/:householdId/enrollments', this.listEnrollments.bind(this));
+		this.internalRouter.post('/sessions/:sessionId/book', asyncHandler(this.book.bind(this)));
+		this.internalRouter.get('/households/:householdId/enrollments', asyncHandler(this.listEnrollments.bind(this)));
 		// TODO: requires a real waitlist (PRD: "queue-based waitlist
 		// ordered strictly by timestamp", automated promotion with a
 		// time-sensitive claim window on cancellation) — status is a free

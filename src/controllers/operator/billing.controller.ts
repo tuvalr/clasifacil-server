@@ -3,6 +3,7 @@ import { inject, injectable } from 'inversify';
 import { TYPES } from '../../container/types';
 import { InvoiceAndPaymentRepository } from '../../repositories/invoice-and-payment.repository';
 import { notImplemented } from '../shared/not-implemented';
+import { asyncHandler } from '../shared/async-handler';
 
 // UC4: Flexible Multi-Tier Payment & Billing Engine (operator side).
 @injectable()
@@ -11,15 +12,15 @@ export class OperatorBillingController {
 
 	public constructor(@inject(TYPES.InvoiceAndPaymentRepository) private readonly invoices: InvoiceAndPaymentRepository) {
 		this.internalRouter = Router();
-		this.internalRouter.get('/', this.list.bind(this));
-		this.internalRouter.get('/:id', this.getById.bind(this));
+		this.internalRouter.get('/', asyncHandler(this.list.bind(this)));
+		this.internalRouter.get('/:id', asyncHandler(this.getById.bind(this)));
 		// Model 2: Cash / Offline Payment Recording. PRD requires logging
 		// WHO recorded the payment "to prevent unrecorded revenue" — the
 		// invoices_and_payments table has operator_id (who the invoice
 		// belongs to) but no separate recorded_by_user_id column, so this
 		// only marks the invoice paid; it can't yet record which staff
 		// member logged it.
-		this.internalRouter.post('/:id/record-offline-payment', this.recordOfflinePayment.bind(this));
+		this.internalRouter.post('/:id/record-offline-payment', asyncHandler(this.recordOfflinePayment.bind(this)));
 		// TODO: requires a class-pack balance table (PRD Model 3: "10-class
 		// pack for €130", decremented per booking) — no such table exists
 		// yet.

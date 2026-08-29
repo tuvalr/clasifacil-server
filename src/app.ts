@@ -4,6 +4,9 @@ import cors from 'cors';
 import { inject, injectable } from 'inversify';
 import { TYPES } from './container/types';
 import { Config } from './config/env';
+import { Logger } from './logger/logger';
+import { requestIdMiddleware } from './controllers/shared/request-id.middleware';
+import { createErrorHandler } from './controllers/shared/error-handler';
 import { AdminOperatorsController } from './controllers/admin/operators.controller';
 import { OperatorHouseholdsController } from './controllers/operator/households.controller';
 import { OperatorSessionsController } from './controllers/operator/sessions.controller';
@@ -23,6 +26,7 @@ export class App {
 
 	public constructor(
 		@inject(TYPES.Config) private readonly config: Config,
+		@inject(TYPES.Logger) private readonly logger: Logger,
 		@inject(TYPES.AdminOperatorsController) private readonly adminOperators: AdminOperatorsController,
 		@inject(TYPES.OperatorHouseholdsController) private readonly operatorHouseholds: OperatorHouseholdsController,
 		@inject(TYPES.OperatorSessionsController) private readonly operatorSessions: OperatorSessionsController,
@@ -39,6 +43,7 @@ export class App {
 		this.internalExpress = express();
 		this.middleware();
 		this.routes();
+		this.errorHandling();
 	}
 
 	public get express(): Express {
@@ -46,6 +51,7 @@ export class App {
 	}
 
 	private middleware(): void {
+		this.internalExpress.use(requestIdMiddleware);
 		this.internalExpress.use(helmet());
 		this.internalExpress.use(cors({ origin: this.config.corsOrigin }));
 		this.internalExpress.use(express.json());
@@ -66,5 +72,12 @@ export class App {
 		this.internalExpress.use('/api/parent/attendance-credits', this.parentAttendanceCredits.router);
 		this.internalExpress.use('/api/parent/billing', this.parentBilling.router);
 		this.internalExpress.use('/api/parent/autopay', this.parentAutopay.router);
+	}
+
+	// Must be mounted after every route — Express only invokes 4-param
+	// (error-handling) middleware for errors forwarded by something
+	// registered before it.
+	private errorHandling(): void {
+		this.internalExpress.use(createErrorHandler(this.logger));
 	}
 }

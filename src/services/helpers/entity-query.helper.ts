@@ -4,19 +4,15 @@ import { snakeToCamel, camelToSnake } from '../../utils/case-mapper';
 
 const IDENTIFIER_PATTERN = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
 
-// Satisfied by both Pool and PoolClient — lets every method below run
-// against either a fresh pool connection (normal calls) or a single
-// checked-out client held across a transaction (see
-// TransactionHandleFactory / PostgresHandler.transaction()), with
-// identical behavior either way.
+// Satisfied by both Pool and PoolClient — lets every method below run against either a fresh pool connection (normal calls) or a single checked-out client
+// held across a transaction (see TransactionHandleFactory / PostgresHandler.transaction()), with identical behavior either way.
 export interface Queryable {
 	query<T extends QueryResultRow>(sql: string, params?: unknown[]): Promise<{ rows: T[] }>;
 }
 
-// Entity-aware CRUD built on top of a raw Queryable. Table/column names
-// are interpolated into SQL (Postgres can't parameterize identifiers),
-// so every one is checked against an allowlist first; values are always
-// passed as query parameters, never interpolated.
+// Entity-aware CRUD built on top of a raw Queryable.
+// Table/column names are interpolated into SQL (Postgres can't parameterize identifiers),
+// so every one is checked against an allowlist first; values are always passed as query parameters, never interpolated.
 export class EntityQueryHelper {
 	public assertValidIdentifier(name: string): void {
 		if (!IDENTIFIER_PATTERN.test(name)) {
@@ -46,8 +42,7 @@ export class EntityQueryHelper {
 		return rows[0] ?? null;
 	}
 
-	// `data` uses camelCase keys matching T's TypeScript properties (e.g.
-	// { isDeleted: false }), converted to snake_case columns here —
+	// `data` uses camelCase keys matching T's TypeScript properties (e.g. { isDeleted: false }), converted to snake_case columns here —
 	// callers never need to know or write the underlying column names.
 	public async insert<T extends BaseEntity>(db: Queryable, entity: EntityDescriptor<T>, data: Record<string, unknown>): Promise<T> {
 		this.assertValidIdentifier(entity.tableName);

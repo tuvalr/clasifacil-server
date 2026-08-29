@@ -4,6 +4,7 @@ import { TYPES } from '../../container/types';
 import { HouseholdRepository } from '../../repositories/household.repository';
 import { StudentRepository } from '../../repositories/student.repository';
 import { notImplemented } from '../shared/not-implemented';
+import { asyncHandler } from '../shared/async-handler';
 
 // UC1: Household & Multi-Child Account Management (operator side).
 @injectable()
@@ -15,11 +16,11 @@ export class OperatorHouseholdsController {
 		@inject(TYPES.StudentRepository) private readonly students: StudentRepository,
 	) {
 		this.internalRouter = Router();
-		this.internalRouter.get('/', this.list.bind(this));
-		this.internalRouter.get('/:id', this.getById.bind(this));
-		this.internalRouter.get('/:id/students', this.listStudents.bind(this));
-		this.internalRouter.post('/:id/archive', this.archive.bind(this));
-		this.internalRouter.post('/:id/restore', this.restore.bind(this));
+		this.internalRouter.get('/', asyncHandler(this.list.bind(this)));
+		this.internalRouter.get('/:id', asyncHandler(this.getById.bind(this)));
+		this.internalRouter.get('/:id/students', asyncHandler(this.listStudents.bind(this)));
+		this.internalRouter.post('/:id/archive', asyncHandler(this.archive.bind(this)));
+		this.internalRouter.post('/:id/restore', asyncHandler(this.restore.bind(this)));
 		// TODO: requires a co-parent/secondary-adult table (PRD UC1: "grant
 		// secondary view/booking access to a co-parent via email invite") —
 		// no such table exists yet.

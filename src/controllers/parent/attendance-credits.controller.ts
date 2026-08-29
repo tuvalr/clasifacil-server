@@ -4,6 +4,7 @@ import { TYPES } from '../../container/types';
 import { EnrollmentAndCreditRepository } from '../../repositories/enrollment-and-credit.repository';
 import { SessionRepository } from '../../repositories/session.repository';
 import { EnrollmentAndCredit } from '../../entities/enrollment-and-credit.entity';
+import { asyncHandler } from '../shared/async-handler';
 
 const CREDIT_EXPIRY_DAYS = 90;
 
@@ -18,8 +19,8 @@ export class ParentAttendanceCreditsController {
 		@inject(TYPES.SessionRepository) private readonly sessions: SessionRepository,
 	) {
 		this.internalRouter = Router();
-		this.internalRouter.post('/:enrollmentId/cancel', this.cancel.bind(this));
-		this.internalRouter.get('/households/:householdId/credits', this.listCredits.bind(this));
+		this.internalRouter.post('/:enrollmentId/cancel', asyncHandler(this.cancel.bind(this)));
+		this.internalRouter.get('/households/:householdId/credits', asyncHandler(this.listCredits.bind(this)));
 	}
 
 	public get router(): Router {
