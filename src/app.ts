@@ -9,9 +9,9 @@ import { Logger } from './logger/logger';
 import { RequestContext } from './controllers/shared/request-context';
 import { RouteHandlers } from './controllers/shared/route-handlers';
 import { swaggerSpec } from './docs/swagger-spec';
-import { AdminController } from './controllers/admin.controller';
-import { OperatorController } from './controllers/operator.controller';
-import { ParentController } from './controllers/parent.controller';
+import { AdminController } from './controllers/admin/admin.controller';
+import { OperatorController } from './controllers/operator/operator.controller';
+import { ParentController } from './controllers/parent/parent.controller';
 
 @injectable()
 export class App {

@@ -1,20 +1,24 @@
-import { Request, Response, NextFunction } from 'express';
+import { Request, Response, NextFunction, ParamsDictionary, RequestHandler } from 'express-serve-static-core';
 import { Logger } from '../../logger/logger';
-import './request-context';
+import './types/express-request.type';
 
-type AsyncRequestHandler = (req: Request, res: Response, next: NextFunction) => Promise<void>;
+type AsyncRequestHandler<P = ParamsDictionary, ResBody = unknown, ReqBody = unknown, ReqQuery = unknown> = (
+	req: Request<P, ResBody, ReqBody, ReqQuery>,
+	res: Response<ResBody>,
+	next: NextFunction,
+) => Promise<void>;
 
 export class RouteHandlers {
 	// Express doesn't await async route handlers itself — a rejected promise from one is silently swallowed rather than forwarded to
 	// error-handling middleware. Wrapping a handler with this forwards any thrown/rejected error to next(err) instead, so errorHandler
-	// below always sees it.
-	public static wrap(handler: AsyncRequestHandler): AsyncRequestHandler {
-		return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-			try {
-				await handler(req, res, next);
-			} catch (error) {
-				next(error);
-			}
+	// below always sees it. Generic over Express's own RequestHandler type parameters (P/ResBody/ReqBody/ReqQuery) — matching
+	// RequestHandler's shape exactly (not a custom Request/Response pairing) is what lets router.get/post/etc. unify route-specific
+	// types (see src/controllers/types/) through wrap() instead of widening back to the untyped defaults.
+	public static wrap<P = ParamsDictionary, ResBody = unknown, ReqBody = unknown, ReqQuery = unknown>(
+		handler: AsyncRequestHandler<P, ResBody, ReqBody, ReqQuery>,
+	): RequestHandler<P, ResBody, ReqBody, ReqQuery> {
+		return (req: Request<P, ResBody, ReqBody, ReqQuery>, res: Response<ResBody>, next: NextFunction): void => {
+			handler(req, res, next).catch(next);
 		};
 	}
 

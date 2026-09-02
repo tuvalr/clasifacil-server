@@ -1,14 +1,6 @@
 import { randomUUID } from 'crypto';
 import { Request, Response, NextFunction } from 'express';
-
-// Augments Express's Request with the per-request correlation ID set by RequestContext.middleware,
-// so it can be read (req.correlationId) anywhere a request flows — route handlers, the global error handler,
-// future logging middleware — without threading it through as a parameter.
-declare module 'express-serve-static-core' {
-	interface Request {
-		correlationId: string;
-	}
-}
+import './types/express-request.type';
 
 export class RequestContext {
 	// Mounted first, before any route: gives every request a correlation ID available to every log line during that request (not just an

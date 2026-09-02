@@ -127,6 +127,8 @@ export const swaggerSpec = swaggerJsdoc({
 	},
 	// Resolved relative to process.cwd() (the project root when run via
 	// npm scripts), not this file's own location — must stay as-is if
-	// this file ever moves.
-	apis: ['./src/controllers/*.ts'],
+	// this file ever moves. Recursive (**) since each controller now
+	// lives in its own subfolder (src/controllers/admin/admin.controller.ts
+	// etc.) rather than flat under src/controllers/.
+	apis: ['./src/controllers/**/*.controller.ts'],
 });

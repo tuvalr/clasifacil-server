@@ -31,9 +31,9 @@ import { BillingServer } from '../servers/billing.server';
 import { AutopayServer } from '../servers/autopay.server';
 import { RemindersServer } from '../servers/reminders.server';
 import { OperatorsServer } from '../servers/operators.server';
-import { AdminController } from '../controllers/admin.controller';
-import { OperatorController } from '../controllers/operator.controller';
-import { ParentController } from '../controllers/parent.controller';
+import { AdminController } from '../controllers/admin/admin.controller';
+import { OperatorController } from '../controllers/operator/operator.controller';
+import { ParentController } from '../controllers/parent/parent.controller';
 
 async function bootstrap(): Promise<void> {
 	const logger: Logger = new PinoLogger();

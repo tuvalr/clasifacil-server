@@ -1,12 +1,26 @@
 import { Router, Request, Response } from 'express';
 import { inject, injectable } from 'inversify';
-import { TYPES } from '../container/types';
-import { HouseholdsServer } from '../servers/households.server';
-import { SessionsServer } from '../servers/sessions.server';
-import { AttendanceCreditsServer } from '../servers/attendance-credits.server';
-import { BillingServer } from '../servers/billing.server';
-import { RouteHandlers } from './shared/route-handlers';
-import { BaseController } from './shared/base.controller';
+import { TYPES } from '../../container/types';
+import { HouseholdsServer } from '../../servers/households.server';
+import { SessionsServer } from '../../servers/sessions.server';
+import { AttendanceCreditsServer } from '../../servers/attendance-credits.server';
+import { BillingServer } from '../../servers/billing.server';
+import { RouteHandlers } from '../shared/route-handlers';
+import { BaseController } from '../shared/base.controller';
+import { GetOwnHouseholdResponse } from './types/get-own-household-response.type';
+import { UpdateHouseholdBody } from './types/update-household-body.type';
+import { UpdateHouseholdResponse } from './types/update-household-response.type';
+import { ListOwnStudentsResponse } from './types/list-own-students-response.type';
+import { CreateStudentBody } from './types/create-student-body.type';
+import { CreateStudentResponse } from './types/create-student-response.type';
+import { UpdateStudentBody } from './types/update-student-body.type';
+import { UpdateStudentResponse } from './types/update-student-response.type';
+import { BookSessionBody } from './types/book-session-body.type';
+import { BookSessionResponse } from './types/book-session-response.type';
+import { ListOwnEnrollmentsResponse } from './types/list-own-enrollments-response.type';
+import { ListOwnCreditsResponse } from './types/list-own-credits-response.type';
+import { CancelEnrollmentResponse } from './types/cancel-enrollment-response.type';
+import { ListOwnInvoicesResponse } from './types/list-own-invoices-response.type';
 
 @injectable()
 export class ParentController extends BaseController {
@@ -178,10 +192,8 @@ export class ParentController extends BaseController {
 		 */
 		router.put('/:id/students/:studentId', RouteHandlers.wrap(this.updateStudent.bind(this)));
 
-		// PRD UC1 edge case: "Archiving a Child Profile" — retain
-		// historical attendance/invoice logs, remove from active roster
-		// selectors. This is exactly PostgresHandler's soft-delete, so it
-		// IS implemented.
+		// PRD UC1 edge case: "Archiving a Child Profile" — retain historical attendance/invoice logs, remove from active roster
+		// selectors. This is exactly PostgresHandler's soft-delete, so it IS implemented.
 		/**
 		 * @openapi
 		 * /api/parent/households/{id}/students/{studentId}/archive:
@@ -204,15 +216,17 @@ export class ParentController extends BaseController {
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
 		router.post('/:id/students/:studentId/archive', RouteHandlers.wrap(this.archiveStudent.bind(this)));
-		// TODO: requires a co-parent/secondary-adult table (PRD: "grant
-		// secondary view/booking access to a co-parent or caregiver via
+
+		// TODO: requires a co-parent/secondary-adult table (PRD: "grant secondary view/booking access to a co-parent or caregiver via
 		// email invite") — no such table exists yet.
 		router.get('/:id/co-parents', RouteHandlers.notImplemented);
+
 		router.post('/:id/co-parents/invite', RouteHandlers.notImplemented);
+
 		return router;
 	}
 
-	private async getHouseholdById(req: Request, res: Response): Promise<void> {
+	private async getHouseholdById(req: Request<{ id: string }>, res: Response<GetOwnHouseholdResponse>): Promise<void> {
 		const household = await this.householdsServer.getById(Number(req.params.id));
 		if (!household) {
 			res.status(404).end();
@@ -221,8 +235,8 @@ export class ParentController extends BaseController {
 		res.json(household);
 	}
 
-	private async updateHousehold(req: Request, res: Response): Promise<void> {
-		const { name, email } = req.body as { name?: string; email?: string };
+	private async updateHousehold(req: Request<{ id: string }, UpdateHouseholdResponse, UpdateHouseholdBody>, res: Response<UpdateHouseholdResponse>): Promise<void> {
+		const { name, email } = req.body;
 		const household = await this.householdsServer.update(Number(req.params.id), { name, email });
 		if (!household) {
 			res.status(404).end();
@@ -231,13 +245,13 @@ export class ParentController extends BaseController {
 		res.json(household);
 	}
 
-	private async listStudents(req: Request, res: Response): Promise<void> {
+	private async listStudents(req: Request<{ id: string }>, res: Response<ListOwnStudentsResponse>): Promise<void> {
 		const students = await this.householdsServer.listStudents(Number(req.params.id));
 		res.json(students);
 	}
 
-	private async createStudent(req: Request, res: Response): Promise<void> {
-		const { fullName, dateOfBirth, notes } = req.body as { fullName: string; dateOfBirth: string | null; notes: string | null };
+	private async createStudent(req: Request<{ id: string }, CreateStudentResponse, CreateStudentBody>, res: Response<CreateStudentResponse>): Promise<void> {
+		const { fullName, dateOfBirth, notes } = req.body;
 		const student = await this.householdsServer.createStudent({
 			householdId: Number(req.params.id),
 			fullName,
@@ -247,8 +261,8 @@ export class ParentController extends BaseController {
 		res.status(201).json(student);
 	}
 
-	private async updateStudent(req: Request, res: Response): Promise<void> {
-		const { fullName, notes } = req.body as { fullName?: string; notes?: string | null };
+	private async updateStudent(req: Request<{ id: string; studentId: string }, UpdateStudentResponse, UpdateStudentBody>, res: Response<UpdateStudentResponse>): Promise<void> {
+		const { fullName, notes } = req.body;
 		const student = await this.householdsServer.updateStudent(Number(req.params.studentId), { fullName, notes });
 		if (!student) {
 			res.status(404).end();
@@ -257,7 +271,7 @@ export class ParentController extends BaseController {
 		res.json(student);
 	}
 
-	private async archiveStudent(req: Request, res: Response): Promise<void> {
+	private async archiveStudent(req: Request<{ id: string; studentId: string }>, res: Response): Promise<void> {
 		await this.householdsServer.archiveStudent(Number(req.params.studentId));
 		res.status(204).end();
 	}
@@ -333,23 +347,24 @@ export class ParentController extends BaseController {
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
 		router.get('/households/:householdId/enrollments', RouteHandlers.wrap(this.listEnrollments.bind(this)));
-		// TODO: requires a real waitlist (PRD: "queue-based waitlist
-		// ordered strictly by timestamp", automated promotion with a
-		// time-sensitive claim window on cancellation) — status is a free
-		// -text column with no queue-position or claim-deadline tracking.
+
+		// TODO: requires a real wait-list (PRD: "queue-based wait-list ordered strictly by timestamp", automated promotion with a
+		// time-sensitive claim window on cancellation) — status is a free-text column with no queue-position or claim-deadline tracking.
 		router.get('/sessions/:sessionId/waitlist', RouteHandlers.notImplemented);
+
 		router.post('/waitlist/:enrollmentId/claim', RouteHandlers.notImplemented);
+
 		return router;
 	}
 
-	private async listEnrollments(req: Request, res: Response): Promise<void> {
+	private async listEnrollments(req: Request<{ householdId: string }>, res: Response<ListOwnEnrollmentsResponse>): Promise<void> {
 		const enrollments = await this.sessionsServer.listEnrollments(Number(req.params.householdId));
 		res.json(enrollments);
 	}
 
-	private async book(req: Request, res: Response): Promise<void> {
+	private async book(req: Request<{ sessionId: string }, BookSessionResponse, BookSessionBody>, res: Response<BookSessionResponse>): Promise<void> {
 		const sessionId = Number(req.params.sessionId);
-		const { studentId, householdId } = req.body as { studentId: number; householdId: number };
+		const { studentId, householdId } = req.body;
 
 		const result = await this.sessionsServer.book(sessionId, studentId, householdId);
 		if (!result) {
@@ -418,12 +433,12 @@ export class ParentController extends BaseController {
 		return router;
 	}
 
-	private async listCredits(req: Request, res: Response): Promise<void> {
+	private async listCredits(req: Request<{ householdId: string }>, res: Response<ListOwnCreditsResponse>): Promise<void> {
 		const credits = await this.attendanceCreditsServer.listCredits(Number(req.params.householdId));
 		res.json(credits);
 	}
 
-	private async cancelEnrollment(req: Request, res: Response): Promise<void> {
+	private async cancelEnrollment(req: Request<{ enrollmentId: string }>, res: Response<CancelEnrollmentResponse>): Promise<void> {
 		const enrollmentId = Number(req.params.enrollmentId);
 		const updated = await this.attendanceCreditsServer.cancel(enrollmentId);
 		if (!updated) {
@@ -460,26 +475,26 @@ export class ParentController extends BaseController {
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
 		router.get('/households/:householdId/invoices', RouteHandlers.wrap(this.listInvoices.bind(this)));
-		// Model 1: Pay-Per-Class (Drop-in) card checkout. TODO: requires a
-		// payment-processor integration (Stripe) — no Stripe SDK is
-		// installed and invoices_and_payments.stripe_charge_id, while
-		// present, has no write path yet.
+
+		// Model 1: Pay-Per-Class (Drop-in) card checkout. TODO: requires a payment-processor integration (Stripe) — no Stripe SDK is
+		// installed and invoices_and_payments.stripe_charge_id, while present, has no write path yet.
 		router.post('/invoices/:id/pay', RouteHandlers.notImplemented);
-		// TODO: requires a class-pack balance table (PRD Model 3) — no
-		// such table exists yet.
+
+		// TODO: requires a class-pack balance table (PRD Model 3) — no such table exists yet.
 		router.get('/households/:householdId/class-packs', RouteHandlers.notImplemented);
+
 		router.post('/households/:householdId/class-packs/purchase', RouteHandlers.notImplemented);
+
 		return router;
 	}
 
-	private async listInvoices(req: Request, res: Response): Promise<void> {
+	private async listInvoices(req: Request<{ householdId: string }>, res: Response<ListOwnInvoicesResponse>): Promise<void> {
 		const invoices = await this.billingServer.findByHouseholdId(Number(req.params.householdId));
 		res.json(invoices);
 	}
 
 	// UC6: Parent Autopay Opt-Out & Operator Notice Controls
-	// TODO: entirely unsupported by the current schema — see
-	// AutopayServer.
+	//  TODO: entirely unsupported by the current schema — see AutopayServer.
 
 	private autopayRouter(): Router {
 		const router = Router();
