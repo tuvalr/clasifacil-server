@@ -105,6 +105,7 @@ export class OperatorController extends BaseController {
 		 *             schema: { type: array, items: { $ref: '#/components/schemas/Student' } }
 		 *       400: { $ref: '#/components/responses/BadRequest' }
 		 *       401: { $ref: '#/components/responses/Unauthorized' }
+		 *       404: { description: Not found }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
 		router.get('/:id/students', RouteHandlers.wrap(this.listStudents.bind(this)));
@@ -124,6 +125,7 @@ export class OperatorController extends BaseController {
 		 *       204: { description: Archived }
 		 *       400: { $ref: '#/components/responses/BadRequest' }
 		 *       401: { $ref: '#/components/responses/Unauthorized' }
+		 *       404: { description: Not found }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
 		router.post('/:id/archive', RouteHandlers.wrap(this.archiveHousehold.bind(this)));
@@ -143,6 +145,7 @@ export class OperatorController extends BaseController {
 		 *       204: { description: Restored }
 		 *       400: { $ref: '#/components/responses/BadRequest' }
 		 *       401: { $ref: '#/components/responses/Unauthorized' }
+		 *       404: { description: Not found }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
 		router.post('/:id/restore', RouteHandlers.wrap(this.restoreHousehold.bind(this)));
@@ -169,16 +172,28 @@ export class OperatorController extends BaseController {
 
 	private async listStudents(req: Request<{ id: string }>, res: Response<ListHouseholdStudentsResponse>): Promise<void> {
 		const students = await this.householdsServer.listStudents(Number(req.params.id));
+		if (!students) {
+			res.status(404).end();
+			return;
+		}
 		res.json(students);
 	}
 
 	private async archiveHousehold(req: Request<{ id: string }>, res: Response): Promise<void> {
-		await this.householdsServer.archive(Number(req.params.id));
+		const household = await this.householdsServer.archive(Number(req.params.id));
+		if (!household) {
+			res.status(404).end();
+			return;
+		}
 		res.status(204).end();
 	}
 
 	private async restoreHousehold(req: Request<{ id: string }>, res: Response): Promise<void> {
-		await this.householdsServer.restore(Number(req.params.id));
+		const household = await this.householdsServer.restore(Number(req.params.id));
+		if (!household) {
+			res.status(404).end();
+			return;
+		}
 		res.status(204).end();
 	}
 
@@ -206,6 +221,7 @@ export class OperatorController extends BaseController {
 		 *             schema: { type: array, items: { $ref: '#/components/schemas/Session' } }
 		 *       400: { $ref: '#/components/responses/BadRequest' }
 		 *       401: { $ref: '#/components/responses/Unauthorized' }
+		 *       404: { description: Operator not found }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
 		router.get('/', RouteHandlers.wrap(this.listSessions.bind(this)));
@@ -253,6 +269,7 @@ export class OperatorController extends BaseController {
 		 *             schema: { type: array, items: { $ref: '#/components/schemas/EnrollmentAndCredit' } }
 		 *       400: { $ref: '#/components/responses/BadRequest' }
 		 *       401: { $ref: '#/components/responses/Unauthorized' }
+		 *       404: { description: Not found }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
 		router.get('/:id/roster', RouteHandlers.wrap(this.getRoster.bind(this)));
@@ -283,6 +300,7 @@ export class OperatorController extends BaseController {
 		 *             schema: { $ref: '#/components/schemas/Session' }
 		 *       400: { $ref: '#/components/responses/BadRequest' }
 		 *       401: { $ref: '#/components/responses/Unauthorized' }
+		 *       404: { description: Operator not found }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
 		router.post('/', RouteHandlers.wrap(this.createSession.bind(this)));
@@ -302,6 +320,7 @@ export class OperatorController extends BaseController {
 		 *       204: { description: Cancelled }
 		 *       400: { $ref: '#/components/responses/BadRequest' }
 		 *       401: { $ref: '#/components/responses/Unauthorized' }
+		 *       404: { description: Not found }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
 		router.post('/:id/cancel', RouteHandlers.wrap(this.cancelSession.bind(this)));
@@ -312,6 +331,10 @@ export class OperatorController extends BaseController {
 	private async listSessions(req: Request<unknown, ListSessionsResponse, unknown, ListSessionsQuery>, res: Response<ListSessionsResponse>): Promise<void> {
 		const operatorId = Number(req.query.operatorId);
 		const sessions = await this.sessionsServer.findByOperatorId(operatorId);
+		if (!sessions) {
+			res.status(404).end();
+			return;
+		}
 		res.json(sessions);
 	}
 
@@ -326,17 +349,29 @@ export class OperatorController extends BaseController {
 
 	private async getRoster(req: Request<{ id: string }>, res: Response<GetSessionRosterResponse>): Promise<void> {
 		const roster = await this.sessionsServer.getRoster(Number(req.params.id));
+		if (!roster) {
+			res.status(404).end();
+			return;
+		}
 		res.json(roster);
 	}
 
 	private async createSession(req: Request<unknown, CreateSessionResponse, CreateSessionBody>, res: Response<CreateSessionResponse>): Promise<void> {
 		const { operatorId, title, startTime, capacityLimit } = req.body;
 		const session = await this.sessionsServer.create({ operatorId, title, startTime: new Date(startTime), capacityLimit });
+		if (!session) {
+			res.status(404).end();
+			return;
+		}
 		res.status(201).json(session);
 	}
 
 	private async cancelSession(req: Request<{ id: string }>, res: Response): Promise<void> {
-		await this.sessionsServer.cancel(Number(req.params.id));
+		const session = await this.sessionsServer.cancel(Number(req.params.id));
+		if (!session) {
+			res.status(404).end();
+			return;
+		}
 		res.status(204).end();
 	}
 
@@ -364,6 +399,7 @@ export class OperatorController extends BaseController {
 		 *             schema: { type: array, items: { $ref: '#/components/schemas/EnrollmentAndCredit' } }
 		 *       400: { $ref: '#/components/responses/BadRequest' }
 		 *       401: { $ref: '#/components/responses/Unauthorized' }
+		 *       404: { description: Not found }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
 		router.get('/session/:sessionId', RouteHandlers.wrap(this.listCreditsBySession.bind(this)));
@@ -381,6 +417,10 @@ export class OperatorController extends BaseController {
 
 	private async listCreditsBySession(req: Request<{ sessionId: string }>, res: Response<ListSessionCreditsResponse>): Promise<void> {
 		const enrollments = await this.attendanceCreditsServer.listBySession(Number(req.params.sessionId));
+		if (!enrollments) {
+			res.status(404).end();
+			return;
+		}
 		res.json(enrollments);
 	}
 
@@ -408,6 +448,7 @@ export class OperatorController extends BaseController {
 		 *             schema: { type: array, items: { $ref: '#/components/schemas/InvoiceAndPayment' } }
 		 *       400: { $ref: '#/components/responses/BadRequest' }
 		 *       401: { $ref: '#/components/responses/Unauthorized' }
+		 *       404: { description: Operator not found }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
 		router.get('/', RouteHandlers.wrap(this.listInvoices.bind(this)));
@@ -473,6 +514,10 @@ export class OperatorController extends BaseController {
 	private async listInvoices(req: Request<unknown, ListOperatorInvoicesResponse, unknown, ListOperatorInvoicesQuery>, res: Response<ListOperatorInvoicesResponse>): Promise<void> {
 		const operatorId = Number(req.query.operatorId);
 		const invoices = await this.billingServer.findByOperatorId(operatorId);
+		if (!invoices) {
+			res.status(404).end();
+			return;
+		}
 		res.json(invoices);
 	}
 

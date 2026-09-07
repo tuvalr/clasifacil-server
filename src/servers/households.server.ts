@@ -22,12 +22,22 @@ export class HouseholdsServer {
 		return this.households.findAll();
 	}
 
-	public async archive(id: number): Promise<void> {
+	public async archive(id: number): Promise<Household | null> {
+		const household = await this.households.findById(id);
+		if (!household) {
+			return null;
+		}
 		await this.households.archive(id);
+		return household;
 	}
 
-	public async restore(id: number): Promise<void> {
+	public async restore(id: number): Promise<Household | null> {
+		const household = await this.households.findByIdIgnoringDeleted(id);
+		if (!household) {
+			return null;
+		}
 		await this.households.restore(id);
+		return household;
 	}
 
 	// TODO: requires a co-parent/secondary-adult table (PRD UC1: "grant
@@ -44,11 +54,19 @@ export class HouseholdsServer {
 		return this.households.update(id, data);
 	}
 
-	public async listStudents(householdId: number): Promise<Student[]> {
+	public async listStudents(householdId: number): Promise<Student[] | null> {
+		const household = await this.households.findById(householdId);
+		if (!household) {
+			return null;
+		}
 		return this.students.findByHouseholdId(householdId);
 	}
 
-	public async createStudent(data: { householdId: number; fullName: string; dateOfBirth: Date | null; notes: string | null }): Promise<Student> {
+	public async createStudent(data: { householdId: number; fullName: string; dateOfBirth: Date | null; notes: string | null }): Promise<Student | null> {
+		const household = await this.households.findById(data.householdId);
+		if (!household) {
+			return null;
+		}
 		return this.students.create(data);
 	}
 
@@ -59,7 +77,12 @@ export class HouseholdsServer {
 	// PRD UC1 edge case: "Archiving a Child Profile" — retain historical
 	// attendance/invoice logs, remove from active roster selectors. This
 	// is exactly PostgresHandler's soft-delete, so it IS implemented.
-	public async archiveStudent(studentId: number): Promise<void> {
+	public async archiveStudent(studentId: number): Promise<Student | null> {
+		const student = await this.students.findById(studentId);
+		if (!student) {
+			return null;
+		}
 		await this.students.archive(studentId);
+		return student;
 	}
 }

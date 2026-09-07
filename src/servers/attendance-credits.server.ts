@@ -2,6 +2,7 @@ import { inject, injectable } from 'inversify';
 import { TYPES } from '../container/types';
 import { EnrollmentAndCreditRepository } from '../repositories/enrollment-and-credit.repository';
 import { SessionRepository } from '../repositories/session.repository';
+import { HouseholdRepository } from '../repositories/household.repository';
 import { EnrollmentAndCredit } from '../entities/enrollment-and-credit.entity';
 
 const CREDIT_EXPIRY_DAYS = 90;
@@ -15,11 +16,16 @@ export class AttendanceCreditsServer {
 	public constructor(
 		@inject(TYPES.EnrollmentAndCreditRepository) private readonly enrollments: EnrollmentAndCreditRepository,
 		@inject(TYPES.SessionRepository) private readonly sessions: SessionRepository,
+		@inject(TYPES.HouseholdRepository) private readonly households: HouseholdRepository,
 	) {}
 
 	// Operator-side
 
-	public async listBySession(sessionId: number): Promise<EnrollmentAndCredit[]> {
+	public async listBySession(sessionId: number): Promise<EnrollmentAndCredit[] | null> {
+		const session = await this.sessions.findById(sessionId);
+		if (!session) {
+			return null;
+		}
 		return this.enrollments.findBySessionId(sessionId);
 	}
 
@@ -33,7 +39,11 @@ export class AttendanceCreditsServer {
 
 	// Parent-side
 
-	public async listCredits(householdId: number): Promise<EnrollmentAndCredit[]> {
+	public async listCredits(householdId: number): Promise<EnrollmentAndCredit[] | null> {
+		const household = await this.households.findById(householdId);
+		if (!household) {
+			return null;
+		}
 		const enrollments = await this.enrollments.findByHouseholdId(householdId);
 		return enrollments.filter((enrollment: EnrollmentAndCredit) => enrollment.status === 'cancelled_with_credit');
 	}

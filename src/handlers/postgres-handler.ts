@@ -65,6 +65,10 @@ export class PostgresHandler {
 		return this.entityQuery.findById(this.pool, entity, id);
 	}
 
+	public async findByIdIgnoringDeleted<T extends BaseEntity>(entity: EntityDescriptor<T>, id: string | number): Promise<T | null> {
+		return this.entityQuery.findByIdIgnoringDeleted(this.pool, entity, id);
+	}
+
 	public async insert<T extends BaseEntity>(entity: EntityDescriptor<T>, data: Record<string, unknown>): Promise<T> {
 		return this.entityQuery.insert(this.pool, entity, data);
 	}

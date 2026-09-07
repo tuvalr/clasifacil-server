@@ -1,6 +1,8 @@
 import { inject, injectable } from 'inversify';
 import { TYPES } from '../container/types';
 import { InvoiceAndPaymentRepository } from '../repositories/invoice-and-payment.repository';
+import { OperatorRepository } from '../repositories/operator.repository';
+import { HouseholdRepository } from '../repositories/household.repository';
 import { InvoiceAndPayment } from '../entities/invoice-and-payment.entity';
 
 // UC4: Flexible Multi-Tier Payment & Billing Engine. Operator-side
@@ -9,11 +11,19 @@ import { InvoiceAndPayment } from '../entities/invoice-and-payment.entity';
 // invoices_and_payments data.
 @injectable()
 export class BillingServer {
-	public constructor(@inject(TYPES.InvoiceAndPaymentRepository) private readonly invoices: InvoiceAndPaymentRepository) {}
+	public constructor(
+		@inject(TYPES.InvoiceAndPaymentRepository) private readonly invoices: InvoiceAndPaymentRepository,
+		@inject(TYPES.OperatorRepository) private readonly operators: OperatorRepository,
+		@inject(TYPES.HouseholdRepository) private readonly households: HouseholdRepository,
+	) {}
 
 	// Operator-side
 
-	public async findByOperatorId(operatorId: number): Promise<InvoiceAndPayment[]> {
+	public async findByOperatorId(operatorId: number): Promise<InvoiceAndPayment[] | null> {
+		const operator = await this.operators.findById(operatorId);
+		if (!operator) {
+			return null;
+		}
 		return this.invoices.findByOperatorId(operatorId);
 	}
 
@@ -41,7 +51,11 @@ export class BillingServer {
 
 	// Parent-side
 
-	public async findByHouseholdId(householdId: number): Promise<InvoiceAndPayment[]> {
+	public async findByHouseholdId(householdId: number): Promise<InvoiceAndPayment[] | null> {
+		const household = await this.households.findById(householdId);
+		if (!household) {
+			return null;
+		}
 		return this.invoices.findByHouseholdId(householdId);
 	}
 

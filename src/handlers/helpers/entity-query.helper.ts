@@ -42,6 +42,14 @@ export class EntityQueryHelper {
 		return rows[0] ?? null;
 	}
 
+	// Unlike findById, this ignores is_deleted — for callers (like a restore operation) that need to confirm a row exists at all,
+	// including soft-deleted ones.
+	public async findByIdIgnoringDeleted<T extends BaseEntity>(db: Queryable, entity: EntityDescriptor<T>, id: string | number): Promise<T | null> {
+		this.assertValidIdentifier(entity.tableName);
+		const result = await db.query<Record<string, unknown>>(`SELECT * FROM "${entity.tableName}" WHERE id = $1`, [id]);
+		return result.rows[0] ? snakeToCamel<T>(result.rows[0]) : null;
+	}
+
 	// `data` uses camelCase keys matching T's TypeScript properties (e.g. { isDeleted: false }), converted to snake_case columns here —
 	// callers never need to know or write the underlying column names.
 	public async insert<T extends BaseEntity>(db: Queryable, entity: EntityDescriptor<T>, data: Record<string, unknown>): Promise<T> {

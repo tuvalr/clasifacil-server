@@ -1,7 +1,8 @@
 import { Router, Request, Response } from 'express';
 import { inject, injectable } from 'inversify';
 import { TYPES } from '../../container/types';
-import { OperatorsServer, ValidationError } from '../../servers/operators.server';
+import { OperatorsServer } from '../../servers/operators.server';
+import { ValidationError } from '../../servers/types/validation-error';
 import { RouteHandlers } from '../shared/route-handlers';
 import { BaseController } from '../shared/base.controller';
 import { ListOperatorsResponse } from './types/list-operators-response.type';

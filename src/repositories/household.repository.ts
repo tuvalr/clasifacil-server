@@ -15,6 +15,11 @@ export class HouseholdRepository {
 		return this.db.findById(HouseholdEntity, id);
 	}
 
+	// Ignores is_deleted — used to check existence before restoring an archived household.
+	public async findByIdIgnoringDeleted(id: number): Promise<Household | null> {
+		return this.db.findByIdIgnoringDeleted(HouseholdEntity, id);
+	}
+
 	public async create(data: { name: string; email: string }): Promise<Household> {
 		return this.db.insert(HouseholdEntity, { name: data.name, email: data.email, isDeleted: false });
 	}

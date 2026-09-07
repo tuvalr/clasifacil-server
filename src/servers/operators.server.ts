@@ -7,18 +7,7 @@ import { OperatorRepository } from '../repositories/operator.repository';
 import { UserRepository } from '../repositories/user.repository';
 import { Operator } from '../entities/operator.entity';
 import { User } from '../entities/user.entity';
-
-export interface ValidationErrorDetail {
-	field: string;
-	message: string;
-}
-
-export class ValidationError extends Error {
-	public constructor(public readonly details: ValidationErrorDetail[]) {
-		super('Validation failed');
-		this.name = 'ValidationError';
-	}
-}
+import { ValidationError, ValidationErrorDetail } from './types/validation-error';
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const VALID_COUNTRY_CODES: ReadonlySet<string> = new Set(getCountries());
@@ -44,14 +33,11 @@ export class OperatorsServer {
 		return this.operators.findById(id);
 	}
 
-	// Creates the operators row and its login-capable users row (role:
-	// 'operator', associatedEntityId: the new operator's id) together —
-	// if either insert fails, both roll back, so an operator can never be
-	// left without a way to log in. auth_uid is generated here (not
-	// accepted from the client) since it's a uuid-typed, unique login
-	// identifier — the caller has no business choosing it.
+	// Creates the operators row and its login-capable users row (role: 'operator', associatedEntityId: the new operator's id) together —
+	// if either insert fails, both roll back, so an operator can never be left without a way to log in. auth_uid is generated here (not
+	// accepted from the client) since it's a uuid-typed, unique login identifier — the caller has no business choosing it.
 	public async create(data: { name: string; email: string; phone: string; countryCode: string }): Promise<{ operator: Operator; user: User }> {
-		const details = await this.validate(data);
+		const details = await this.validateCreate(data);
 		if (details.length > 0) {
 			throw new ValidationError(details);
 		}
@@ -65,7 +51,7 @@ export class OperatorsServer {
 		});
 	}
 
-	private async validate(data: { name: string; email: string; phone: string; countryCode: string }): Promise<ValidationErrorDetail[]> {
+	private async validateCreate(data: { name: string; email: string; phone: string; countryCode: string }): Promise<ValidationErrorDetail[]> {
 		const details: ValidationErrorDetail[] = [];
 
 		if (!EMAIL_PATTERN.test(data.email)) {

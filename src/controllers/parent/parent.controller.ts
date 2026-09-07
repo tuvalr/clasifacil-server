@@ -118,6 +118,7 @@ export class ParentController extends BaseController {
 		 *             schema: { type: array, items: { $ref: '#/components/schemas/Student' } }
 		 *       400: { $ref: '#/components/responses/BadRequest' }
 		 *       401: { $ref: '#/components/responses/Unauthorized' }
+		 *       404: { description: Not found }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
 		router.get('/:id/students', RouteHandlers.wrap(this.listStudents.bind(this)));
@@ -152,6 +153,7 @@ export class ParentController extends BaseController {
 		 *             schema: { $ref: '#/components/schemas/Student' }
 		 *       400: { $ref: '#/components/responses/BadRequest' }
 		 *       401: { $ref: '#/components/responses/Unauthorized' }
+		 *       404: { description: Household not found }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
 		router.post('/:id/students', RouteHandlers.wrap(this.createStudent.bind(this)));
@@ -213,6 +215,7 @@ export class ParentController extends BaseController {
 		 *       204: { description: Archived }
 		 *       400: { $ref: '#/components/responses/BadRequest' }
 		 *       401: { $ref: '#/components/responses/Unauthorized' }
+		 *       404: { description: Not found }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
 		router.post('/:id/students/:studentId/archive', RouteHandlers.wrap(this.archiveStudent.bind(this)));
@@ -247,6 +250,10 @@ export class ParentController extends BaseController {
 
 	private async listStudents(req: Request<{ id: string }>, res: Response<ListOwnStudentsResponse>): Promise<void> {
 		const students = await this.householdsServer.listStudents(Number(req.params.id));
+		if (!students) {
+			res.status(404).end();
+			return;
+		}
 		res.json(students);
 	}
 
@@ -258,6 +265,10 @@ export class ParentController extends BaseController {
 			dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : null,
 			notes,
 		});
+		if (!student) {
+			res.status(404).end();
+			return;
+		}
 		res.status(201).json(student);
 	}
 
@@ -272,7 +283,11 @@ export class ParentController extends BaseController {
 	}
 
 	private async archiveStudent(req: Request<{ id: string; studentId: string }>, res: Response): Promise<void> {
-		await this.householdsServer.archiveStudent(Number(req.params.studentId));
+		const student = await this.householdsServer.archiveStudent(Number(req.params.studentId));
+		if (!student) {
+			res.status(404).end();
+			return;
+		}
 		res.status(204).end();
 	}
 
@@ -311,7 +326,7 @@ export class ParentController extends BaseController {
 		 *             schema: { $ref: '#/components/schemas/EnrollmentAndCredit' }
 		 *       400: { $ref: '#/components/responses/BadRequest' }
 		 *       401: { $ref: '#/components/responses/Unauthorized' }
-		 *       404: { description: Session not found }
+		 *       404: { description: Session, student, or household not found }
 		 *       409:
 		 *         description: Session at capacity
 		 *         content:
@@ -344,6 +359,7 @@ export class ParentController extends BaseController {
 		 *             schema: { type: array, items: { $ref: '#/components/schemas/EnrollmentAndCredit' } }
 		 *       400: { $ref: '#/components/responses/BadRequest' }
 		 *       401: { $ref: '#/components/responses/Unauthorized' }
+		 *       404: { description: Household not found }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
 		router.get('/households/:householdId/enrollments', RouteHandlers.wrap(this.listEnrollments.bind(this)));
@@ -359,6 +375,10 @@ export class ParentController extends BaseController {
 
 	private async listEnrollments(req: Request<{ householdId: string }>, res: Response<ListOwnEnrollmentsResponse>): Promise<void> {
 		const enrollments = await this.sessionsServer.listEnrollments(Number(req.params.householdId));
+		if (!enrollments) {
+			res.status(404).end();
+			return;
+		}
 		res.json(enrollments);
 	}
 
@@ -426,6 +446,7 @@ export class ParentController extends BaseController {
 		 *             schema: { type: array, items: { $ref: '#/components/schemas/EnrollmentAndCredit' } }
 		 *       400: { $ref: '#/components/responses/BadRequest' }
 		 *       401: { $ref: '#/components/responses/Unauthorized' }
+		 *       404: { description: Household not found }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
 		router.get('/households/:householdId/credits', RouteHandlers.wrap(this.listCredits.bind(this)));
@@ -435,6 +456,10 @@ export class ParentController extends BaseController {
 
 	private async listCredits(req: Request<{ householdId: string }>, res: Response<ListOwnCreditsResponse>): Promise<void> {
 		const credits = await this.attendanceCreditsServer.listCredits(Number(req.params.householdId));
+		if (!credits) {
+			res.status(404).end();
+			return;
+		}
 		res.json(credits);
 	}
 
@@ -472,6 +497,7 @@ export class ParentController extends BaseController {
 		 *             schema: { type: array, items: { $ref: '#/components/schemas/InvoiceAndPayment' } }
 		 *       400: { $ref: '#/components/responses/BadRequest' }
 		 *       401: { $ref: '#/components/responses/Unauthorized' }
+		 *       404: { description: Household not found }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
 		router.get('/households/:householdId/invoices', RouteHandlers.wrap(this.listInvoices.bind(this)));
@@ -490,6 +516,10 @@ export class ParentController extends BaseController {
 
 	private async listInvoices(req: Request<{ householdId: string }>, res: Response<ListOwnInvoicesResponse>): Promise<void> {
 		const invoices = await this.billingServer.findByHouseholdId(Number(req.params.householdId));
+		if (!invoices) {
+			res.status(404).end();
+			return;
+		}
 		res.json(invoices);
 	}
 

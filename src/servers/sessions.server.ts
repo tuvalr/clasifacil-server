@@ -2,6 +2,9 @@ import { inject, injectable } from 'inversify';
 import { TYPES } from '../container/types';
 import { SessionRepository } from '../repositories/session.repository';
 import { EnrollmentAndCreditRepository } from '../repositories/enrollment-and-credit.repository';
+import { OperatorRepository } from '../repositories/operator.repository';
+import { StudentRepository } from '../repositories/student.repository';
+import { HouseholdRepository } from '../repositories/household.repository';
 import { Session } from '../entities/session.entity';
 import { EnrollmentAndCredit } from '../entities/enrollment-and-credit.entity';
 
@@ -19,11 +22,18 @@ export class SessionsServer {
 	public constructor(
 		@inject(TYPES.SessionRepository) private readonly sessions: SessionRepository,
 		@inject(TYPES.EnrollmentAndCreditRepository) private readonly enrollments: EnrollmentAndCreditRepository,
+		@inject(TYPES.OperatorRepository) private readonly operators: OperatorRepository,
+		@inject(TYPES.StudentRepository) private readonly students: StudentRepository,
+		@inject(TYPES.HouseholdRepository) private readonly households: HouseholdRepository,
 	) {}
 
 	// Operator-side
 
-	public async findByOperatorId(operatorId: number): Promise<Session[]> {
+	public async findByOperatorId(operatorId: number): Promise<Session[] | null> {
+		const operator = await this.operators.findById(operatorId);
+		if (!operator) {
+			return null;
+		}
 		return this.sessions.findByOperatorId(operatorId);
 	}
 
@@ -31,11 +41,19 @@ export class SessionsServer {
 		return this.sessions.findById(id);
 	}
 
-	public async getRoster(sessionId: number): Promise<EnrollmentAndCredit[]> {
+	public async getRoster(sessionId: number): Promise<EnrollmentAndCredit[] | null> {
+		const session = await this.sessions.findById(sessionId);
+		if (!session) {
+			return null;
+		}
 		return this.enrollments.findBySessionId(sessionId);
 	}
 
-	public async create(data: { operatorId: number; title: string; startTime: Date; capacityLimit: number }): Promise<Session> {
+	public async create(data: { operatorId: number; title: string; startTime: Date; capacityLimit: number }): Promise<Session | null> {
+		const operator = await this.operators.findById(data.operatorId);
+		if (!operator) {
+			return null;
+		}
 		return this.sessions.create(data);
 	}
 
@@ -46,17 +64,26 @@ export class SessionsServer {
 	// there's no cancellation-policy-window config on operators/sessions
 	// yet, and audit_logs has no is_deleted-style "which credit rule
 	// applied" linkage designed in.
-	public async cancel(sessionId: number): Promise<void> {
+	public async cancel(sessionId: number): Promise<Session | null> {
+		const session = await this.sessions.findById(sessionId);
+		if (!session) {
+			return null;
+		}
 		await this.sessions.cancel(sessionId);
 		// TODO: issue make-up tokens to all enrolled households (roster =
 		// this.enrollments.findBySessionId(sessionId)) and write an
 		// audit_logs entry — requires the credit-issuance logic from UC3
 		// and a defined audit-log write path, neither implemented yet.
+		return session;
 	}
 
 	// Parent-side
 
-	public async listEnrollments(householdId: number): Promise<EnrollmentAndCredit[]> {
+	public async listEnrollments(householdId: number): Promise<EnrollmentAndCredit[] | null> {
+		const household = await this.households.findById(householdId);
+		if (!household) {
+			return null;
+		}
 		return this.enrollments.findByHouseholdId(householdId);
 	}
 
@@ -71,6 +98,16 @@ export class SessionsServer {
 	public async book(sessionId: number, studentId: number, householdId: number): Promise<EnrollmentAndCredit | BookingConflict | null> {
 		const session = await this.sessions.findById(sessionId);
 		if (!session) {
+			return null;
+		}
+
+		const student = await this.students.findById(studentId);
+		if (!student) {
+			return null;
+		}
+
+		const household = await this.households.findById(householdId);
+		if (!household) {
 			return null;
 		}
 
