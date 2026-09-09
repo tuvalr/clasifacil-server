@@ -16,12 +16,20 @@ export class UserRepository {
 		return rows[0] ?? null;
 	}
 
-	// Accepts an optional TransactionHandle so this insert can participate
-	// in a caller's transaction (e.g. AdminOperatorsController creating an
-	// operator + its user account atomically) instead of always running
-	// on its own connection.
+	public async findByAssociatedEntity(role: string, associatedEntityId: number): Promise<User | null> {
+		const rows = await this.db.queryActive(UserEntity, 'role = $1 AND associated_entity_id = $2', [role, associatedEntityId]);
+		return rows[0] ?? null;
+	}
+
+	// Accepts an optional TransactionHandle so this insert can participate in a caller's transaction (e.g. AdminOperatorsController creating an
+	// operator + its user account atomically) instead of always running on its own connection.
 	public async create(data: { authUid: string; email: string; role: string; associatedEntityId: number | null }, tx?: TransactionHandle): Promise<User> {
 		const db = tx ?? this.db;
 		return db.insert(UserEntity, { ...data, isDeleted: false });
+	}
+
+	public async delete(id: number, tx?: TransactionHandle): Promise<void> {
+		const db = tx ?? this.db;
+		return db.delete(UserEntity, id);
 	}
 }

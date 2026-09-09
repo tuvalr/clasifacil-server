@@ -45,7 +45,23 @@ export class App {
 		// Swagger UI exposes route/schema structure — not something to
 		// hand out in prod, so it's only mounted for dev/local.
 		if (this.config.nodeEnv === 'dev' || this.config.nodeEnv === 'local') {
-			this.internalExpress.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+			this.internalExpress.use(
+				'/api-docs',
+				swaggerUi.serve,
+				swaggerUi.setup(swaggerSpec, {
+					// Within each tag, order operations GET, POST, PUT, PATCH,
+					// DELETE instead of swagger-ui-express's default (by path).
+					// This function is serialized to a string and evaluated client-side
+					// by Swagger UI, so `a`/`b` are its internal Immutable.js operation
+					// objects, not plain TS values — hence the untyped signature.
+					swaggerOptions: {
+						operationsSorter: (a: { get: (key: string) => string }, b: { get: (key: string) => string }): number => {
+							const methodOrder = ['get', 'post', 'put', 'patch', 'delete'];
+							return methodOrder.indexOf(a.get('method')) - methodOrder.indexOf(b.get('method'));
+						},
+					},
+				}),
+			);
 		}
 
 		this.internalExpress.use('/api/admin', this.adminController.router);

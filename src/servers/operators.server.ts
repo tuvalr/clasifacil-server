@@ -51,6 +51,45 @@ export class OperatorsServer {
 		});
 	}
 
+	// Soft-deletes the operator and its login-capable users row together — same atomicity reasoning as create(): a deleted operator must
+	// immediately lose the ability to log in, so both rows go together or neither does.
+	public async delete(id: number): Promise<Operator | null> {
+		const operator = await this.operators.findById(id);
+		if (!operator) {
+			return null;
+		}
+
+		await this.db.transaction(async (transaction: TransactionHandle) => {
+			await this.operators.delete(id, transaction);
+			const user = await this.users.findByAssociatedEntity('operator', id);
+			if (user) {
+				await this.users.delete(user.id, transaction);
+			}
+		});
+
+		return operator;
+	}
+
+	// pausedUntil: null means an unlimited (indefinite) pause; a date means the operator is paused until that time.
+	// Resuming is always an explicit call (resume()) — pausedUntil is not auto-expired on read.
+	// findById first (rather than trusting pause()'s own UPDATE...RETURNING) because that UPDATE has no is_deleted guard — without this
+	// check, a soft-deleted operator would still match and get silently paused/resumed instead of 404ing like every other endpoint.
+	public async pause(id: number, pausedUntil: Date | null): Promise<Operator | null> {
+		const operator = await this.operators.findById(id);
+		if (!operator) {
+			return null;
+		}
+		return this.operators.pause(id, pausedUntil);
+	}
+
+	public async resume(id: number): Promise<Operator | null> {
+		const operator = await this.operators.findById(id);
+		if (!operator) {
+			return null;
+		}
+		return this.operators.resume(id);
+	}
+
 	private async validateCreate(data: { name: string; email: string; phone: string; countryCode: string }): Promise<ValidationErrorDetail[]> {
 		const details: ValidationErrorDetail[] = [];
 

@@ -26,5 +26,16 @@ export const TYPES = {
 
 	AdminController: Symbol.for('AdminController'),
 	OperatorController: Symbol.for('OperatorController'),
+	HouseholdsController: Symbol.for('HouseholdsController'),
+	SessionsController: Symbol.for('SessionsController'),
+	AttendanceCreditsController: Symbol.for('AttendanceCreditsController'),
+	BillingController: Symbol.for('BillingController'),
+	RemindersController: Symbol.for('RemindersController'),
+	AutopayController: Symbol.for('AutopayController'),
 	ParentController: Symbol.for('ParentController'),
+	ParentHouseholdsController: Symbol.for('ParentHouseholdsController'),
+	BookingController: Symbol.for('BookingController'),
+	ParentAttendanceCreditsController: Symbol.for('ParentAttendanceCreditsController'),
+	ParentBillingController: Symbol.for('ParentBillingController'),
+	ParentAutopayController: Symbol.for('ParentAutopayController'),
 };

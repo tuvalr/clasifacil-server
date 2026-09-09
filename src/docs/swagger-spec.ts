@@ -16,6 +16,20 @@ export const swaggerSpec = swaggerJsdoc({
 	definition: {
 		openapi: '3.0.0',
 		info: { title: 'Clasifacil API', version: '1.0.0' },
+		// Explicit order so Swagger UI groups tags as Admin, then Operator,
+		// then Parent (alphabetical within Operator/Parent), instead of
+		// whatever order swagger-jsdoc happens to scan the controller files in.
+		tags: [
+			{ name: 'Admin' },
+			{ name: 'Operator - Attendance Credits' },
+			{ name: 'Operator - Billing' },
+			{ name: 'Operator - Households' },
+			{ name: 'Operator - Sessions' },
+			{ name: 'Parent - Attendance Credits' },
+			{ name: 'Parent - Billing' },
+			{ name: 'Parent - Booking' },
+			{ name: 'Parent - Households' },
+		],
 		components: {
 			schemas: {
 				Operator: {
@@ -24,8 +38,12 @@ export const swaggerSpec = swaggerJsdoc({
 						...swaggerBaseFields,
 						name: { type: 'string' },
 						email: { type: 'string' },
+						phone: { type: 'string' },
+						countryCode: { type: 'string' },
 						stripeAccountId: { type: 'string', nullable: true },
 						onboardingStatus: { type: 'string', nullable: true },
+						status: { type: 'string', enum: ['active', 'paused'] },
+						pausedUntil: { type: 'string', format: 'date-time', nullable: true },
 					},
 				},
 				User: {

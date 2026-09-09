@@ -7,6 +7,8 @@ export interface Operator extends BaseEntity {
 	countryCode: string;
 	stripeAccountId: string | null;
 	onboardingStatus: string | null;
+	status: 'active' | 'paused';
+	pausedUntil: Date | null;
 }
 
 export const OperatorEntity: EntityDescriptor<Operator> = {

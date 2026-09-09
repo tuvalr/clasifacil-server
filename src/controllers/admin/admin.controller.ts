@@ -10,6 +10,7 @@ import { GetOperatorResponse } from './types/get-operator-response.type';
 import { CreateOperatorBody } from './types/create-operator-body.type';
 import { CreateOperatorResponse } from './types/create-operator-response.type';
 import { CreateOperatorValidationErrorResponse } from './types/create-operator-validation-error-response.type';
+import { PauseOperatorBody } from './types/pause-operator-body.type';
 
 @injectable()
 export class AdminController extends BaseController {
@@ -115,6 +116,86 @@ export class AdminController extends BaseController {
 		 */
 		router.post('/', RouteHandlers.wrap(this.createOperator.bind(this)));
 
+		/**
+		 * @openapi
+		 * /api/admin/operators/{id}:
+		 *   delete:
+		 *     summary: Delete an operator and its login user
+		 *     description: Soft-deletes the operator and its associated users row together, so it immediately loses login access.
+		 *     tags: [Admin]
+		 *     parameters:
+		 *       - in: path
+		 *         name: id
+		 *         required: true
+		 *         schema: { type: integer }
+		 *     responses:
+		 *       204: { description: Deleted }
+		 *       400: { $ref: '#/components/responses/BadRequest' }
+		 *       401: { $ref: '#/components/responses/Unauthorized' }
+		 *       404: { description: Not found }
+		 *       500: { $ref: '#/components/responses/InternalError' }
+		 */
+		router.delete('/:id', RouteHandlers.wrap(this.deleteOperator.bind(this)));
+
+		/**
+		 * @openapi
+		 * /api/admin/operators/{id}/pause:
+		 *   post:
+		 *     summary: Pause an operator
+		 *     description: >
+		 *       Omit pausedUntil (or send null) for an unlimited pause. Resuming
+		 *       is always explicit via /resume — a pausedUntil timestamp in the
+		 *       past does not auto-reactivate the operator.
+		 *     tags: [Admin]
+		 *     parameters:
+		 *       - in: path
+		 *         name: id
+		 *         required: true
+		 *         schema: { type: integer }
+		 *     requestBody:
+		 *       content:
+		 *         application/json:
+		 *           schema:
+		 *             type: object
+		 *             properties:
+		 *               pausedUntil: { type: string, format: date-time, nullable: true, description: 'Omit or null for an unlimited pause' }
+		 *     responses:
+		 *       200:
+		 *         description: OK
+		 *         content:
+		 *           application/json:
+		 *             schema: { $ref: '#/components/schemas/Operator' }
+		 *       400: { $ref: '#/components/responses/BadRequest' }
+		 *       401: { $ref: '#/components/responses/Unauthorized' }
+		 *       404: { description: Not found }
+		 *       500: { $ref: '#/components/responses/InternalError' }
+		 */
+		router.post('/:id/pause', RouteHandlers.wrap(this.pauseOperator.bind(this)));
+
+		/**
+		 * @openapi
+		 * /api/admin/operators/{id}/resume:
+		 *   post:
+		 *     summary: Resume a paused operator
+		 *     tags: [Admin]
+		 *     parameters:
+		 *       - in: path
+		 *         name: id
+		 *         required: true
+		 *         schema: { type: integer }
+		 *     responses:
+		 *       200:
+		 *         description: OK
+		 *         content:
+		 *           application/json:
+		 *             schema: { $ref: '#/components/schemas/Operator' }
+		 *       400: { $ref: '#/components/responses/BadRequest' }
+		 *       401: { $ref: '#/components/responses/Unauthorized' }
+		 *       404: { description: Not found }
+		 *       500: { $ref: '#/components/responses/InternalError' }
+		 */
+		router.post('/:id/resume', RouteHandlers.wrap(this.resumeOperator.bind(this)));
+
 		return router;
 	}
 
@@ -147,5 +228,33 @@ export class AdminController extends BaseController {
 			}
 			throw error;
 		}
+	}
+
+	private async deleteOperator(req: Request<{ id: string }>, res: Response): Promise<void> {
+		const operator = await this.operatorsServer.delete(Number(req.params.id));
+		if (!operator) {
+			res.status(404).end();
+			return;
+		}
+		res.status(204).end();
+	}
+
+	private async pauseOperator(req: Request<{ id: string }, GetOperatorResponse, PauseOperatorBody>, res: Response<GetOperatorResponse>): Promise<void> {
+		const pausedUntil = req.body.pausedUntil ? new Date(req.body.pausedUntil) : null;
+		const operator = await this.operatorsServer.pause(Number(req.params.id), pausedUntil);
+		if (!operator) {
+			res.status(404).end();
+			return;
+		}
+		res.json(operator);
+	}
+
+	private async resumeOperator(req: Request<{ id: string }>, res: Response<GetOperatorResponse>): Promise<void> {
+		const operator = await this.operatorsServer.resume(Number(req.params.id));
+		if (!operator) {
+			res.status(404).end();
+			return;
+		}
+		res.json(operator);
 	}
 }

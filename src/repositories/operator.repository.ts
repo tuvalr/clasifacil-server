@@ -34,4 +34,19 @@ export class OperatorRepository {
 	public async update(id: number, data: Partial<{ name: string; email: string; stripeAccountId: string | null; onboardingStatus: string | null }>): Promise<Operator | null> {
 		return this.db.update(OperatorEntity, id, data);
 	}
+
+	public async pause(id: number, pausedUntil: Date | null, tx?: TransactionHandle): Promise<Operator | null> {
+		const db = tx ?? this.db;
+		return db.update(OperatorEntity, id, { status: 'paused', pausedUntil });
+	}
+
+	public async resume(id: number, tx?: TransactionHandle): Promise<Operator | null> {
+		const db = tx ?? this.db;
+		return db.update(OperatorEntity, id, { status: 'active', pausedUntil: null });
+	}
+
+	public async delete(id: number, tx?: TransactionHandle): Promise<void> {
+		const db = tx ?? this.db;
+		return db.delete(OperatorEntity, id);
+	}
 }

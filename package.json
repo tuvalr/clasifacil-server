@@ -10,7 +10,7 @@
     "dev:local": "cross-env NODE_ENV=local nodemon --exec ts-node src/container/inversify.config.ts",
     "dev:prod": "cross-env NODE_ENV=prod nodemon --exec ts-node src/container/inversify.config.ts",
     "build": "tsc",
-    "start": "node dist/container/inversify.config.js",
+    "start": "cross-env NODE_ENV=local nodemon --exec ts-node src/container/inversify.config.ts",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "test": "echo \"Error: no test specified\" && exit 1"
