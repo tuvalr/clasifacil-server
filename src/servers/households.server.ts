@@ -23,7 +23,7 @@ export class HouseholdHasActiveBookingError extends Error {
 	}
 }
 
-// UC1: Household & Multi-Child Account Management. Operations for both
+// UC1: Household & Multi-Student Account Management. Operations for both
 // the operator (list/archive/restore) and household (get/update/manage own
 // students) roles live together here since they operate on the same
 // households/students data.
@@ -211,7 +211,7 @@ export class HouseholdsServer {
 		return this.students.update(studentId, data);
 	}
 
-	// PRD UC1 edge case: "Archiving a Child Profile" — retain historical
+	// PRD UC1 edge case: "Archiving a Student Profile" — retain historical
 	// attendance/invoice logs, remove from active roster selectors. This
 	// is exactly PostgresHandler's soft-delete, so it IS implemented.
 	public async archiveStudent(studentId: number): Promise<Student | null> {

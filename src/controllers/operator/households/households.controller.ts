@@ -9,7 +9,7 @@ import { GetHouseholdResponse } from './types/get-household-response.type';
 import { ListHouseholdStudentsResponse } from './types/list-household-students-response.type';
 import { toPublic } from '../../../utils/to-public';
 
-// UC1: Household & Multi-Child Account Management
+// UC1: Household & Multi-Student Account Management
 @injectable()
 export class HouseholdsController extends BaseController {
 	public constructor(@inject(TYPES.HouseholdsServer) private readonly householdsServer: HouseholdsServer) {

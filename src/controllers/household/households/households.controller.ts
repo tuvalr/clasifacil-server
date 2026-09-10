@@ -14,7 +14,7 @@ import { UpdateStudentBody } from './types/update-student-body.type';
 import { UpdateStudentResponse } from './types/update-student-response.type';
 import { toPublic } from '../../../utils/to-public';
 
-// UC1: Household & Multi-Child Account Management
+// UC1: Household & Multi-Student Account Management
 @injectable()
 export class HouseholdHouseholdsController extends BaseController {
 	public constructor(@inject(TYPES.HouseholdsServer) private readonly householdsServer: HouseholdsServer) {
@@ -171,7 +171,7 @@ export class HouseholdHouseholdsController extends BaseController {
 		 */
 		this.internalRouter.put('/:id/students/:studentId', RouteHandlers.wrap(this.updateStudent.bind(this)));
 
-		// PRD UC1 edge case: "Archiving a Child Profile" — retain historical attendance/invoice logs, remove from active roster
+		// PRD UC1 edge case: "Archiving a Student Profile" — retain historical attendance/invoice logs, remove from active roster
 		// selectors. This is exactly PostgresHandler's soft-delete, so it IS implemented.
 		/**
 		 * @openapi
