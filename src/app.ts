@@ -56,7 +56,18 @@ export class App {
 		this.internalExpress.use(express.json());
 		// Serves avatar files written by LocalDiskAvatarStorage — remove this once avatar storage moves to a cloud
 		// bucket (URLs would then point at the bucket directly instead of this server).
-		this.internalExpress.use('/uploads', express.static(path.resolve(process.cwd(), 'uploads')));
+		// helmet()'s default Cross-Origin-Resource-Policy: same-origin blocks the frontend (a different origin) from
+		// embedding these as <img> subresources even though CORS already allows it — COEP/CORP is a separate browser
+		// mechanism CORS headers don't override. Relaxed to cross-origin only here, not app-wide, since this is the
+		// one route meant to be loaded cross-origin.
+		this.internalExpress.use(
+			'/uploads',
+			express.static(path.resolve(process.cwd(), 'uploads'), {
+				setHeaders: (res): void => {
+					res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+				},
+			}),
+		);
 	}
 
 	private routes(): void {

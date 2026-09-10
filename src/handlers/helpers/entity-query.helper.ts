@@ -70,10 +70,14 @@ export class EntityQueryHelper {
 		const columns = camelToSnake(data);
 		const columnNames = Object.keys(columns);
 		columnNames.forEach((name: string) => this.assertValidIdentifier(name));
-		const setClause = columnNames.map((name: string, index: number) => `"${name}" = $${index + 2}`).join(', ');
 		const values = columnNames.map((columnName: string) => columns[columnName]);
 
-		const sql = `UPDATE "${entity.tableName}" SET ${setClause}, updated_at = NOW() WHERE id = $1 RETURNING *`;
+		// No fields to change (e.g. a PUT with an empty/all-optional body) — still touch updated_at rather than
+		// building a SET clause with nothing before it, which would be a SQL syntax error.
+		const setClause =
+			columnNames.length > 0 ? columnNames.map((name: string, index: number) => `"${name}" = $${index + 2}`).join(', ') + ', updated_at = NOW()' : 'updated_at = NOW()';
+
+		const sql = `UPDATE "${entity.tableName}" SET ${setClause} WHERE id = $1 RETURNING *`;
 		const result = await db.query(sql, [id, ...values]);
 		return result.rows[0] ? snakeToCamel<T>(result.rows[0]) : null;
 	}
