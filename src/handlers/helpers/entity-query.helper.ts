@@ -22,12 +22,12 @@ export class EntityQueryHelper {
 
 	public async delete<T extends BaseEntity>(db: Queryable, entity: EntityDescriptor<T>, id: string | number): Promise<void> {
 		this.assertValidIdentifier(entity.tableName);
-		await db.query(`UPDATE "${entity.tableName}" SET is_deleted = TRUE, deleted_at = NOW() WHERE id = $1`, [id]);
+		await db.query(`UPDATE "${entity.tableName}" SET is_deleted = TRUE, deleted_at = NOW(), updated_at = NOW() WHERE id = $1`, [id]);
 	}
 
 	public async unDelete<T extends BaseEntity>(db: Queryable, entity: EntityDescriptor<T>, id: string | number): Promise<void> {
 		this.assertValidIdentifier(entity.tableName);
-		await db.query(`UPDATE "${entity.tableName}" SET is_deleted = FALSE, deleted_at = NULL WHERE id = $1`, [id]);
+		await db.query(`UPDATE "${entity.tableName}" SET is_deleted = FALSE, deleted_at = NULL, updated_at = NOW() WHERE id = $1`, [id]);
 	}
 
 	public async queryActive<T extends BaseEntity>(db: Queryable, entity: EntityDescriptor<T>, where?: string, params?: unknown[]): Promise<T[]> {

@@ -1,3 +1,4 @@
 import { Session } from '../../../../entities/session.entity';
+import { PublicEntity } from '../../../../entities/base.entity';
 
-export type ListSessionsResponse = Session[];
+export type ListSessionsResponse = PublicEntity<Session>[];

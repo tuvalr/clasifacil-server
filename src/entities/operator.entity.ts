@@ -9,6 +9,7 @@ export interface Operator extends BaseEntity {
 	onboardingStatus: string | null;
 	status: 'active' | 'paused';
 	pausedUntil: Date | null;
+	avatarUrl: string | null;
 }
 
 export const OperatorEntity: EntityDescriptor<Operator> = {

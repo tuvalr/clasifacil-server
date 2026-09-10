@@ -1,3 +1,4 @@
 import { Student } from '../../../../entities/student.entity';
+import { PublicEntity } from '../../../../entities/base.entity';
 
-export type ListOwnStudentsResponse = Student[];
+export type ListOwnStudentsResponse = PublicEntity<Student>[];

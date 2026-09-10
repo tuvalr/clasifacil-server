@@ -1,3 +1,4 @@
+import path from 'path';
 import express, { Express } from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
@@ -37,8 +38,25 @@ export class App {
 	private middleware(): void {
 		this.internalExpress.use(RequestContext.middleware);
 		this.internalExpress.use(helmet());
-		this.internalExpress.use(cors({ origin: this.config.corsOrigin }));
+		this.internalExpress.use(
+			cors({
+				// Reflects the request's Origin back (instead of a fixed value) when it's in the allowlist — this is
+				// what lets multiple distinct frontend origins (local dev, staging, prod) share one server/config,
+				// since Access-Control-Allow-Origin can only ever name one origin per response, never a list.
+				// A disallowed origin resolves with allow=false (not an error) so cors just omits the
+				// Access-Control-Allow-Origin header — the browser blocks the response client-side, same as any other
+				// unlisted origin, instead of the request 500ing server-side.
+				origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void): void => {
+					callback(null, !origin || this.config.corsAllowedOrigins.includes(origin));
+				},
+				methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+				allowedHeaders: ['Content-Type'],
+			}),
+		);
 		this.internalExpress.use(express.json());
+		// Serves avatar files written by LocalDiskAvatarStorage — remove this once avatar storage moves to a cloud
+		// bucket (URLs would then point at the bucket directly instead of this server).
+		this.internalExpress.use('/uploads', express.static(path.resolve(process.cwd(), 'uploads')));
 	}
 
 	private routes(): void {

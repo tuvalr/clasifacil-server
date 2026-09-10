@@ -8,6 +8,7 @@ import { ListOperatorInvoicesQuery } from './types/list-operator-invoices-query.
 import { ListOperatorInvoicesResponse } from './types/list-operator-invoices-response.type';
 import { GetInvoiceResponse } from './types/get-invoice-response.type';
 import { RecordOfflinePaymentResponse } from './types/record-offline-payment-response.type';
+import { toPublic } from '../../../utils/to-public';
 
 // UC4: Flexible Multi-Tier Payment & Billing Engine
 @injectable()
@@ -97,12 +98,17 @@ export class BillingController extends BaseController {
 
 	private async listInvoices(req: Request<unknown, ListOperatorInvoicesResponse, unknown, ListOperatorInvoicesQuery>, res: Response<ListOperatorInvoicesResponse>): Promise<void> {
 		const operatorId = Number(req.query.operatorId);
+		if (!req.query.operatorId || Number.isNaN(operatorId)) {
+			res.status(400).end();
+			return;
+		}
+
 		const invoices = await this.billingServer.findByOperatorId(operatorId);
 		if (!invoices) {
 			res.status(404).end();
 			return;
 		}
-		res.json(invoices);
+		res.json(invoices.map(toPublic));
 	}
 
 	private async getInvoiceById(req: Request<{ id: string }>, res: Response<GetInvoiceResponse>): Promise<void> {
@@ -111,7 +117,7 @@ export class BillingController extends BaseController {
 			res.status(404).end();
 			return;
 		}
-		res.json(invoice);
+		res.json(toPublic(invoice));
 	}
 
 	private async recordOfflinePayment(req: Request<{ id: string }>, res: Response<RecordOfflinePaymentResponse>): Promise<void> {
@@ -120,6 +126,6 @@ export class BillingController extends BaseController {
 			res.status(404).end();
 			return;
 		}
-		res.json(invoice);
+		res.json(toPublic(invoice));
 	}
 }

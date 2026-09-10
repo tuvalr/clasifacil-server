@@ -12,6 +12,7 @@ import { CreateStudentBody } from './types/create-student-body.type';
 import { CreateStudentResponse } from './types/create-student-response.type';
 import { UpdateStudentBody } from './types/update-student-body.type';
 import { UpdateStudentResponse } from './types/update-student-response.type';
+import { toPublic } from '../../../utils/to-public';
 
 // UC1: Household & Multi-Child Account Management
 @injectable()
@@ -209,7 +210,7 @@ export class ParentHouseholdsController extends BaseController {
 			res.status(404).end();
 			return;
 		}
-		res.json(household);
+		res.json(toPublic(household));
 	}
 
 	private async updateHousehold(req: Request<{ id: string }, UpdateHouseholdResponse, UpdateHouseholdBody>, res: Response<UpdateHouseholdResponse>): Promise<void> {
@@ -219,7 +220,7 @@ export class ParentHouseholdsController extends BaseController {
 			res.status(404).end();
 			return;
 		}
-		res.json(household);
+		res.json(toPublic(household));
 	}
 
 	private async listStudents(req: Request<{ id: string }>, res: Response<ListOwnStudentsResponse>): Promise<void> {
@@ -228,7 +229,7 @@ export class ParentHouseholdsController extends BaseController {
 			res.status(404).end();
 			return;
 		}
-		res.json(students);
+		res.json(students.map(toPublic));
 	}
 
 	private async createStudent(req: Request<{ id: string }, CreateStudentResponse, CreateStudentBody>, res: Response<CreateStudentResponse>): Promise<void> {
@@ -243,7 +244,7 @@ export class ParentHouseholdsController extends BaseController {
 			res.status(404).end();
 			return;
 		}
-		res.status(201).json(student);
+		res.status(201).json(toPublic(student));
 	}
 
 	private async updateStudent(req: Request<{ id: string; studentId: string }, UpdateStudentResponse, UpdateStudentBody>, res: Response<UpdateStudentResponse>): Promise<void> {
@@ -253,7 +254,7 @@ export class ParentHouseholdsController extends BaseController {
 			res.status(404).end();
 			return;
 		}
-		res.json(student);
+		res.json(toPublic(student));
 	}
 
 	private async archiveStudent(req: Request<{ id: string; studentId: string }>, res: Response): Promise<void> {

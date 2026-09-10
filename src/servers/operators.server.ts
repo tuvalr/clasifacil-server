@@ -90,23 +90,120 @@ export class OperatorsServer {
 		return this.operators.resume(id);
 	}
 
+	// findById first — same reasoning as pause()/resume(): update() has no is_deleted guard, so without this check a
+	// soft-deleted operator would still match and get silently updated instead of 404ing like every other endpoint.
+	public async update(id: number, data: { name?: string; email?: string; phone?: string; countryCode?: string }): Promise<Operator | null> {
+		const operator = await this.operators.findById(id);
+		if (!operator) {
+			return null;
+		}
+
+		const details = await this.validateUpdate(id, data);
+		if (details.length > 0) {
+			throw new ValidationError(details);
+		}
+
+		return this.operators.update(id, data);
+	}
+
+	public async updateAvatarUrl(id: number, avatarUrl: string | null): Promise<Operator | null> {
+		const operator = await this.operators.findById(id);
+		if (!operator) {
+			return null;
+		}
+		return this.operators.update(id, { avatarUrl });
+	}
+
 	private async validateCreate(data: { name: string; email: string; phone: string; countryCode: string }): Promise<ValidationErrorDetail[]> {
 		const details: ValidationErrorDetail[] = [];
 
-		if (!EMAIL_PATTERN.test(data.email)) {
+		details.push(...(await this.validateEmail(data.email, null)));
+		details.push(...(await this.validateName(data.name, null)));
+		details.push(...(await this.validatePhone(data.phone, null, data.countryCode)));
+
+		return details;
+	}
+
+	// Only the fields actually present in `data` are checked — an update() caller that isn't touching name/email/phone
+	// shouldn't be blocked by, say, another operator already having this operator's own unchanged email.
+	private async validateUpdate(id: number, data: { name?: string; email?: string; phone?: string; countryCode?: string }): Promise<ValidationErrorDetail[]> {
+		const details: ValidationErrorDetail[] = [];
+
+		if (data.email !== undefined) {
+			details.push(...(await this.validateEmail(data.email, id)));
+		}
+		if (data.name !== undefined) {
+			details.push(...(await this.validateName(data.name, id)));
+		}
+		if (data.phone !== undefined) {
+			details.push(...(await this.validatePhone(data.phone, id, data.countryCode)));
+		}
+
+		return details;
+	}
+
+	// excludeId: a re-fetched match is the operator's own current row (the field is unchanged) rather than a genuine
+	// collision — pass the operator's own id on update so it doesn't flag against itself; null on create, where no
+	// such row can exist yet. Shared by validateCreate/validateUpdate so both stay consistent automatically.
+	//
+	// Both operators_email_active_key and users_email_active_key are partial unique indexes scoped to active
+	// (NOT is_deleted) rows, so a soft-deleted operator's email is free to reuse — findByEmail/existsByEmail already
+	// only see active rows, matching that scope exactly, with no separate ignoring-deleted lookup needed.
+	private async validateEmail(email: string, excludeId: number | null): Promise<ValidationErrorDetail[]> {
+		const details: ValidationErrorDetail[] = [];
+
+		if (!EMAIL_PATTERN.test(email)) {
 			details.push({ field: 'email', message: 'Invalid email format' });
-		} else if (await this.operators.findByEmail(data.email)) {
+			return details;
+		}
+
+		const existingOperator = await this.operators.findByEmail(email);
+		if (existingOperator && existingOperator.id !== excludeId) {
 			details.push({ field: 'email', message: 'An operator with this email already exists' });
+			return details;
 		}
 
-		if (await this.operators.findByName(data.name)) {
-			details.push({ field: 'name', message: 'An operator with this name already exists' });
+		// users_email_active_key is a separate index (not scoped to operators) — checked independently so a taken
+		// login email 400s here instead of reaching that constraint raw. Only checked when the operators check above
+		// didn't already flag it, to avoid reporting the same email as invalid twice. Excluded by the *user's*
+		// associatedEntityId (not the operator match above, which already returned) — on an unchanged-email update,
+		// the operator's own login account legitimately owns this email already.
+		const existingUser = await this.users.findByEmail(email);
+		if (existingUser && !(existingUser.role === 'operator' && existingUser.associatedEntityId === excludeId)) {
+			details.push({ field: 'email', message: 'An account with this email already exists' });
 		}
 
-		if (!isKnownCountryCode(data.countryCode)) {
-			details.push({ field: 'countryCode', message: 'Invalid or unrecognized country code' });
-		} else if (!isValidPhoneNumber(data.phone, data.countryCode)) {
-			details.push({ field: 'phone', message: `Invalid phone number for country code ${data.countryCode}` });
+		return details;
+	}
+
+	private async validateName(name: string, excludeId: number | null): Promise<ValidationErrorDetail[]> {
+		const existing = await this.operators.findByName(name);
+		if (existing && existing.id !== excludeId) {
+			return [{ field: 'name', message: 'An operator with this name already exists' }];
+		}
+		return [];
+	}
+
+	// countryCode is required on create (format is only checkable together with it) but optional on update — a
+	// phone-only update's uniqueness check doesn't also need to re-validate format against a countryCode the caller
+	// isn't changing.
+	private async validatePhone(phone: string, excludeId: number | null, countryCode?: string): Promise<ValidationErrorDetail[]> {
+		const details: ValidationErrorDetail[] = [];
+
+		if (countryCode !== undefined) {
+			if (!isKnownCountryCode(countryCode)) {
+				details.push({ field: 'countryCode', message: 'Invalid or unrecognized country code' });
+				return details;
+			}
+			if (!isValidPhoneNumber(phone, countryCode)) {
+				details.push({ field: 'phone', message: `Invalid phone number for country code ${countryCode}` });
+				return details;
+			}
+		}
+
+		const existing = await this.operators.findByPhone(phone);
+		if (existing && existing.id !== excludeId) {
+			details.push({ field: 'phone', message: 'An operator with this phone number already exists' });
 		}
 
 		return details;

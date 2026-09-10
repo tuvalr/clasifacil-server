@@ -1,0 +1,27 @@
+import { randomUUID } from 'crypto';
+import { promises as fs } from 'fs';
+import path from 'path';
+import { injectable } from 'inversify';
+import { AvatarStorage } from './types/avatar-storage';
+
+// Stand-in for a cloud object store (e.g. S3) until one is actually provisioned. Saves under <repo>/uploads/avatars and
+// returns a URL served by express.static (see App.middleware) — swap this class for a cloud-backed AvatarStorage
+// implementation later; AvatarsServer and every controller stay unchanged.
+const UPLOADS_ROOT = path.resolve(process.cwd(), 'uploads');
+const AVATARS_DIR = path.join(UPLOADS_ROOT, 'avatars');
+export const AVATARS_URL_PREFIX = '/uploads/avatars';
+
+@injectable()
+export class LocalDiskAvatarStorage implements AvatarStorage {
+	public async save(role: 'parent' | 'operator', id: number, buffer: Buffer, extension: string): Promise<string> {
+		await fs.mkdir(AVATARS_DIR, { recursive: true });
+		const fileName = `${role}-${id}-${randomUUID()}.${extension}`;
+		await fs.writeFile(path.join(AVATARS_DIR, fileName), buffer);
+		return `${AVATARS_URL_PREFIX}/${fileName}`;
+	}
+
+	public async delete(url: string): Promise<void> {
+		const fileName = path.basename(url);
+		await fs.rm(path.join(AVATARS_DIR, fileName), { force: true });
+	}
+}

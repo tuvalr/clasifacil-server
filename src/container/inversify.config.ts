@@ -31,6 +31,9 @@ import { BillingServer } from '../servers/billing.server';
 import { AutopayServer } from '../servers/autopay.server';
 import { RemindersServer } from '../servers/reminders.server';
 import { OperatorsServer } from '../servers/operators.server';
+import { AvatarsServer } from '../servers/avatars.server';
+import { AvatarStorage } from '../servers/types/avatar-storage';
+import { LocalDiskAvatarStorage } from '../servers/local-disk-avatar-storage';
 import { AdminController } from '../controllers/admin/admin.controller';
 import { OperatorController } from '../controllers/operator/operator.controller';
 import { HouseholdsController } from '../controllers/operator/households/households.controller';
@@ -45,6 +48,8 @@ import { BookingController } from '../controllers/parent/booking/booking.control
 import { ParentAttendanceCreditsController } from '../controllers/parent/attendance-credits/attendance-credits.controller';
 import { ParentBillingController } from '../controllers/parent/billing/billing.controller';
 import { ParentAutopayController } from '../controllers/parent/autopay/autopay.controller';
+import { ParentSettingsController } from '../controllers/parent/settings/settings.controller';
+import { OperatorSettingsController } from '../controllers/operator/settings/settings.controller';
 
 async function bootstrap(): Promise<void> {
 	const logger: Logger = new PinoLogger();
@@ -75,6 +80,8 @@ async function bootstrap(): Promise<void> {
 	container.bind<AutopayServer>(TYPES.AutopayServer).to(AutopayServer).inSingletonScope();
 	container.bind<RemindersServer>(TYPES.RemindersServer).to(RemindersServer).inSingletonScope();
 	container.bind<OperatorsServer>(TYPES.OperatorsServer).to(OperatorsServer).inSingletonScope();
+	container.bind<AvatarStorage>(TYPES.AvatarStorage).to(LocalDiskAvatarStorage).inSingletonScope();
+	container.bind<AvatarsServer>(TYPES.AvatarsServer).to(AvatarsServer).inSingletonScope();
 
 	container.bind<AdminController>(TYPES.AdminController).to(AdminController).inSingletonScope();
 	container.bind<HouseholdsController>(TYPES.HouseholdsController).to(HouseholdsController).inSingletonScope();
@@ -89,6 +96,8 @@ async function bootstrap(): Promise<void> {
 	container.bind<ParentAttendanceCreditsController>(TYPES.ParentAttendanceCreditsController).to(ParentAttendanceCreditsController).inSingletonScope();
 	container.bind<ParentBillingController>(TYPES.ParentBillingController).to(ParentBillingController).inSingletonScope();
 	container.bind<ParentAutopayController>(TYPES.ParentAutopayController).to(ParentAutopayController).inSingletonScope();
+	container.bind<ParentSettingsController>(TYPES.ParentSettingsController).to(ParentSettingsController).inSingletonScope();
+	container.bind<OperatorSettingsController>(TYPES.OperatorSettingsController).to(OperatorSettingsController).inSingletonScope();
 	container.bind<ParentController>(TYPES.ParentController).to(ParentController).inSingletonScope();
 
 	container.bind<App>(TYPES.App).to(App).inSingletonScope();

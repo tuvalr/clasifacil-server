@@ -5,6 +5,7 @@ import { BillingServer } from '../../../servers/billing.server';
 import { RouteHandlers } from '../../shared/route-handlers';
 import { BaseController } from '../../shared/base.controller';
 import { ListOwnInvoicesResponse } from './types/list-own-invoices-response.type';
+import { toPublic } from '../../../utils/to-public';
 
 // UC4: Flexible Multi-Tier Payment & Billing Engine
 @injectable()
@@ -52,6 +53,6 @@ export class ParentBillingController extends BaseController {
 			res.status(404).end();
 			return;
 		}
-		res.json(invoices);
+		res.json(invoices.map(toPublic));
 	}
 }

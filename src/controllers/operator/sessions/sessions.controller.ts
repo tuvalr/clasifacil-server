@@ -10,6 +10,7 @@ import { GetSessionResponse } from './types/get-session-response.type';
 import { GetSessionRosterResponse } from './types/get-session-roster-response.type';
 import { CreateSessionBody } from './types/create-session-body.type';
 import { CreateSessionResponse } from './types/create-session-response.type';
+import { toPublic } from '../../../utils/to-public';
 
 // UC2: Automated Session Booking & Capacity Hard Limits
 @injectable()
@@ -143,12 +144,17 @@ export class SessionsController extends BaseController {
 
 	private async listSessions(req: Request<unknown, ListSessionsResponse, unknown, ListSessionsQuery>, res: Response<ListSessionsResponse>): Promise<void> {
 		const operatorId = Number(req.query.operatorId);
+		if (!req.query.operatorId || Number.isNaN(operatorId)) {
+			res.status(400).end();
+			return;
+		}
+
 		const sessions = await this.sessionsServer.findByOperatorId(operatorId);
 		if (!sessions) {
 			res.status(404).end();
 			return;
 		}
-		res.json(sessions);
+		res.json(sessions.map(toPublic));
 	}
 
 	private async getSessionById(req: Request<{ id: string }>, res: Response<GetSessionResponse>): Promise<void> {
@@ -157,7 +163,7 @@ export class SessionsController extends BaseController {
 			res.status(404).end();
 			return;
 		}
-		res.json(session);
+		res.json(toPublic(session));
 	}
 
 	private async getRoster(req: Request<{ id: string }>, res: Response<GetSessionRosterResponse>): Promise<void> {
@@ -166,7 +172,7 @@ export class SessionsController extends BaseController {
 			res.status(404).end();
 			return;
 		}
-		res.json(roster);
+		res.json(roster.map(toPublic));
 	}
 
 	private async createSession(req: Request<unknown, CreateSessionResponse, CreateSessionBody>, res: Response<CreateSessionResponse>): Promise<void> {
@@ -176,7 +182,7 @@ export class SessionsController extends BaseController {
 			res.status(404).end();
 			return;
 		}
-		res.status(201).json(session);
+		res.status(201).json(toPublic(session));
 	}
 
 	private async cancelSession(req: Request<{ id: string }>, res: Response): Promise<void> {

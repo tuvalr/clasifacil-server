@@ -7,6 +7,7 @@ import { BaseController } from '../../shared/base.controller';
 import { ListHouseholdsResponse } from './types/list-households-response.type';
 import { GetHouseholdResponse } from './types/get-household-response.type';
 import { ListHouseholdStudentsResponse } from './types/list-household-students-response.type';
+import { toPublic } from '../../../utils/to-public';
 
 // UC1: Household & Multi-Child Account Management
 @injectable()
@@ -127,7 +128,7 @@ export class HouseholdsController extends BaseController {
 
 	private async listHouseholds(_req: Request, res: Response<ListHouseholdsResponse>): Promise<void> {
 		const households = await this.householdsServer.listAll();
-		res.json(households);
+		res.json(households.map(toPublic));
 	}
 
 	private async getHouseholdById(req: Request<{ id: string }>, res: Response<GetHouseholdResponse>): Promise<void> {
@@ -136,7 +137,7 @@ export class HouseholdsController extends BaseController {
 			res.status(404).end();
 			return;
 		}
-		res.json(household);
+		res.json(toPublic(household));
 	}
 
 	private async listStudents(req: Request<{ id: string }>, res: Response<ListHouseholdStudentsResponse>): Promise<void> {
@@ -145,7 +146,7 @@ export class HouseholdsController extends BaseController {
 			res.status(404).end();
 			return;
 		}
-		res.json(students);
+		res.json(students.map(toPublic));
 	}
 
 	private async archiveHousehold(req: Request<{ id: string }>, res: Response): Promise<void> {

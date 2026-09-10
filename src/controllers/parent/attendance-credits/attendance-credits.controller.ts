@@ -6,6 +6,7 @@ import { RouteHandlers } from '../../shared/route-handlers';
 import { BaseController } from '../../shared/base.controller';
 import { ListOwnCreditsResponse } from './types/list-own-credits-response.type';
 import { CancelEnrollmentResponse } from './types/cancel-enrollment-response.type';
+import { toPublic } from '../../../utils/to-public';
 
 // UC3: Attendance Tracking & Automated Make-Up Credit State Machine
 @injectable()
@@ -68,7 +69,7 @@ export class ParentAttendanceCreditsController extends BaseController {
 			res.status(404).end();
 			return;
 		}
-		res.json(credits);
+		res.json(credits.map(toPublic));
 	}
 
 	private async cancelEnrollment(req: Request<{ enrollmentId: string }>, res: Response<CancelEnrollmentResponse>): Promise<void> {
@@ -78,6 +79,6 @@ export class ParentAttendanceCreditsController extends BaseController {
 			res.status(404).end();
 			return;
 		}
-		res.json(updated);
+		res.json(toPublic(updated));
 	}
 }

@@ -7,6 +7,7 @@ import { BaseController } from '../../shared/base.controller';
 import { BookSessionBody } from './types/book-session-body.type';
 import { BookSessionResponse } from './types/book-session-response.type';
 import { ListOwnEnrollmentsResponse } from './types/list-own-enrollments-response.type';
+import { toPublic } from '../../../utils/to-public';
 
 // UC2: Automated Session Booking & Capacity Hard Limits
 @injectable()
@@ -96,7 +97,7 @@ export class BookingController extends BaseController {
 			res.status(404).end();
 			return;
 		}
-		res.json(enrollments);
+		res.json(enrollments.map(toPublic));
 	}
 
 	private async book(req: Request<{ sessionId: string }, BookSessionResponse, BookSessionBody>, res: Response<BookSessionResponse>): Promise<void> {
@@ -112,6 +113,6 @@ export class BookingController extends BaseController {
 			res.status(409).json({ error: 'Session at capacity', waitlisted: result.waitlisted });
 			return;
 		}
-		res.status(201).json(result);
+		res.status(201).json(toPublic(result));
 	}
 }

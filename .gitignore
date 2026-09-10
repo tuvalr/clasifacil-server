@@ -1,6 +1,7 @@
 .superpowers/
 node_modules/
 dist/
+uploads/
 .env.dev
 .env.local
 .env.prod

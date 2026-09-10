@@ -1,3 +1,4 @@
 import { EnrollmentAndCredit } from '../../../../entities/enrollment-and-credit.entity';
+import { PublicEntity } from '../../../../entities/base.entity';
 
-export type ListOwnEnrollmentsResponse = EnrollmentAndCredit[];
+export type ListOwnEnrollmentsResponse = PublicEntity<EnrollmentAndCredit>[];

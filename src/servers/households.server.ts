@@ -54,6 +54,10 @@ export class HouseholdsServer {
 		return this.households.update(id, data);
 	}
 
+	public async updateAvatarUrl(id: number, avatarUrl: string | null): Promise<Household | null> {
+		return this.households.update(id, { avatarUrl });
+	}
+
 	public async listStudents(householdId: number): Promise<Student[] | null> {
 		const household = await this.households.findById(householdId);
 		if (!household) {

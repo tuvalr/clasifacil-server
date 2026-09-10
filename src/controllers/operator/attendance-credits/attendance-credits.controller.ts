@@ -5,6 +5,7 @@ import { AttendanceCreditsServer } from '../../../servers/attendance-credits.ser
 import { RouteHandlers } from '../../shared/route-handlers';
 import { BaseController } from '../../shared/base.controller';
 import { ListSessionCreditsResponse } from './types/list-session-credits-response.type';
+import { toPublic } from '../../../utils/to-public';
 
 // UC3: Attendance Tracking & Automated Make-Up Credit State Machine
 @injectable()
@@ -51,6 +52,6 @@ export class AttendanceCreditsController extends BaseController {
 			res.status(404).end();
 			return;
 		}
-		res.json(enrollments);
+		res.json(enrollments.map(toPublic));
 	}
 }

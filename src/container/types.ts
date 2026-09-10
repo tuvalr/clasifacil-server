@@ -23,6 +23,8 @@ export const TYPES = {
 	AutopayServer: Symbol.for('AutopayServer'),
 	RemindersServer: Symbol.for('RemindersServer'),
 	OperatorsServer: Symbol.for('OperatorsServer'),
+	AvatarsServer: Symbol.for('AvatarsServer'),
+	AvatarStorage: Symbol.for('AvatarStorage'),
 
 	AdminController: Symbol.for('AdminController'),
 	OperatorController: Symbol.for('OperatorController'),
@@ -38,4 +40,6 @@ export const TYPES = {
 	ParentAttendanceCreditsController: Symbol.for('ParentAttendanceCreditsController'),
 	ParentBillingController: Symbol.for('ParentBillingController'),
 	ParentAutopayController: Symbol.for('ParentAutopayController'),
+	ParentSettingsController: Symbol.for('ParentSettingsController'),
+	OperatorSettingsController: Symbol.for('OperatorSettingsController'),
 };

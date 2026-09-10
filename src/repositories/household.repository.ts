@@ -24,7 +24,7 @@ export class HouseholdRepository {
 		return this.db.insert(HouseholdEntity, { name: data.name, email: data.email, isDeleted: false });
 	}
 
-	public async update(id: number, data: Partial<{ name: string; email: string }>): Promise<Household | null> {
+	public async update(id: number, data: Partial<{ name: string; email: string; avatarUrl: string | null }>): Promise<Household | null> {
 		return this.db.update(HouseholdEntity, id, data);
 	}
 

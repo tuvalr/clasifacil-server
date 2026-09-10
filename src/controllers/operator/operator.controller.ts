@@ -7,6 +7,7 @@ import { AttendanceCreditsController } from './attendance-credits/attendance-cre
 import { BillingController } from './billing/billing.controller';
 import { RemindersController } from './reminders/reminders.controller';
 import { AutopayController } from './autopay/autopay.controller';
+import { OperatorSettingsController } from './settings/settings.controller';
 
 @injectable()
 export class OperatorController extends BaseController {
@@ -17,6 +18,7 @@ export class OperatorController extends BaseController {
 		@inject(TYPES.BillingController) billingController: BillingController,
 		@inject(TYPES.RemindersController) remindersController: RemindersController,
 		@inject(TYPES.AutopayController) autopayController: AutopayController,
+		@inject(TYPES.OperatorSettingsController) settingsController: OperatorSettingsController,
 	) {
 		super();
 		this.internalRouter.use('/households', householdsController.router);
@@ -25,5 +27,6 @@ export class OperatorController extends BaseController {
 		this.internalRouter.use('/billing', billingController.router);
 		this.internalRouter.use('/reminders', remindersController.router);
 		this.internalRouter.use('/autopay', autopayController.router);
+		this.internalRouter.use('/settings', settingsController.router);
 	}
 }

@@ -3,7 +3,7 @@ export type NodeEnv = 'dev' | 'local' | 'prod';
 export interface Config {
 	nodeEnv: NodeEnv;
 	port: number;
-	corsOrigin: string;
+	corsAllowedOrigins: string[];
 	pgHost: string;
 	pgPort: number;
 	pgUser: string;
@@ -32,9 +32,9 @@ export function loadConfig(): Config {
 		missing.push('PORT');
 	}
 
-	const rawCorsOrigin = process.env.CORS_ORIGIN;
-	if (!rawCorsOrigin) {
-		missing.push('CORS_ORIGIN');
+	const rawCorsAllowedOrigins = process.env.CORS_ALLOWED_ORIGINS;
+	if (!rawCorsAllowedOrigins) {
+		missing.push('CORS_ALLOWED_ORIGINS');
 	}
 
 	const rawPgHost = process.env.PG_HOST;
@@ -79,7 +79,7 @@ export function loadConfig(): Config {
 	return {
 		nodeEnv: rawNodeEnv as NodeEnv,
 		port,
-		corsOrigin: rawCorsOrigin as string,
+		corsAllowedOrigins: (rawCorsAllowedOrigins as string).split(',').map((origin: string) => origin.trim()),
 		pgHost: rawPgHost as string,
 		pgPort,
 		pgUser: rawPgUser as string,

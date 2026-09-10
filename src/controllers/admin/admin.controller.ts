@@ -11,6 +11,8 @@ import { CreateOperatorBody } from './types/create-operator-body.type';
 import { CreateOperatorResponse } from './types/create-operator-response.type';
 import { CreateOperatorValidationErrorResponse } from './types/create-operator-validation-error-response.type';
 import { PauseOperatorBody } from './types/pause-operator-body.type';
+import { UpdateOperatorBody } from './types/update-operator-body.type';
+import { toPublic } from '../../utils/to-public';
 
 @injectable()
 export class AdminController extends BaseController {
@@ -119,6 +121,58 @@ export class AdminController extends BaseController {
 		/**
 		 * @openapi
 		 * /api/admin/operators/{id}:
+		 *   put:
+		 *     summary: Update an operator
+		 *     description: >
+		 *       All fields optional — only provided fields are changed. name, email, and phone must each stay unique
+		 *       across operators (and, for email, across all login accounts); phone is also validated against
+		 *       countryCode when both are provided.
+		 *     tags: [Admin]
+		 *     parameters:
+		 *       - in: path
+		 *         name: id
+		 *         required: true
+		 *         schema: { type: integer }
+		 *     requestBody:
+		 *       content:
+		 *         application/json:
+		 *           schema:
+		 *             type: object
+		 *             properties:
+		 *               name: { type: string }
+		 *               email: { type: string }
+		 *               phone: { type: string, description: 'National-format phone number, validated against countryCode' }
+		 *               countryCode: { type: string, description: 'ISO 3166-1 alpha-2 country code, e.g. US' }
+		 *     responses:
+		 *       200:
+		 *         description: OK
+		 *         content:
+		 *           application/json:
+		 *             schema: { $ref: '#/components/schemas/Operator' }
+		 *       400:
+		 *         description: Validation failed
+		 *         content:
+		 *           application/json:
+		 *             schema:
+		 *               type: object
+		 *               properties:
+		 *                 error: { type: string }
+		 *                 details:
+		 *                   type: array
+		 *                   items:
+		 *                     type: object
+		 *                     properties:
+		 *                       field: { type: string }
+		 *                       message: { type: string }
+		 *       401: { $ref: '#/components/responses/Unauthorized' }
+		 *       404: { description: Not found }
+		 *       500: { $ref: '#/components/responses/InternalError' }
+		 */
+		router.put('/:id', RouteHandlers.wrap(this.updateOperator.bind(this)));
+
+		/**
+		 * @openapi
+		 * /api/admin/operators/{id}:
 		 *   delete:
 		 *     summary: Delete an operator and its login user
 		 *     description: Soft-deletes the operator and its associated users row together, so it immediately loses login access.
@@ -201,7 +255,7 @@ export class AdminController extends BaseController {
 
 	private async listOperators(_req: Request, res: Response<ListOperatorsResponse>): Promise<void> {
 		const operators = await this.operatorsServer.listAll();
-		res.json(operators);
+		res.json(operators.map(toPublic));
 	}
 
 	private async getOperatorById(req: Request<{ id: string }>, res: Response<GetOperatorResponse>): Promise<void> {
@@ -210,7 +264,7 @@ export class AdminController extends BaseController {
 			res.status(404).end();
 			return;
 		}
-		res.json(operator);
+		res.json(toPublic(operator));
 	}
 
 	private async createOperator(
@@ -220,7 +274,28 @@ export class AdminController extends BaseController {
 		const { name, email, phone, countryCode } = req.body;
 		try {
 			const result = await this.operatorsServer.create({ name, email, phone, countryCode });
-			res.status(201).json(result);
+			res.status(201).json({ operator: toPublic(result.operator), user: toPublic(result.user) });
+		} catch (error) {
+			if (error instanceof ValidationError) {
+				res.status(400).json({ error: 'Validation failed', details: error.details });
+				return;
+			}
+			throw error;
+		}
+	}
+
+	private async updateOperator(
+		req: Request<{ id: string }, GetOperatorResponse | CreateOperatorValidationErrorResponse, UpdateOperatorBody>,
+		res: Response<GetOperatorResponse | CreateOperatorValidationErrorResponse>,
+	): Promise<void> {
+		const { name, email, phone, countryCode } = req.body;
+		try {
+			const operator = await this.operatorsServer.update(Number(req.params.id), { name, email, phone, countryCode });
+			if (!operator) {
+				res.status(404).end();
+				return;
+			}
+			res.json(toPublic(operator));
 		} catch (error) {
 			if (error instanceof ValidationError) {
 				res.status(400).json({ error: 'Validation failed', details: error.details });
@@ -246,7 +321,7 @@ export class AdminController extends BaseController {
 			res.status(404).end();
 			return;
 		}
-		res.json(operator);
+		res.json(toPublic(operator));
 	}
 
 	private async resumeOperator(req: Request<{ id: string }>, res: Response<GetOperatorResponse>): Promise<void> {
@@ -255,6 +330,6 @@ export class AdminController extends BaseController {
 			res.status(404).end();
 			return;
 		}
-		res.json(operator);
+		res.json(toPublic(operator));
 	}
 }

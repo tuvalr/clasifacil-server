@@ -2,14 +2,13 @@ import swaggerJsdoc from 'swagger-jsdoc';
 
 // Shared response schemas referenced from @openapi comments across
 // controllers via $ref: '#/components/schemas/<Name>' — matches each
-// entity's actual TypeScript shape (src/entities/*.entity.ts) so the
-// docs stay in sync with what the API actually returns.
+// entity's PUBLIC (PublicEntity<T>, see src/entities/base.entity.ts) shape,
+// not the raw DB entity: deletedAt/createdAt/updatedAt are DB-managed
+// bookkeeping that every controller strips via toPublic() before responding
+// (src/utils/to-public.ts), so they're deliberately absent here too.
 const swaggerBaseFields = {
 	id: { type: 'integer' },
 	isDeleted: { type: 'boolean' },
-	deletedAt: { type: 'string', format: 'date-time', nullable: true },
-	createdAt: { type: 'string', format: 'date-time' },
-	updatedAt: { type: 'string', format: 'date-time' },
 };
 
 export const swaggerSpec = swaggerJsdoc({
@@ -25,10 +24,12 @@ export const swaggerSpec = swaggerJsdoc({
 			{ name: 'Operator - Billing' },
 			{ name: 'Operator - Households' },
 			{ name: 'Operator - Sessions' },
+			{ name: 'Operator - Settings' },
 			{ name: 'Parent - Attendance Credits' },
 			{ name: 'Parent - Billing' },
 			{ name: 'Parent - Booking' },
 			{ name: 'Parent - Households' },
+			{ name: 'Parent - Settings' },
 		],
 		components: {
 			schemas: {
@@ -44,6 +45,7 @@ export const swaggerSpec = swaggerJsdoc({
 						onboardingStatus: { type: 'string', nullable: true },
 						status: { type: 'string', enum: ['active', 'paused'] },
 						pausedUntil: { type: 'string', format: 'date-time', nullable: true },
+						avatarUrl: { type: 'string', nullable: true },
 					},
 				},
 				User: {
@@ -62,6 +64,7 @@ export const swaggerSpec = swaggerJsdoc({
 						...swaggerBaseFields,
 						name: { type: 'string' },
 						email: { type: 'string' },
+						avatarUrl: { type: 'string', nullable: true },
 					},
 				},
 				Student: {

@@ -25,13 +25,21 @@ export class OperatorRepository {
 		return rows[0] ?? null;
 	}
 
+	public async findByPhone(phone: string): Promise<Operator | null> {
+		const rows = await this.db.queryActive(OperatorEntity, 'phone = $1', [phone]);
+		return rows[0] ?? null;
+	}
+
 	// Accepts an optional TransactionHandle — see UserRepository.create() for why (AdminOperatorsController creates an operator + its user account atomically).
 	public async create(data: { name: string; email: string; phone: string; countryCode: string }, tx?: TransactionHandle): Promise<Operator> {
 		const db = tx ?? this.db;
 		return db.insert(OperatorEntity, { ...data, isDeleted: false });
 	}
 
-	public async update(id: number, data: Partial<{ name: string; email: string; stripeAccountId: string | null; onboardingStatus: string | null }>): Promise<Operator | null> {
+	public async update(
+		id: number,
+		data: Partial<{ name: string; email: string; phone: string; countryCode: string; stripeAccountId: string | null; onboardingStatus: string | null; avatarUrl: string | null }>,
+	): Promise<Operator | null> {
 		return this.db.update(OperatorEntity, id, data);
 	}
 
