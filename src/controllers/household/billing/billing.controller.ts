@@ -9,16 +9,16 @@ import { toPublic } from '../../../utils/to-public';
 
 // UC4: Flexible Multi-Tier Payment & Billing Engine
 @injectable()
-export class ParentBillingController extends BaseController {
+export class HouseholdBillingController extends BaseController {
 	public constructor(@inject(TYPES.BillingServer) private readonly billingServer: BillingServer) {
 		super();
 
 		/**
 		 * @openapi
-		 * /api/parent/billing/households/{householdId}/invoices:
+		 * /api/household/billing/households/{householdId}/invoices:
 		 *   get:
 		 *     summary: List own household's invoices
-		 *     tags: [Parent - Billing]
+		 *     tags: [Household - Billing]
 		 *     parameters:
 		 *       - in: path
 		 *         name: householdId

@@ -14,7 +14,7 @@ export interface BookingConflict {
 }
 
 // UC2: Automated Session Booking & Capacity Hard Limits. Operator-side
-// session management (create/cancel/roster) and parent-side booking
+// session management (create/cancel/roster) and household-side booking
 // live together since both operate on sessions + enrollments_and_credits
 // as one domain (session capacity/roster) viewed from two roles.
 @injectable()
@@ -77,7 +77,7 @@ export class SessionsServer {
 		return session;
 	}
 
-	// Parent-side
+	// Household-side
 
 	public async listEnrollments(householdId: number): Promise<EnrollmentAndCredit[] | null> {
 		const household = await this.households.findById(householdId);
@@ -128,6 +128,6 @@ export class SessionsServer {
 	// claim window on cancellation) — status is a free-text column with
 	// no queue-position or claim-deadline tracking.
 
-	// TODO: browse-by-availability listing (parent session search), not
+	// TODO: browse-by-availability listing (household session search), not
 	// yet designed.
 }

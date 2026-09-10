@@ -1,5 +1,5 @@
 import path from 'path';
-import express, { Express } from 'express';
+import express, { Express, Response } from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
 import swaggerUi from 'swagger-ui-express';
@@ -12,7 +12,7 @@ import { RouteHandlers } from './controllers/shared/route-handlers';
 import { swaggerSpec } from './docs/swagger-spec';
 import { AdminController } from './controllers/admin/admin.controller';
 import { OperatorController } from './controllers/operator/operator.controller';
-import { ParentController } from './controllers/parent/parent.controller';
+import { HouseholdController } from './controllers/household/household.controller';
 
 @injectable()
 export class App {
@@ -23,7 +23,7 @@ export class App {
 		@inject(TYPES.Logger) private readonly logger: Logger,
 		@inject(TYPES.AdminController) private readonly adminController: AdminController,
 		@inject(TYPES.OperatorController) private readonly operatorController: OperatorController,
-		@inject(TYPES.ParentController) private readonly parentController: ParentController,
+		@inject(TYPES.HouseholdController) private readonly householdController: HouseholdController,
 	) {
 		this.internalExpress = express();
 		this.middleware();
@@ -63,7 +63,7 @@ export class App {
 		this.internalExpress.use(
 			'/uploads',
 			express.static(path.resolve(process.cwd(), 'uploads'), {
-				setHeaders: (res): void => {
+				setHeaders: (res: Response): void => {
 					res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
 				},
 			}),
@@ -95,7 +95,7 @@ export class App {
 
 		this.internalExpress.use('/api/admin', this.adminController.router);
 		this.internalExpress.use('/api/operator', this.operatorController.router);
-		this.internalExpress.use('/api/parent', this.parentController.router);
+		this.internalExpress.use('/api/household', this.householdController.router);
 	}
 
 	// Must be mounted after every route —

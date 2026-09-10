@@ -10,16 +10,16 @@ import { toPublic } from '../../../utils/to-public';
 
 // UC3: Attendance Tracking & Automated Make-Up Credit State Machine
 @injectable()
-export class ParentAttendanceCreditsController extends BaseController {
+export class HouseholdAttendanceCreditsController extends BaseController {
 	public constructor(@inject(TYPES.AttendanceCreditsServer) private readonly attendanceCreditsServer: AttendanceCreditsServer) {
 		super();
 
 		/**
 		 * @openapi
-		 * /api/parent/attendance-credits/{enrollmentId}/cancel:
+		 * /api/household/attendance-credits/{enrollmentId}/cancel:
 		 *   post:
 		 *     summary: Cancel an enrollment
-		 *     tags: [Parent - Attendance Credits]
+		 *     tags: [Household - Attendance Credits]
 		 *     parameters:
 		 *       - in: path
 		 *         name: enrollmentId
@@ -40,10 +40,10 @@ export class ParentAttendanceCreditsController extends BaseController {
 
 		/**
 		 * @openapi
-		 * /api/parent/attendance-credits/households/{householdId}/credits:
+		 * /api/household/attendance-credits/households/{householdId}/credits:
 		 *   get:
 		 *     summary: List own household's credits
-		 *     tags: [Parent - Attendance Credits]
+		 *     tags: [Household - Attendance Credits]
 		 *     parameters:
 		 *       - in: path
 		 *         name: householdId

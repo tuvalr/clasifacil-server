@@ -20,7 +20,7 @@ const parseAvatarUpload = multer({
 	},
 }).single('avatar');
 
-// Shared by the parent and operator settings controllers' avatar-upload routes. Wraps multer's callback-style
+// Shared by the household and operator settings controllers' avatar-upload routes. Wraps multer's callback-style
 // middleware so its errors (file too large, unsupported type) become 400s instead of falling through to the generic
 // 500 error handler, which is what next(err) would otherwise trigger for any unrecognized error.
 export function avatarUpload(req: Request, res: Response, next: NextFunction): void {

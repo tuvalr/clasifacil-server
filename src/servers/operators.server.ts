@@ -5,8 +5,16 @@ import { TYPES } from '../container/types';
 import { PostgresHandler, TransactionHandle } from '../handlers/postgres-handler';
 import { OperatorRepository } from '../repositories/operator.repository';
 import { UserRepository } from '../repositories/user.repository';
+import { SessionRepository } from '../repositories/session.repository';
+import { EnrollmentAndCreditRepository } from '../repositories/enrollment-and-credit.repository';
+import { StudentRepository } from '../repositories/student.repository';
+import { HouseholdRepository } from '../repositories/household.repository';
 import { Operator } from '../entities/operator.entity';
 import { User } from '../entities/user.entity';
+import { Session } from '../entities/session.entity';
+import { EnrollmentAndCredit } from '../entities/enrollment-and-credit.entity';
+import { Student } from '../entities/student.entity';
+import { Household } from '../entities/household.entity';
 import { ValidationError, ValidationErrorDetail } from './types/validation-error';
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -16,6 +24,9 @@ function isKnownCountryCode(value: string): value is CountryCode {
 	return VALID_COUNTRY_CODES.has(value);
 }
 
+export type EnrollmentWithHouseholdDetails = EnrollmentAndCredit & { student: Student | null; household: Household | null };
+export type SessionWithEnrollmentDetails = Session & { enrollments: EnrollmentWithHouseholdDetails[] };
+
 // Admin: creating and managing operators.
 @injectable()
 export class OperatorsServer {
@@ -23,6 +34,10 @@ export class OperatorsServer {
 		@inject(TYPES.PostgresHandler) private readonly db: PostgresHandler,
 		@inject(TYPES.OperatorRepository) private readonly operators: OperatorRepository,
 		@inject(TYPES.UserRepository) private readonly users: UserRepository,
+		@inject(TYPES.SessionRepository) private readonly sessions: SessionRepository,
+		@inject(TYPES.EnrollmentAndCreditRepository) private readonly enrollments: EnrollmentAndCreditRepository,
+		@inject(TYPES.StudentRepository) private readonly students: StudentRepository,
+		@inject(TYPES.HouseholdRepository) private readonly households: HouseholdRepository,
 	) {}
 
 	public async listAll(): Promise<Operator[]> {
@@ -31,6 +46,47 @@ export class OperatorsServer {
 
 	public async findById(id: number): Promise<Operator | null> {
 		return this.operators.findById(id);
+	}
+
+	// Detail view: the operator plus each of its (non-cancelled) sessions, each annotated with its own
+	// enrollments — and each enrollment annotated with the student and household that booked it — everything an
+	// admin needs to see who is connected to this operator without further round trips. Students/households are
+	// fetched once per distinct id (not once per enrollment) since the same household commonly has multiple
+	// students/enrollments across an operator's sessions.
+	public async getByIdWithDetails(id: number): Promise<{ operator: Operator; sessions: SessionWithEnrollmentDetails[] } | null> {
+		const operator = await this.operators.findById(id);
+		if (!operator) {
+			return null;
+		}
+
+		const sessions = await this.sessions.findByOperatorId(id);
+		const enrollmentsBySession = await Promise.all(sessions.map((session: Session) => this.enrollments.findBySessionId(session.id)));
+		const allEnrollments = enrollmentsBySession.flat();
+
+		const studentIds = [...new Set(allEnrollments.map((enrollment: EnrollmentAndCredit) => enrollment.studentId))];
+		const householdIds = [...new Set(allEnrollments.map((enrollment: EnrollmentAndCredit) => enrollment.householdId))];
+		const [studentResults, householdResults]: [(Student | null)[], (Household | null)[]] = await Promise.all([
+			Promise.all(studentIds.map((studentId: number) => this.students.findById(studentId))),
+			Promise.all(householdIds.map((householdId: number) => this.households.findById(householdId))),
+		]);
+		const studentsById = new Map<number, Student>(
+			studentResults.filter((student: Student | null): student is Student => student !== null).map((student: Student) => [student.id, student]),
+		);
+		const householdsById = new Map<number, Household>(
+			householdResults.filter((household: Household | null): household is Household => household !== null).map((household: Household) => [household.id, household]),
+		);
+
+		return {
+			operator,
+			sessions: sessions.map((session: Session, index: number) => ({
+				...session,
+				enrollments: enrollmentsBySession[index].map((enrollment: EnrollmentAndCredit) => ({
+					...enrollment,
+					student: studentsById.get(enrollment.studentId) ?? null,
+					household: householdsById.get(enrollment.householdId) ?? null,
+				})),
+			})),
+		};
 	}
 
 	// Creates the operators row and its login-capable users row (role: 'operator', associatedEntityId: the new operator's id) together —

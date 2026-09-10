@@ -1,6 +1,6 @@
 import { injectable } from 'inversify';
 
-// UC6: Parent Autopay Opt-Out & Operator Notice Controls.
+// UC6: Household Autopay Opt-Out & Operator Notice Controls.
 // TODO: entirely unsupported by the current schema — no
 // households.autopay_enabled flag exists (PRD: "a prominent,
 // frictionless toggle... Automatic Payments (Autopay)"), and no

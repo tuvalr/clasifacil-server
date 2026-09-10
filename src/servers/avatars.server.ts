@@ -9,7 +9,7 @@ const MIME_EXTENSIONS: Record<string, string> = {
 	'image/png': 'png',
 };
 
-// Shared by both ParentSettingsController and OperatorSettingsController — the upload/validation/storage flow is
+// Shared by both HouseholdSettingsController and OperatorSettingsController — the upload/validation/storage flow is
 // identical for a household's and an operator's avatar, only the entity being updated differs.
 @injectable()
 export class AvatarsServer {
@@ -23,13 +23,13 @@ export class AvatarsServer {
 		return mimeType in MIME_EXTENSIONS;
 	}
 
-	public async updateParentAvatar(householdId: number, file: { buffer: Buffer; mimetype: string }): Promise<{ avatarUrl: string } | null> {
+	public async updateHouseholdAvatar(householdId: number, file: { buffer: Buffer; mimetype: string }): Promise<{ avatarUrl: string } | null> {
 		const existing = await this.households.getById(householdId);
 		if (!existing) {
 			return null;
 		}
 
-		const avatarUrl = await this.storage.save('parent', householdId, file.buffer, MIME_EXTENSIONS[file.mimetype]);
+		const avatarUrl = await this.storage.save('household', householdId, file.buffer, MIME_EXTENSIONS[file.mimetype]);
 		await this.households.updateAvatarUrl(householdId, avatarUrl);
 
 		if (existing.avatarUrl) {

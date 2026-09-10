@@ -2,7 +2,7 @@ import { injectable } from 'inversify';
 import { RouteHandlers } from '../../shared/route-handlers';
 import { BaseController } from '../../shared/base.controller';
 
-// UC6: Parent Autopay Opt-Out & Operator Notice Controls
+// UC6: Household Autopay Opt-Out & Operator Notice Controls
 // TODO: entirely unsupported by the current schema — see AutopayServer.
 @injectable()
 export class AutopayController extends BaseController {

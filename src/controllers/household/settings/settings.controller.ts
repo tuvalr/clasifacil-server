@@ -7,14 +7,14 @@ import { RouteHandlers } from '../../shared/route-handlers';
 import { BaseController } from '../../shared/base.controller';
 import { avatarUpload } from '../../shared/avatar-upload.middleware';
 import { toPublic } from '../../../utils/to-public';
-import { GetParentSettingsResponse } from './types/get-parent-settings-response.type';
-import { UpdateParentSettingsBody } from './types/update-parent-settings-body.type';
-import { UpdateParentSettingsResponse } from './types/update-parent-settings-response.type';
-import { UpdateParentAvatarResponse } from './types/update-parent-avatar-response.type';
+import { GetHouseholdSettingsResponse } from './types/get-household-settings-response.type';
+import { UpdateHouseholdSettingsBody } from './types/update-household-settings-body.type';
+import { UpdateHouseholdSettingsResponse } from './types/update-household-settings-response.type';
+import { UpdateHouseholdAvatarResponse } from './types/update-household-avatar-response.type';
 import { AvatarErrorResponse } from './types/avatar-error-response.type';
 
 @injectable()
-export class ParentSettingsController extends BaseController {
+export class HouseholdSettingsController extends BaseController {
 	public constructor(
 		@inject(TYPES.HouseholdsServer) private readonly householdsServer: HouseholdsServer,
 		@inject(TYPES.AvatarsServer) private readonly avatarsServer: AvatarsServer,
@@ -23,10 +23,10 @@ export class ParentSettingsController extends BaseController {
 
 		/**
 		 * @openapi
-		 * /api/parent/settings/{id}:
+		 * /api/household/settings/{id}:
 		 *   get:
 		 *     summary: Get own settings
-		 *     tags: [Parent - Settings]
+		 *     tags: [Household - Settings]
 		 *     parameters:
 		 *       - in: path
 		 *         name: id
@@ -47,10 +47,10 @@ export class ParentSettingsController extends BaseController {
 
 		/**
 		 * @openapi
-		 * /api/parent/settings/{id}:
+		 * /api/household/settings/{id}:
 		 *   put:
 		 *     summary: Update own settings
-		 *     tags: [Parent - Settings]
+		 *     tags: [Household - Settings]
 		 *     parameters:
 		 *       - in: path
 		 *         name: id
@@ -79,11 +79,11 @@ export class ParentSettingsController extends BaseController {
 
 		/**
 		 * @openapi
-		 * /api/parent/settings/{id}/avatar:
+		 * /api/household/settings/{id}/avatar:
 		 *   put:
 		 *     summary: Upload own avatar photo
 		 *     description: Accepts a JPEG or PNG image up to 2MB as multipart/form-data, field name "avatar".
-		 *     tags: [Parent - Settings]
+		 *     tags: [Household - Settings]
 		 *     parameters:
 		 *       - in: path
 		 *         name: id
@@ -115,7 +115,7 @@ export class ParentSettingsController extends BaseController {
 		this.internalRouter.put('/:id/avatar', avatarUpload, RouteHandlers.wrap(this.updateAvatar.bind(this)));
 	}
 
-	private async getSettings(req: Request<{ id: string }>, res: Response<GetParentSettingsResponse>): Promise<void> {
+	private async getSettings(req: Request<{ id: string }>, res: Response<GetHouseholdSettingsResponse>): Promise<void> {
 		const household = await this.householdsServer.getById(Number(req.params.id));
 		if (!household) {
 			res.status(404).end();
@@ -124,7 +124,10 @@ export class ParentSettingsController extends BaseController {
 		res.json(toPublic(household));
 	}
 
-	private async updateSettings(req: Request<{ id: string }, UpdateParentSettingsResponse, UpdateParentSettingsBody>, res: Response<UpdateParentSettingsResponse>): Promise<void> {
+	private async updateSettings(
+		req: Request<{ id: string }, UpdateHouseholdSettingsResponse, UpdateHouseholdSettingsBody>,
+		res: Response<UpdateHouseholdSettingsResponse>,
+	): Promise<void> {
 		const { name, email } = req.body;
 		const household = await this.householdsServer.update(Number(req.params.id), { name, email });
 		if (!household) {
@@ -134,13 +137,13 @@ export class ParentSettingsController extends BaseController {
 		res.json(toPublic(household));
 	}
 
-	private async updateAvatar(req: Request<{ id: string }>, res: Response<UpdateParentAvatarResponse | AvatarErrorResponse>): Promise<void> {
+	private async updateAvatar(req: Request<{ id: string }>, res: Response<UpdateHouseholdAvatarResponse | AvatarErrorResponse>): Promise<void> {
 		if (!req.file) {
 			res.status(400).json({ error: 'No avatar file provided' });
 			return;
 		}
 
-		const result = await this.avatarsServer.updateParentAvatar(Number(req.params.id), { buffer: req.file.buffer, mimetype: req.file.mimetype });
+		const result = await this.avatarsServer.updateHouseholdAvatar(Number(req.params.id), { buffer: req.file.buffer, mimetype: req.file.mimetype });
 		if (!result) {
 			res.status(404).end();
 			return;

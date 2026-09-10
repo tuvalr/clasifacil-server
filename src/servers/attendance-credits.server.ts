@@ -8,7 +8,7 @@ import { EnrollmentAndCredit } from '../entities/enrollment-and-credit.entity';
 const CREDIT_EXPIRY_DAYS = 90;
 
 // UC3: Attendance Tracking & Automated Make-Up Credit State Machine.
-// Operator-side (policy config, viewing state) and parent-side
+// Operator-side (policy config, viewing state) and household-side
 // (cancelling a booking, viewing credit balance) live together since
 // both operate on the same cancellation/credit state machine.
 @injectable()
@@ -37,7 +37,7 @@ export class AttendanceCreditsServer {
 	// scheduling infrastructure in this project yet (no cron/job-runner
 	// dependency installed).
 
-	// Parent-side
+	// Household-side
 
 	public async listCredits(householdId: number): Promise<EnrollmentAndCredit[] | null> {
 		const household = await this.households.findById(householdId);

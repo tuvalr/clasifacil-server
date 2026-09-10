@@ -15,21 +15,21 @@ export const swaggerSpec = swaggerJsdoc({
 	definition: {
 		openapi: '3.0.0',
 		info: { title: 'Clasifacil API', version: '1.0.0' },
-		// Explicit order so Swagger UI groups tags as Admin, then Operator,
-		// then Parent (alphabetical within Operator/Parent), instead of
+		// Explicit order so Swagger UI groups tags as Admin, then Household,
+		// then Operator (alphabetical within Household/Operator), instead of
 		// whatever order swagger-jsdoc happens to scan the controller files in.
 		tags: [
 			{ name: 'Admin' },
+			{ name: 'Household - Attendance Credits' },
+			{ name: 'Household - Billing' },
+			{ name: 'Household - Booking' },
+			{ name: 'Household - Households' },
+			{ name: 'Household - Settings' },
 			{ name: 'Operator - Attendance Credits' },
 			{ name: 'Operator - Billing' },
 			{ name: 'Operator - Households' },
 			{ name: 'Operator - Sessions' },
 			{ name: 'Operator - Settings' },
-			{ name: 'Parent - Attendance Credits' },
-			{ name: 'Parent - Billing' },
-			{ name: 'Parent - Booking' },
-			{ name: 'Parent - Households' },
-			{ name: 'Parent - Settings' },
 		],
 		components: {
 			schemas: {
@@ -46,6 +46,51 @@ export const swaggerSpec = swaggerJsdoc({
 						status: { type: 'string', enum: ['active', 'paused'] },
 						pausedUntil: { type: 'string', format: 'date-time', nullable: true },
 						avatarUrl: { type: 'string', nullable: true },
+					},
+				},
+				OperatorDetails: {
+					type: 'object',
+					properties: {
+						...swaggerBaseFields,
+						name: { type: 'string' },
+						email: { type: 'string' },
+						phone: { type: 'string' },
+						countryCode: { type: 'string' },
+						stripeAccountId: { type: 'string', nullable: true },
+						onboardingStatus: { type: 'string', nullable: true },
+						status: { type: 'string', enum: ['active', 'paused'] },
+						pausedUntil: { type: 'string', format: 'date-time', nullable: true },
+						avatarUrl: { type: 'string', nullable: true },
+						sessions: {
+							type: 'array',
+							items: {
+								type: 'object',
+								properties: {
+									...swaggerBaseFields,
+									operatorId: { type: 'integer' },
+									title: { type: 'string' },
+									startTime: { type: 'string', format: 'date-time' },
+									capacityLimit: { type: 'integer' },
+									currentRosterCount: { type: 'integer', nullable: true },
+									enrollments: {
+										type: 'array',
+										items: {
+											type: 'object',
+											properties: {
+												...swaggerBaseFields,
+												studentId: { type: 'integer' },
+												sessionId: { type: 'integer', nullable: true },
+												householdId: { type: 'integer' },
+												status: { type: 'string' },
+												creditTokenExpiry: { type: 'string', format: 'date-time', nullable: true },
+												student: { allOf: [{ $ref: '#/components/schemas/Student' }], nullable: true },
+												household: { allOf: [{ $ref: '#/components/schemas/Household' }], nullable: true },
+											},
+										},
+									},
+								},
+							},
+						},
 					},
 				},
 				User: {
@@ -65,6 +110,33 @@ export const swaggerSpec = swaggerJsdoc({
 						name: { type: 'string' },
 						email: { type: 'string' },
 						avatarUrl: { type: 'string', nullable: true },
+						status: { type: 'string', enum: ['active', 'paused'] },
+						pausedUntil: { type: 'string', format: 'date-time', nullable: true },
+					},
+				},
+				HouseholdDetails: {
+					type: 'object',
+					properties: {
+						...swaggerBaseFields,
+						name: { type: 'string' },
+						email: { type: 'string' },
+						avatarUrl: { type: 'string', nullable: true },
+						status: { type: 'string', enum: ['active', 'paused'] },
+						pausedUntil: { type: 'string', format: 'date-time', nullable: true },
+						students: {
+							type: 'array',
+							items: {
+								type: 'object',
+								properties: {
+									...swaggerBaseFields,
+									householdId: { type: 'integer' },
+									fullName: { type: 'string' },
+									dateOfBirth: { type: 'string', format: 'date-time', nullable: true },
+									notes: { type: 'string', nullable: true },
+									enrollments: { type: 'array', items: { $ref: '#/components/schemas/EnrollmentAndCredit' } },
+								},
+							},
+						},
 					},
 				},
 				Student: {

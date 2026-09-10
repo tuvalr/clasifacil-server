@@ -16,16 +16,16 @@ import { toPublic } from '../../../utils/to-public';
 
 // UC1: Household & Multi-Child Account Management
 @injectable()
-export class ParentHouseholdsController extends BaseController {
+export class HouseholdHouseholdsController extends BaseController {
 	public constructor(@inject(TYPES.HouseholdsServer) private readonly householdsServer: HouseholdsServer) {
 		super();
 
 		/**
 		 * @openapi
-		 * /api/parent/households/{id}:
+		 * /api/household/households/{id}:
 		 *   get:
 		 *     summary: Get own household
-		 *     tags: [Parent - Households]
+		 *     tags: [Household - Households]
 		 *     parameters:
 		 *       - in: path
 		 *         name: id
@@ -46,10 +46,10 @@ export class ParentHouseholdsController extends BaseController {
 
 		/**
 		 * @openapi
-		 * /api/parent/households/{id}:
+		 * /api/household/households/{id}:
 		 *   put:
 		 *     summary: Update own household
-		 *     tags: [Parent - Households]
+		 *     tags: [Household - Households]
 		 *     parameters:
 		 *       - in: path
 		 *         name: id
@@ -78,10 +78,10 @@ export class ParentHouseholdsController extends BaseController {
 
 		/**
 		 * @openapi
-		 * /api/parent/households/{id}/students:
+		 * /api/household/households/{id}/students:
 		 *   get:
 		 *     summary: List own students
-		 *     tags: [Parent - Households]
+		 *     tags: [Household - Households]
 		 *     parameters:
 		 *       - in: path
 		 *         name: id
@@ -102,10 +102,10 @@ export class ParentHouseholdsController extends BaseController {
 
 		/**
 		 * @openapi
-		 * /api/parent/households/{id}/students:
+		 * /api/household/households/{id}/students:
 		 *   post:
 		 *     summary: Add a student to own household
-		 *     tags: [Parent - Households]
+		 *     tags: [Household - Households]
 		 *     parameters:
 		 *       - in: path
 		 *         name: id
@@ -137,10 +137,10 @@ export class ParentHouseholdsController extends BaseController {
 
 		/**
 		 * @openapi
-		 * /api/parent/households/{id}/students/{studentId}:
+		 * /api/household/households/{id}/students/{studentId}:
 		 *   put:
 		 *     summary: Update own student
-		 *     tags: [Parent - Households]
+		 *     tags: [Household - Households]
 		 *     parameters:
 		 *       - in: path
 		 *         name: id
@@ -175,10 +175,10 @@ export class ParentHouseholdsController extends BaseController {
 		// selectors. This is exactly PostgresHandler's soft-delete, so it IS implemented.
 		/**
 		 * @openapi
-		 * /api/parent/households/{id}/students/{studentId}/archive:
+		 * /api/household/households/{id}/students/{studentId}/archive:
 		 *   post:
 		 *     summary: Archive own student
-		 *     tags: [Parent - Households]
+		 *     tags: [Household - Households]
 		 *     parameters:
 		 *       - in: path
 		 *         name: id
@@ -197,11 +197,11 @@ export class ParentHouseholdsController extends BaseController {
 		 */
 		this.internalRouter.post('/:id/students/:studentId/archive', RouteHandlers.wrap(this.archiveStudent.bind(this)));
 
-		// TODO: requires a co-parent/secondary-adult table (PRD: "grant secondary view/booking access to a co-parent or caregiver via
-		// email invite") — no such table exists yet.
-		this.internalRouter.get('/:id/co-parents', RouteHandlers.notImplemented);
+		// TODO: requires a co-household-owner/secondary-adult table (PRD: "grant secondary view/booking access to a co-household-owner or
+		// caregiver via email invite") — no such table exists yet.
+		this.internalRouter.get('/:id/co-household-owners', RouteHandlers.notImplemented);
 
-		this.internalRouter.post('/:id/co-parents/invite', RouteHandlers.notImplemented);
+		this.internalRouter.post('/:id/co-household-owners/invite', RouteHandlers.notImplemented);
 	}
 
 	private async getHouseholdById(req: Request<{ id: string }>, res: Response<GetOwnHouseholdResponse>): Promise<void> {

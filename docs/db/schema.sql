@@ -1,0 +1,151 @@
+-- Clasifacil Server — full database DDL.
+--
+-- This is a hand-maintained snapshot of the schema actually running against the local dev database
+-- (introspected via information_schema/pg_catalog, since this repo has no migration tooling and no
+-- pg_dump available in this environment). Run it against a fresh database to provision a new
+-- environment (staging, prod, another dev machine).
+--
+-- IMPORTANT: whenever the schema changes (a new ALTER TABLE, a new table, a new index/constraint),
+-- update this file in the same change — it is not auto-generated and will drift silently otherwise.
+
+-- ==========================================================================
+-- operators
+-- ==========================================================================
+CREATE TABLE operators (
+	id                 BIGSERIAL PRIMARY KEY,
+	name               VARCHAR(255)             NOT NULL,
+	email              VARCHAR(255)             NOT NULL,
+	phone              VARCHAR                  NOT NULL,
+	country_code       VARCHAR(2)               NOT NULL,
+	stripe_account_id  VARCHAR(255),
+	onboarding_status  VARCHAR(50)              DEFAULT 'pending',
+	status             VARCHAR                  NOT NULL DEFAULT 'active',
+	paused_until       TIMESTAMPTZ,
+	avatar_url         TEXT,
+	is_deleted         BOOLEAN                  NOT NULL DEFAULT FALSE,
+	deleted_at         TIMESTAMPTZ,
+	created_at         TIMESTAMPTZ              DEFAULT CURRENT_TIMESTAMP,
+	updated_at         TIMESTAMPTZ              DEFAULT CURRENT_TIMESTAMP,
+	CONSTRAINT operators_status_check CHECK (status IN ('active', 'paused'))
+);
+
+-- Case-insensitive-in-practice (app validates format), but uniqueness is scoped to active rows only —
+-- a soft-deleted operator's email is free to be reused by a new one.
+CREATE UNIQUE INDEX operators_email_active_key ON operators (email) WHERE (NOT is_deleted);
+
+-- ==========================================================================
+-- households
+-- ==========================================================================
+-- Unlike operators/users, email uniqueness here is a plain table-level UNIQUE constraint, not a partial
+-- index scoped to active rows — a soft-deleted household's email is NOT freed up for reuse. Preserved
+-- as-is to match what's actually running; consider aligning with the operators/users pattern
+-- (a partial unique index WHERE NOT is_deleted) if that was an oversight rather than intentional.
+CREATE TABLE households (
+	id            BIGSERIAL PRIMARY KEY,
+	name          VARCHAR(255)  NOT NULL,
+	email         VARCHAR(255)  NOT NULL UNIQUE,
+	avatar_url    TEXT,
+	status        TEXT          NOT NULL DEFAULT 'active',
+	paused_until  TIMESTAMPTZ,
+	is_deleted    BOOLEAN       NOT NULL DEFAULT FALSE,
+	deleted_at    TIMESTAMPTZ,
+	created_at    TIMESTAMPTZ   DEFAULT CURRENT_TIMESTAMP,
+	updated_at    TIMESTAMPTZ   DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ==========================================================================
+-- sessions
+-- ==========================================================================
+CREATE TABLE sessions (
+	id                     BIGSERIAL PRIMARY KEY,
+	operator_id            BIGINT        NOT NULL REFERENCES operators (id) ON DELETE CASCADE,
+	title                  VARCHAR(255)  NOT NULL,
+	start_time             TIMESTAMPTZ   NOT NULL,
+	capacity_limit         INTEGER       NOT NULL,
+	current_roster_count   INTEGER       DEFAULT 0,
+	is_deleted             BOOLEAN       NOT NULL DEFAULT FALSE,
+	deleted_at             TIMESTAMPTZ,
+	created_at             TIMESTAMPTZ   DEFAULT CURRENT_TIMESTAMP,
+	updated_at             TIMESTAMPTZ   DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ==========================================================================
+-- students
+-- ==========================================================================
+CREATE TABLE students (
+	id             BIGSERIAL PRIMARY KEY,
+	household_id   BIGINT        NOT NULL REFERENCES households (id) ON DELETE CASCADE,
+	full_name      VARCHAR(255)  NOT NULL,
+	date_of_birth  TIMESTAMPTZ,
+	notes          TEXT,
+	is_deleted     BOOLEAN       NOT NULL DEFAULT FALSE,
+	deleted_at     TIMESTAMPTZ,
+	created_at     TIMESTAMPTZ   DEFAULT CURRENT_TIMESTAMP,
+	updated_at     TIMESTAMPTZ   DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ==========================================================================
+-- enrollments_and_credits
+-- ==========================================================================
+CREATE TABLE enrollments_and_credits (
+	id                    BIGSERIAL PRIMARY KEY,
+	student_id            BIGINT       NOT NULL REFERENCES students (id) ON DELETE CASCADE,
+	session_id            BIGINT       REFERENCES sessions (id) ON DELETE SET NULL,
+	household_id          BIGINT       NOT NULL REFERENCES households (id) ON DELETE CASCADE,
+	status                VARCHAR(50)  NOT NULL DEFAULT 'booked',
+	credit_token_expiry   TIMESTAMPTZ,
+	is_deleted            BOOLEAN      NOT NULL DEFAULT FALSE,
+	deleted_at            TIMESTAMPTZ,
+	created_at            TIMESTAMPTZ  DEFAULT CURRENT_TIMESTAMP,
+	updated_at            TIMESTAMPTZ  DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ==========================================================================
+-- invoices_and_payments
+-- ==========================================================================
+CREATE TABLE invoices_and_payments (
+	id                 BIGSERIAL PRIMARY KEY,
+	household_id       BIGINT        NOT NULL REFERENCES households (id) ON DELETE CASCADE,
+	operator_id        BIGINT        NOT NULL REFERENCES operators (id) ON DELETE CASCADE,
+	amount             NUMERIC       NOT NULL,
+	payment_type       VARCHAR(50)   NOT NULL,
+	status             VARCHAR(50)   NOT NULL DEFAULT 'pending',
+	stripe_charge_id   VARCHAR(255),
+	is_deleted         BOOLEAN       NOT NULL DEFAULT FALSE,
+	deleted_at         TIMESTAMPTZ,
+	created_at         TIMESTAMPTZ   DEFAULT CURRENT_TIMESTAMP,
+	updated_at         TIMESTAMPTZ   DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ==========================================================================
+-- users (login accounts — role + associated_entity_id points at an operators.id or households.id row)
+-- ==========================================================================
+CREATE TABLE users (
+	id                     BIGSERIAL PRIMARY KEY,
+	auth_uid               UUID          NOT NULL,
+	email                  VARCHAR(255)  NOT NULL,
+	role                   VARCHAR(50)   NOT NULL,
+	associated_entity_id   BIGINT,
+	is_deleted             BOOLEAN       NOT NULL DEFAULT FALSE,
+	deleted_at             TIMESTAMPTZ,
+	created_at             TIMESTAMPTZ   DEFAULT CURRENT_TIMESTAMP,
+	updated_at             TIMESTAMPTZ   DEFAULT CURRENT_TIMESTAMP,
+	CONSTRAINT users_auth_uid_key UNIQUE (auth_uid)
+);
+
+-- Login email must be unique among active accounts only — a soft-deleted user's email is free to reuse.
+CREATE UNIQUE INDEX users_email_active_key ON users (email) WHERE (NOT is_deleted);
+
+-- ==========================================================================
+-- audit_logs
+-- ==========================================================================
+CREATE TABLE audit_logs (
+	id                   BIGSERIAL PRIMARY KEY,
+	table_name           VARCHAR(100)  NOT NULL,
+	record_id            BIGINT        NOT NULL,
+	action               VARCHAR(20)   NOT NULL,
+	old_data             JSONB,
+	new_data             JSONB,
+	changed_by_user_id   BIGINT        REFERENCES users (id) ON DELETE RESTRICT,
+	changed_at           TIMESTAMPTZ   DEFAULT CURRENT_TIMESTAMP
+);

@@ -19,10 +19,10 @@ export class BookingController extends BaseController {
 
 		/**
 		 * @openapi
-		 * /api/parent/booking/sessions/{sessionId}/book:
+		 * /api/household/booking/sessions/{sessionId}/book:
 		 *   post:
 		 *     summary: Book a session
-		 *     tags: [Parent - Booking]
+		 *     tags: [Household - Booking]
 		 *     parameters:
 		 *       - in: path
 		 *         name: sessionId
@@ -62,10 +62,10 @@ export class BookingController extends BaseController {
 
 		/**
 		 * @openapi
-		 * /api/parent/booking/households/{householdId}/enrollments:
+		 * /api/household/booking/households/{householdId}/enrollments:
 		 *   get:
 		 *     summary: List own household's enrollments
-		 *     tags: [Parent - Booking]
+		 *     tags: [Household - Booking]
 		 *     parameters:
 		 *       - in: path
 		 *         name: householdId

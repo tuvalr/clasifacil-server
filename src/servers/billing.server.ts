@@ -6,7 +6,7 @@ import { HouseholdRepository } from '../repositories/household.repository';
 import { InvoiceAndPayment } from '../entities/invoice-and-payment.entity';
 
 // UC4: Flexible Multi-Tier Payment & Billing Engine. Operator-side
-// (viewing invoices, recording offline payments) and parent-side
+// (viewing invoices, recording offline payments) and household-side
 // (viewing own invoices) live together since both operate on the same
 // invoices_and_payments data.
 @injectable()
@@ -49,7 +49,7 @@ export class BillingServer {
 	// installed and operators.stripe_account_id, while present, isn't
 	// wired to any payment flow yet.
 
-	// Parent-side
+	// Household-side
 
 	public async findByHouseholdId(householdId: number): Promise<InvoiceAndPayment[] | null> {
 		const household = await this.households.findById(householdId);

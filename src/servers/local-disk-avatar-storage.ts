@@ -13,7 +13,7 @@ export const AVATARS_URL_PREFIX = '/uploads/avatars';
 
 @injectable()
 export class LocalDiskAvatarStorage implements AvatarStorage {
-	public async save(role: 'parent' | 'operator', id: number, buffer: Buffer, extension: string): Promise<string> {
+	public async save(role: 'household' | 'operator', id: number, buffer: Buffer, extension: string): Promise<string> {
 		await fs.mkdir(AVATARS_DIR, { recursive: true });
 		const fileName = `${role}-${id}-${randomUUID()}.${extension}`;
 		await fs.writeFile(path.join(AVATARS_DIR, fileName), buffer);

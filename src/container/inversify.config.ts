@@ -35,6 +35,8 @@ import { AvatarsServer } from '../servers/avatars.server';
 import { AvatarStorage } from '../servers/types/avatar-storage';
 import { LocalDiskAvatarStorage } from '../servers/local-disk-avatar-storage';
 import { AdminController } from '../controllers/admin/admin.controller';
+import { AdminOperatorsController } from '../controllers/admin/operators/operators.controller';
+import { AdminHouseholdsController } from '../controllers/admin/households/households.controller';
 import { OperatorController } from '../controllers/operator/operator.controller';
 import { HouseholdsController } from '../controllers/operator/households/households.controller';
 import { SessionsController } from '../controllers/operator/sessions/sessions.controller';
@@ -42,13 +44,13 @@ import { AttendanceCreditsController } from '../controllers/operator/attendance-
 import { BillingController } from '../controllers/operator/billing/billing.controller';
 import { RemindersController } from '../controllers/operator/reminders/reminders.controller';
 import { AutopayController } from '../controllers/operator/autopay/autopay.controller';
-import { ParentController } from '../controllers/parent/parent.controller';
-import { ParentHouseholdsController } from '../controllers/parent/households/households.controller';
-import { BookingController } from '../controllers/parent/booking/booking.controller';
-import { ParentAttendanceCreditsController } from '../controllers/parent/attendance-credits/attendance-credits.controller';
-import { ParentBillingController } from '../controllers/parent/billing/billing.controller';
-import { ParentAutopayController } from '../controllers/parent/autopay/autopay.controller';
-import { ParentSettingsController } from '../controllers/parent/settings/settings.controller';
+import { HouseholdController } from '../controllers/household/household.controller';
+import { HouseholdHouseholdsController } from '../controllers/household/households/households.controller';
+import { BookingController } from '../controllers/household/booking/booking.controller';
+import { HouseholdAttendanceCreditsController } from '../controllers/household/attendance-credits/attendance-credits.controller';
+import { HouseholdBillingController } from '../controllers/household/billing/billing.controller';
+import { HouseholdAutopayController } from '../controllers/household/autopay/autopay.controller';
+import { HouseholdSettingsController } from '../controllers/household/settings/settings.controller';
 import { OperatorSettingsController } from '../controllers/operator/settings/settings.controller';
 
 async function bootstrap(): Promise<void> {
@@ -83,6 +85,8 @@ async function bootstrap(): Promise<void> {
 	container.bind<AvatarStorage>(TYPES.AvatarStorage).to(LocalDiskAvatarStorage).inSingletonScope();
 	container.bind<AvatarsServer>(TYPES.AvatarsServer).to(AvatarsServer).inSingletonScope();
 
+	container.bind<AdminOperatorsController>(TYPES.AdminOperatorsController).to(AdminOperatorsController).inSingletonScope();
+	container.bind<AdminHouseholdsController>(TYPES.AdminHouseholdsController).to(AdminHouseholdsController).inSingletonScope();
 	container.bind<AdminController>(TYPES.AdminController).to(AdminController).inSingletonScope();
 	container.bind<HouseholdsController>(TYPES.HouseholdsController).to(HouseholdsController).inSingletonScope();
 	container.bind<SessionsController>(TYPES.SessionsController).to(SessionsController).inSingletonScope();
@@ -91,14 +95,14 @@ async function bootstrap(): Promise<void> {
 	container.bind<RemindersController>(TYPES.RemindersController).to(RemindersController).inSingletonScope();
 	container.bind<AutopayController>(TYPES.AutopayController).to(AutopayController).inSingletonScope();
 	container.bind<OperatorController>(TYPES.OperatorController).to(OperatorController).inSingletonScope();
-	container.bind<ParentHouseholdsController>(TYPES.ParentHouseholdsController).to(ParentHouseholdsController).inSingletonScope();
+	container.bind<HouseholdHouseholdsController>(TYPES.HouseholdHouseholdsController).to(HouseholdHouseholdsController).inSingletonScope();
 	container.bind<BookingController>(TYPES.BookingController).to(BookingController).inSingletonScope();
-	container.bind<ParentAttendanceCreditsController>(TYPES.ParentAttendanceCreditsController).to(ParentAttendanceCreditsController).inSingletonScope();
-	container.bind<ParentBillingController>(TYPES.ParentBillingController).to(ParentBillingController).inSingletonScope();
-	container.bind<ParentAutopayController>(TYPES.ParentAutopayController).to(ParentAutopayController).inSingletonScope();
-	container.bind<ParentSettingsController>(TYPES.ParentSettingsController).to(ParentSettingsController).inSingletonScope();
+	container.bind<HouseholdAttendanceCreditsController>(TYPES.HouseholdAttendanceCreditsController).to(HouseholdAttendanceCreditsController).inSingletonScope();
+	container.bind<HouseholdBillingController>(TYPES.HouseholdBillingController).to(HouseholdBillingController).inSingletonScope();
+	container.bind<HouseholdAutopayController>(TYPES.HouseholdAutopayController).to(HouseholdAutopayController).inSingletonScope();
+	container.bind<HouseholdSettingsController>(TYPES.HouseholdSettingsController).to(HouseholdSettingsController).inSingletonScope();
 	container.bind<OperatorSettingsController>(TYPES.OperatorSettingsController).to(OperatorSettingsController).inSingletonScope();
-	container.bind<ParentController>(TYPES.ParentController).to(ParentController).inSingletonScope();
+	container.bind<HouseholdController>(TYPES.HouseholdController).to(HouseholdController).inSingletonScope();
 
 	container.bind<App>(TYPES.App).to(App).inSingletonScope();
 	container.bind<Server>(TYPES.Server).to(Server).inSingletonScope();
