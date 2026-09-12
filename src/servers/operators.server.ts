@@ -192,8 +192,18 @@ export class OperatorsServer {
 		return this.operators.update(id, { avatarUrl });
 	}
 
-	private async validateCreate(data: { name: string; email: string; phone: string; countryCode: string }): Promise<ValidationErrorDetail[]> {
+	private async validateCreate(data: { name: string; email: string; phone: string; countryCode: string; type?: unknown }): Promise<ValidationErrorDetail[]> {
 		const details: ValidationErrorDetail[] = [];
+
+		// Validate type is present and valid
+		if (data.type === undefined) {
+			details.push({ field: 'type', message: 'type is required' });
+			return details;
+		}
+		if (data.type !== 'schedule' && data.type !== 'assigned') {
+			details.push({ field: 'type', message: "type must be 'schedule' or 'assigned'" });
+			return details;
+		}
 
 		details.push(...(await this.validateEmail(data.email, null)));
 		details.push(...(await this.validateName(data.name, null)));
