@@ -14,6 +14,11 @@ export class PinoLogger implements Logger {
 			// log line — dropped so only the explicit "server listening"
 			// call (which passes pid itself) shows a process ID.
 			base: null,
+			// Default level is 'info', which silently drops .debug() calls — raised to 'debug' in
+			// dev/local so RequestLogger's per-request input/output logs actually emit there, while
+			// prod stays at 'info' so those same calls are structurally never emitted, not just filtered
+			// by some other guard.
+			level: isPrettyEnv ? 'debug' : 'info',
 			...(isPrettyEnv
 				? {
 						transport: {

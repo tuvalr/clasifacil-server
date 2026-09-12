@@ -8,6 +8,7 @@ import { TYPES } from './container/types';
 import { Config } from './config/env';
 import { Logger } from './logger/logger';
 import { RequestContext } from './controllers/shared/request-context';
+import { RequestLogger } from './controllers/shared/request-logger';
 import { RouteHandlers } from './controllers/shared/route-handlers';
 import { swaggerSpec } from './docs/swagger-spec';
 import { AdminController } from './controllers/admin/admin.controller';
@@ -54,6 +55,9 @@ export class App {
 			}),
 		);
 		this.internalExpress.use(express.json());
+		// Debug-level only (see PinoLogger) — a structural no-op in prod, not a conditionally-mounted one, so
+		// there's no risk of it silently staying on if NODE_ENV is ever misconfigured.
+		this.internalExpress.use(RequestLogger.middleware(this.logger));
 		// Serves avatar files written by LocalDiskAvatarStorage — remove this once avatar storage moves to a cloud
 		// bucket (URLs would then point at the bucket directly instead of this server).
 		// helmet()'s default Cross-Origin-Resource-Policy: same-origin blocks the frontend (a different origin) from
