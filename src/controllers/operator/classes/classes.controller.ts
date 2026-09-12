@@ -10,6 +10,7 @@ import { GetClassResponse } from './types/get-class-response.type';
 import { CreateClassBody } from './types/create-class-body.type';
 import { CreateClassResponse } from './types/create-class-response.type';
 import { ClassValidationErrorResponse } from './types/class-validation-error-response.type';
+import { CreateClassResult } from './types/create-class-result.type';
 import { UpdateClassBody } from './types/update-class-body.type';
 import { PauseClassBody } from './types/pause-class-body.type';
 import { AssignStudentsBody } from './types/assign-students-body.type';
@@ -79,7 +80,9 @@ export class ClassesController extends BaseController {
 		 *   post:
 		 *     summary: Create a recurring class
 		 *     description: >
-		 *       This task creates the class definition only — occurrence generation and recup sessions are separate
+		 *       Accepts a single class object or an array for bulk creation (satisfies bulk class definitions in one call).
+		 *       Array requests return one per-item success/error result instead of a single class object — partial success is possible.
+		 *       This endpoint creates the class definition only — occurrence generation and recup sessions are separate
 		 *       endpoints (see Task 4 of the implementation plan). For assigned-type operators (padel instructors,
 		 *       personal trainers), studentId is required and maxSize must be exactly 1 — the single student is
 		 *       assigned atomically at creation. For schedule-type operators, studentId is forbidden; use
@@ -90,23 +93,53 @@ export class ClassesController extends BaseController {
 		 *       content:
 		 *         application/json:
 		 *           schema:
-		 *             type: object
-		 *             required: [operatorId, title, dayOfWeek, startTime, durationMinutes, maxSize]
-		 *             properties:
-		 *               operatorId: { type: integer }
-		 *               title: { type: string }
-		 *               dayOfWeek: { type: integer, minimum: 0, maximum: 6 }
-		 *               startTime: { type: string, description: 'HH:MM:SS' }
-		 *               durationMinutes: { type: integer }
-		 *               minSize: { type: integer, nullable: true }
-		 *               maxSize: { type: integer }
-		 *               studentId: { type: integer, description: 'Required for assigned-type operators; forbidden otherwise' }
+		 *             oneOf:
+		 *               - type: object
+		 *                 required: [operatorId, title, dayOfWeek, startTime, durationMinutes, maxSize]
+		 *                 properties:
+		 *                   operatorId: { type: integer }
+		 *                   title: { type: string }
+		 *                   dayOfWeek: { type: integer, minimum: 0, maximum: 6 }
+		 *                   startTime: { type: string, description: 'HH:MM:SS' }
+		 *                   durationMinutes: { type: integer }
+		 *                   minSize: { type: integer, nullable: true }
+		 *                   maxSize: { type: integer }
+		 *                   studentId: { type: integer, description: 'Required for assigned-type operators; forbidden otherwise' }
+		 *               - type: array
+		 *                 items:
+		 *                   type: object
+		 *                   required: [operatorId, title, dayOfWeek, startTime, durationMinutes, maxSize]
+		 *                   properties:
+		 *                     operatorId: { type: integer }
+		 *                     title: { type: string }
+		 *                     dayOfWeek: { type: integer, minimum: 0, maximum: 6 }
+		 *                     startTime: { type: string, description: 'HH:MM:SS' }
+		 *                     durationMinutes: { type: integer }
+		 *                     minSize: { type: integer, nullable: true }
+		 *                     maxSize: { type: integer }
+		 *                     studentId: { type: integer, description: 'Required for assigned-type operators; forbidden otherwise' }
 		 *     responses:
 		 *       201:
 		 *         description: Created
 		 *         content:
 		 *           application/json:
-		 *             schema: { $ref: '#/components/schemas/Class' }
+		 *             schema:
+		 *               oneOf:
+		 *                 - { $ref: '#/components/schemas/Class' }
+		 *                 - type: array
+		 *                   items:
+		 *                     type: object
+		 *                     properties:
+		 *                       success: { type: boolean }
+		 *                       class: { $ref: '#/components/schemas/Class' }
+		 *                       error: { type: string }
+		 *                       details:
+		 *                         type: array
+		 *                         items:
+		 *                           type: object
+		 *                           properties:
+		 *                             field: { type: string }
+		 *                             message: { type: string }
 		 *       400:
 		 *         description: Validation failed
 		 *         content:
@@ -382,9 +415,18 @@ export class ClassesController extends BaseController {
 	}
 
 	private async createClass(
-		req: Request<unknown, CreateClassResponse | ClassValidationErrorResponse, CreateClassBody>,
-		res: Response<CreateClassResponse | ClassValidationErrorResponse>,
+		req: Request<unknown, CreateClassResponse | ClassValidationErrorResponse | CreateClassResult[], CreateClassBody | CreateClassBody[]>,
+		res: Response<CreateClassResponse | ClassValidationErrorResponse | CreateClassResult[]>,
 	): Promise<void> {
+		if (Array.isArray(req.body)) {
+			const results: CreateClassResult[] = [];
+			for (const item of req.body) {
+				results.push(await this.createOneClass(item));
+			}
+			res.status(201).json(results);
+			return;
+		}
+
 		const { operatorId, title, dayOfWeek, startTime, durationMinutes, minSize, maxSize, studentId } = req.body;
 		try {
 			const created = await this.classesServer.create({ operatorId, title, dayOfWeek, startTime, durationMinutes, minSize, maxSize, studentId });
@@ -393,6 +435,18 @@ export class ClassesController extends BaseController {
 			if (error instanceof ValidationError) {
 				res.status(400).json({ error: 'Validation failed', details: error.details });
 				return;
+			}
+			throw error;
+		}
+	}
+
+	private async createOneClass(body: CreateClassBody): Promise<CreateClassResult> {
+		try {
+			const created = await this.classesServer.create(body);
+			return { success: true, class: toPublic(created) };
+		} catch (error) {
+			if (error instanceof ValidationError) {
+				return { success: false, error: 'Validation failed', details: error.details };
 			}
 			throw error;
 		}
