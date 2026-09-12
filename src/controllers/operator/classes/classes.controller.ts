@@ -413,6 +413,12 @@ export class ClassesController extends BaseController {
 			res.status(204).end();
 		} catch (error) {
 			if (error instanceof ValidationError) {
+				// "Class not found" is indicated by a details field of "classId" (404); anything else
+				// (e.g. "studentIds" for a malformed body, or "operatorType" for wrong operator type) is a genuine 400.
+				if (error.details.some((detail: ValidationErrorDetail): boolean => detail.field === 'classId')) {
+					res.status(404).end();
+					return;
+				}
 				res.status(400).json({ error: 'Validation failed', details: error.details });
 				return;
 			}

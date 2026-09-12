@@ -164,6 +164,11 @@ export class ClassesServer {
 			throw new ValidationError([{ field: 'classId', message: 'Class not found' }]);
 		}
 
+		const operator = await this.operators.findById(foundClass.operatorId);
+		if (operator?.type === 'assigned') {
+			throw new ValidationError([{ field: 'operatorType', message: 'Cannot assign students to an assigned-type class. Students are assigned at class creation.' }]);
+		}
+
 		const results: AssignStudentResult[] = [];
 		for (const studentId of studentIds) {
 			// Intentionally sequential (not Promise.all): each iteration's capacity check depends on the previous iteration's insert.
@@ -200,6 +205,16 @@ export class ClassesServer {
 	public async unassignStudents(classId: number, studentIds: unknown): Promise<void> {
 		if (!isNumberArray(studentIds)) {
 			throw new ValidationError([{ field: 'studentIds', message: 'studentIds must be an array of numbers' }]);
+		}
+
+		const foundClass = await this.classes.findById(classId);
+		if (!foundClass) {
+			throw new ValidationError([{ field: 'classId', message: 'Class not found' }]);
+		}
+
+		const operator = await this.operators.findById(foundClass.operatorId);
+		if (operator?.type === 'assigned') {
+			throw new ValidationError([{ field: 'operatorType', message: 'Cannot unassign students from an assigned-type class. Remove the class itself to remove its assignment.' }]);
 		}
 
 		// Small bulk operation, sequential is simplest and matches assignStudents' style.
