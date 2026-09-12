@@ -34,6 +34,9 @@ working per-occurrence.
 - Let assigned-type operators create either one-off sessions (today's
   existing flow, unchanged) or a recurring 1:1 weekly slot for a single
   student, created and assigned in one step.
+- Restrict the existing plain one-off session-create endpoint to
+  assigned-type operators only, since schedule-type operators' sessions
+  must originate from a class.
 - Support single-occurrence overrides (reschedule or skip) on any
   generated session, independent of the recurring definition.
 - Support recup (make-up) sessions as extra occurrences tied to a class.
@@ -60,6 +63,14 @@ working per-occurrence.
   denormalization or to the one-off booking/cancellation-credit flow for
   assigned-type one-off sessions — those reuse `SessionsServer.book`/
   `cancel` exactly as they work today.
+- No changes to household-side endpoints (e.g. direct household booking
+  into a session, `POST /api/household/booking/sessions/{sessionId}/book`)
+  even though a household can today book directly into a class-generated
+  session, bypassing `class_enrollments` entirely. Whether/how to restrict
+  household-side booking against class-generated sessions is explicitly
+  deferred — the user will define that requirement separately later. This
+  spec only restricts the **operator-side** plain session-create endpoint
+  (see API surface, Sessions section).
 
 ## Data model
 
@@ -234,6 +245,14 @@ books a normal occurrence directly — allowed but not a primary flow).
 
 ### Sessions (extend existing operator sessions controller)
 
+- `POST /api/operator/sessions` (existing plain one-off session create):
+  now 400s for `type='schedule'` operators. A schedule-type operator's
+  sessions must originate from a class (`generate-occurrences` or
+  `recup-session`) — allowing an untethered one-off session for this
+  type would produce a session with no class/roster story and undermine
+  the point of the recurring model. Unaffected for `type='assigned'`
+  operators, who keep using this endpoint exactly as today for one-off
+  bookings.
 - `PATCH /api/operator/sessions/{id}/reschedule` — body `{ startTime }`.
   Updates the single occurrence's `start_time`; leaves the class and all
   other occurrences untouched. Works on any session (class-generated or
