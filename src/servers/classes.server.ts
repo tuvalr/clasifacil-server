@@ -78,19 +78,63 @@ export class ClassesServer {
 		durationMinutes?: unknown;
 		minSize?: unknown;
 		maxSize?: unknown;
+		studentId?: unknown;
 	}): Promise<Class> {
 		const requiredDetails = this.validateRequired(data);
 		if (requiredDetails.length > 0) {
 			throw new ValidationError(requiredDetails);
 		}
-		// Narrowed by validateRequired above: every required field is confirmed present and of the correct type.
-		const narrowed = data as { operatorId: number; title: string; dayOfWeek: number; startTime: string; durationMinutes: number; minSize?: number; maxSize: number };
+		// studentId is optional at the type level (only required for assigned-type operators, checked below), but if
+		// it's present it must actually be a number — same "don't let untyped JSON garbage sail through" reasoning as
+		// validateRequired's other fields; a non-number studentId would otherwise reach classEnrollments.create and
+		// fail as a raw 500 instead of a clean 400.
+		if (data.studentId !== undefined && typeof data.studentId !== 'number') {
+			throw new ValidationError([{ field: 'studentId', message: 'studentId must be a number' }]);
+		}
+		// Narrowed by validateRequired and the studentId check above: every required field is confirmed present and
+		// of the correct type, and studentId (if present) is a number.
+		const narrowed = data as {
+			operatorId: number;
+			title: string;
+			dayOfWeek: number;
+			startTime: string;
+			durationMinutes: number;
+			minSize?: number;
+			maxSize: number;
+			studentId?: number;
+		};
+
+		const operator = await this.operators.findById(narrowed.operatorId);
+		if (!operator) {
+			throw new ValidationError([{ field: 'operatorId', message: 'Operator not found' }]);
+		}
+
+		// assigned-type operators (padel instructors, personal trainers) create a recurring 1:1 slot in one atomic
+		// step: studentId is required and maxSize must be exactly 1, since assigned-type classes can't use
+		// assign-students/unassign-students afterward (see ClassesServer.assignStudents/unassignStudents' guard).
+		// schedule-type operators use the separate assign-students endpoint instead, so studentId is forbidden here.
+		let student = null;
+		if (operator.type === 'assigned') {
+			if (narrowed.studentId == null) {
+				throw new ValidationError([{ field: 'studentId', message: 'studentId is required for assigned-type operators' }]);
+			}
+			if (narrowed.maxSize !== 1) {
+				throw new ValidationError([{ field: 'maxSize', message: 'Must be 1 for assigned-type operators' }]);
+			}
+			student = await this.students.findById(narrowed.studentId);
+			if (!student) {
+				throw new ValidationError([{ field: 'studentId', message: 'Student not found' }]);
+			}
+		} else if (narrowed.studentId != null) {
+			throw new ValidationError([{ field: 'studentId', message: 'studentId is only accepted for assigned-type operators — use assign-students instead' }]);
+		}
 
 		const details = this.validate(narrowed);
 		if (details.length > 0) {
 			throw new ValidationError(details);
 		}
-		return this.classes.create({
+
+		const created = await this.classes.create({
 			operatorId: narrowed.operatorId,
 			title: narrowed.title,
 			dayOfWeek: narrowed.dayOfWeek,
@@ -99,6 +143,12 @@ export class ClassesServer {
 			minSize: narrowed.minSize ?? null,
 			maxSize: narrowed.maxSize,
 		});
+
+		if (student) {
+			await this.classEnrollments.create(created.id, student.id);
+		}
+
+		return created;
 	}
 
 	public async update(

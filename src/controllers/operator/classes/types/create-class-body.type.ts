@@ -6,4 +6,5 @@ export interface CreateClassBody {
 	durationMinutes: number;
 	minSize?: number;
 	maxSize: number;
+	studentId?: number;
 }

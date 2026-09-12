@@ -79,8 +79,11 @@ export class ClassesController extends BaseController {
 		 *   post:
 		 *     summary: Create a recurring class
 		 *     description: >
-		 *       This task creates the class definition only — occurrence generation, student assignment, and
-		 *       recup sessions are separate endpoints (see Task 3/4 of the implementation plan).
+		 *       This task creates the class definition only — occurrence generation and recup sessions are separate
+		 *       endpoints (see Task 4 of the implementation plan). For assigned-type operators (padel instructors,
+		 *       personal trainers), studentId is required and maxSize must be exactly 1 — the single student is
+		 *       assigned atomically at creation. For schedule-type operators, studentId is forbidden; use
+		 *       assign-students instead.
 		 *     tags: [Operator - Classes]
 		 *     requestBody:
 		 *       required: true
@@ -97,6 +100,7 @@ export class ClassesController extends BaseController {
 		 *               durationMinutes: { type: integer }
 		 *               minSize: { type: integer, nullable: true }
 		 *               maxSize: { type: integer }
+		 *               studentId: { type: integer, description: 'Required for assigned-type operators; forbidden otherwise' }
 		 *     responses:
 		 *       201:
 		 *         description: Created
@@ -381,9 +385,9 @@ export class ClassesController extends BaseController {
 		req: Request<unknown, CreateClassResponse | ClassValidationErrorResponse, CreateClassBody>,
 		res: Response<CreateClassResponse | ClassValidationErrorResponse>,
 	): Promise<void> {
-		const { operatorId, title, dayOfWeek, startTime, durationMinutes, minSize, maxSize } = req.body;
+		const { operatorId, title, dayOfWeek, startTime, durationMinutes, minSize, maxSize, studentId } = req.body;
 		try {
-			const created = await this.classesServer.create({ operatorId, title, dayOfWeek, startTime, durationMinutes, minSize, maxSize });
+			const created = await this.classesServer.create({ operatorId, title, dayOfWeek, startTime, durationMinutes, minSize, maxSize, studentId });
 			res.status(201).json(toPublic(created));
 		} catch (error) {
 			if (error instanceof ValidationError) {
