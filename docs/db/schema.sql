@@ -114,6 +114,25 @@ CREATE TABLE students (
 );
 
 -- ==========================================================================
+-- class_enrollments
+-- ==========================================================================
+-- The standing student<->class membership for schedule-type classes (assigned-type classes' single student is
+-- intrinsic to the class row and does not use this table's guard the same way — see ClassesServer.delete).
+-- No household_id column — a student's household is resolved via students.household_id whenever needed, never
+-- duplicated here. The unique constraint is a plain (class_id, student_id) pair, not partial on status, so
+-- unassigning then reassigning the same student re-activates the existing row instead of inserting a new one.
+CREATE TABLE class_enrollments (
+    id          BIGSERIAL PRIMARY KEY,
+    class_id    BIGINT        NOT NULL REFERENCES classes (id) ON DELETE CASCADE,
+    student_id  BIGINT        NOT NULL REFERENCES students (id) ON DELETE CASCADE,
+    status      VARCHAR(20)   NOT NULL DEFAULT 'active',  -- 'active' | 'removed'
+    created_at  TIMESTAMPTZ   DEFAULT CURRENT_TIMESTAMP,
+    updated_at  TIMESTAMPTZ   DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT class_enrollments_status_check CHECK (status IN ('active', 'removed')),
+    CONSTRAINT class_enrollments_unique_active UNIQUE (class_id, student_id)
+);
+
+-- ==========================================================================
 -- enrollments_and_credits
 -- ==========================================================================
 CREATE TABLE enrollments_and_credits (

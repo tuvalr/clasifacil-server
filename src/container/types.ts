@@ -16,6 +16,7 @@ export const TYPES = {
 	InvoiceAndPaymentRepository: Symbol.for('InvoiceAndPaymentRepository'),
 	UserRepository: Symbol.for('UserRepository'),
 	ClassRepository: Symbol.for('ClassRepository'),
+	ClassEnrollmentRepository: Symbol.for('ClassEnrollmentRepository'),
 
 	HouseholdsServer: Symbol.for('HouseholdsServer'),
 	SessionsServer: Symbol.for('SessionsServer'),

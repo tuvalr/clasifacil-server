@@ -2,7 +2,10 @@ import { inject, injectable } from 'inversify';
 import { TYPES } from '../container/types';
 import { ClassRepository } from '../repositories/class.repository';
 import { OperatorRepository } from '../repositories/operator.repository';
+import { ClassEnrollmentRepository } from '../repositories/class-enrollment.repository';
+import { StudentRepository } from '../repositories/student.repository';
 import { Class } from '../entities/class.entity';
+import { ClassEnrollment } from '../entities/class-enrollment.entity';
 import { ValidationError, ValidationErrorDetail } from './types/validation-error';
 
 const MAX_DAY_OF_WEEK = 6;
@@ -14,6 +17,30 @@ export class ClassHasActiveEnrollmentsError extends Error {
 	}
 }
 
+export interface AssignStudentSuccess {
+	studentId: number;
+	success: true;
+	enrollment: ClassEnrollment;
+}
+
+export interface AssignStudentFailure {
+	studentId: number;
+	success: false;
+	error: string;
+}
+
+export type AssignStudentResult = AssignStudentSuccess | AssignStudentFailure;
+
+// Runtime type guard for the assign/unassign-students request body's studentIds: it arrives as untyped JSON, so
+// the `number[]` signature on ClassesServer's methods only guards call sites within this codebase, not an actual
+// HTTP request. Without this check, a missing/malformed studentIds (undefined, a single number, a string, etc.)
+// would reach a `for...of` loop and throw a raw TypeError, forwarded by RouteHandlers.wrap to the generic error
+// handler as a 500 instead of a clean 400 — the same gotcha OperatorsServer.validateCreate and
+// ClassesServer.validateRequired work around elsewhere.
+function isNumberArray(value: unknown): value is number[] {
+	return Array.isArray(value) && value.every((item: unknown): boolean => typeof item === 'number');
+}
+
 // UC-Scheduling: recurring weekly classes (schedule-type operators) and recurring 1:1 slots (assigned-type
 // operators) share this same table — see docs/superpowers/specs/2026-09-12-operator-scheduling-design.md.
 @injectable()
@@ -21,6 +48,8 @@ export class ClassesServer {
 	public constructor(
 		@inject(TYPES.ClassRepository) private readonly classes: ClassRepository,
 		@inject(TYPES.OperatorRepository) private readonly operators: OperatorRepository,
+		@inject(TYPES.ClassEnrollmentRepository) private readonly classEnrollments: ClassEnrollmentRepository,
+		@inject(TYPES.StudentRepository) private readonly students: StudentRepository,
 	) {}
 
 	public async listByOperatorId(operatorId: number): Promise<Class[] | null> {
@@ -111,11 +140,75 @@ export class ClassesServer {
 		if (!existing) {
 			return null;
 		}
-		if (await this.classes.existsActiveEnrollments(id)) {
+		const operator = await this.operators.findById(existing.operatorId);
+		// assigned-type: the single class_enrollments row is intrinsic to the slot, not a separate precondition —
+		// deletes directly. schedule-type: refuse while any active enrollments exist (the guard this method exists for).
+		if (operator?.type === 'schedule' && (await this.classEnrollments.countActiveByClassId(id)) > 0) {
 			throw new ClassHasActiveEnrollmentsError();
 		}
 		await this.classes.archive(id);
 		return existing;
+	}
+
+	// Each studentId is evaluated independently and in array order — partial success across the batch, matching
+	// the spec's bulk semantics (one bad item doesn't roll back the others). max_size is checked against the
+	// current active count as of each item's turn, so submitting more students than remaining capacity fills the
+	// slots in submission order and 409s the rest.
+	public async assignStudents(classId: number, studentIds: unknown): Promise<AssignStudentResult[]> {
+		if (!isNumberArray(studentIds)) {
+			throw new ValidationError([{ field: 'studentIds', message: 'studentIds must be an array of numbers' }]);
+		}
+
+		const foundClass = await this.classes.findById(classId);
+		if (!foundClass) {
+			throw new ValidationError([{ field: 'classId', message: 'Class not found' }]);
+		}
+
+		const results: AssignStudentResult[] = [];
+		for (const studentId of studentIds) {
+			// Intentionally sequential (not Promise.all): each iteration's capacity check depends on the previous iteration's insert.
+			const result = await this.assignOneStudent(foundClass, studentId);
+			results.push(result);
+		}
+		return results;
+	}
+
+	private async assignOneStudent(foundClass: Class, studentId: number): Promise<AssignStudentResult> {
+		if (foundClass.status === 'paused') {
+			return { studentId, success: false, error: 'Class is paused' };
+		}
+
+		const student = await this.students.findById(studentId);
+		if (!student) {
+			return { studentId, success: false, error: 'Student not found' };
+		}
+
+		const existing = await this.classEnrollments.findByClassIdAndStudentId(foundClass.id, studentId);
+		if (existing && existing.status === 'active') {
+			return { studentId, success: false, error: 'Student already assigned to this class' };
+		}
+
+		const activeCount = await this.classEnrollments.countActiveByClassId(foundClass.id);
+		if (activeCount >= foundClass.maxSize) {
+			return { studentId, success: false, error: 'Class is at maxSize' };
+		}
+
+		const enrollment = existing ? await this.classEnrollments.setStatus(existing.id, 'active') : await this.classEnrollments.create(foundClass.id, studentId);
+		return { studentId, success: true, enrollment };
+	}
+
+	public async unassignStudents(classId: number, studentIds: unknown): Promise<void> {
+		if (!isNumberArray(studentIds)) {
+			throw new ValidationError([{ field: 'studentIds', message: 'studentIds must be an array of numbers' }]);
+		}
+
+		// Small bulk operation, sequential is simplest and matches assignStudents' style.
+		for (const studentId of studentIds) {
+			const existing = await this.classEnrollments.findByClassIdAndStudentId(classId, studentId);
+			if (existing && existing.status === 'active') {
+				await this.classEnrollments.setStatus(existing.id, 'removed');
+			}
+		}
 	}
 
 	// Runtime-required check for create(): TypeScript's required fields on the create() signature only guard

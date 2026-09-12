@@ -25,6 +25,7 @@ import { EnrollmentAndCreditRepository } from '../repositories/enrollment-and-cr
 import { InvoiceAndPaymentRepository } from '../repositories/invoice-and-payment.repository';
 import { UserRepository } from '../repositories/user.repository';
 import { ClassRepository } from '../repositories/class.repository';
+import { ClassEnrollmentRepository } from '../repositories/class-enrollment.repository';
 import { HouseholdsServer } from '../servers/households.server';
 import { SessionsServer } from '../servers/sessions.server';
 import { AttendanceCreditsServer } from '../servers/attendance-credits.server';
@@ -78,6 +79,7 @@ async function bootstrap(): Promise<void> {
 	container.bind<InvoiceAndPaymentRepository>(TYPES.InvoiceAndPaymentRepository).to(InvoiceAndPaymentRepository).inSingletonScope();
 	container.bind<UserRepository>(TYPES.UserRepository).to(UserRepository).inSingletonScope();
 	container.bind<ClassRepository>(TYPES.ClassRepository).to(ClassRepository).inSingletonScope();
+	container.bind<ClassEnrollmentRepository>(TYPES.ClassEnrollmentRepository).to(ClassEnrollmentRepository).inSingletonScope();
 
 	container.bind<HouseholdsServer>(TYPES.HouseholdsServer).to(HouseholdsServer).inSingletonScope();
 	container.bind<SessionsServer>(TYPES.SessionsServer).to(SessionsServer).inSingletonScope();

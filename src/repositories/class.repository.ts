@@ -42,14 +42,6 @@ export class ClassRepository {
 		return this.db.delete(ClassEntity, id);
 	}
 
-	// Stubbed until Task 3 adds class_enrollments — always reports no active enrollments, so class delete and
-	// operator change-type are never blocked yet. Task 3 replaces the query body with a real count against
-	// class_enrollments (status = 'active').
-	// eslint-disable-next-line @typescript-eslint/no-unused-vars -- classId will be used once the real query lands in Task 3
-	public existsActiveEnrollments(classId: number): Promise<boolean> {
-		return Promise.resolve(false);
-	}
-
 	public async existsActiveForOperator(operatorId: number): Promise<boolean> {
 		const rows = await this.db.queryActive(ClassEntity, 'operator_id = $1', [operatorId]);
 		return rows.length > 0;

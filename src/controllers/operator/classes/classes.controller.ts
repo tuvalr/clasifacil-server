@@ -1,8 +1,8 @@
 import { Request, Response } from 'express';
 import { inject, injectable } from 'inversify';
 import { TYPES } from '../../../container/types';
-import { ClassesServer, ClassHasActiveEnrollmentsError } from '../../../servers/classes.server';
-import { ValidationError } from '../../../servers/types/validation-error';
+import { ClassesServer, ClassHasActiveEnrollmentsError, AssignStudentResult } from '../../../servers/classes.server';
+import { ValidationError, ValidationErrorDetail } from '../../../servers/types/validation-error';
 import { RouteHandlers } from '../../shared/route-handlers';
 import { BaseController } from '../../shared/base.controller';
 import { ListClassesResponse } from './types/list-classes-response.type';
@@ -12,6 +12,8 @@ import { CreateClassResponse } from './types/create-class-response.type';
 import { ClassValidationErrorResponse } from './types/class-validation-error-response.type';
 import { UpdateClassBody } from './types/update-class-body.type';
 import { PauseClassBody } from './types/pause-class-body.type';
+import { AssignStudentsBody } from './types/assign-students-body.type';
+import { AssignStudentsResponse, AssignStudentsResponseItem } from './types/assign-students-response.type';
 import { toPublic } from '../../../utils/to-public';
 
 @injectable()
@@ -219,6 +221,67 @@ export class ClassesController extends BaseController {
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
 		this.internalRouter.post('/:id/resume', RouteHandlers.wrap(this.resumeClass.bind(this)));
+
+		/**
+		 * @openapi
+		 * /api/operator/classes/{id}/assign-students:
+		 *   post:
+		 *     summary: Bulk-assign students to a class's standing roster
+		 *     description: >
+		 *       Each studentId is evaluated independently — partial success is possible. Not available for
+		 *       assigned-type classes (their single student is set at creation).
+		 *     tags: [Operator - Classes]
+		 *     parameters:
+		 *       - in: path
+		 *         name: id
+		 *         required: true
+		 *         schema: { type: integer }
+		 *     requestBody:
+		 *       required: true
+		 *       content:
+		 *         application/json:
+		 *           schema:
+		 *             type: object
+		 *             required: [studentIds]
+		 *             properties:
+		 *               studentIds: { type: array, items: { type: integer } }
+		 *     responses:
+		 *       200:
+		 *         description: Per-studentId results (200 even if some items failed — check each item's success field)
+		 *       400: { $ref: '#/components/responses/BadRequest' }
+		 *       401: { $ref: '#/components/responses/Unauthorized' }
+		 *       404: { description: Class not found }
+		 *       500: { $ref: '#/components/responses/InternalError' }
+		 */
+		this.internalRouter.post('/:id/assign-students', RouteHandlers.wrap(this.assignStudents.bind(this)));
+
+		/**
+		 * @openapi
+		 * /api/operator/classes/{id}/unassign-students:
+		 *   post:
+		 *     summary: Bulk-unassign students from a class's standing roster
+		 *     tags: [Operator - Classes]
+		 *     parameters:
+		 *       - in: path
+		 *         name: id
+		 *         required: true
+		 *         schema: { type: integer }
+		 *     requestBody:
+		 *       required: true
+		 *       content:
+		 *         application/json:
+		 *           schema:
+		 *             type: object
+		 *             required: [studentIds]
+		 *             properties:
+		 *               studentIds: { type: array, items: { type: integer } }
+		 *     responses:
+		 *       204: { description: Unassigned }
+		 *       400: { $ref: '#/components/responses/BadRequest' }
+		 *       401: { $ref: '#/components/responses/Unauthorized' }
+		 *       500: { $ref: '#/components/responses/InternalError' }
+		 */
+		this.internalRouter.post('/:id/unassign-students', RouteHandlers.wrap(this.unassignStudents.bind(this)));
 	}
 
 	private async listClasses(req: Request<unknown, ListClassesResponse, unknown, { operatorId?: string }>, res: Response<ListClassesResponse>): Promise<void> {
@@ -315,5 +378,45 @@ export class ClassesController extends BaseController {
 			return;
 		}
 		res.json(toPublic(resumed));
+	}
+
+	private async assignStudents(
+		req: Request<{ id: string }, AssignStudentsResponse | ClassValidationErrorResponse, AssignStudentsBody>,
+		res: Response<AssignStudentsResponse | ClassValidationErrorResponse>,
+	): Promise<void> {
+		try {
+			const results = await this.classesServer.assignStudents(Number(req.params.id), req.body.studentIds);
+			res.json(
+				results.map((result: AssignStudentResult): AssignStudentsResponseItem =>
+					result.success ? { studentId: result.studentId, success: true, enrollment: result.enrollment } : { studentId: result.studentId, success: false, error: result.error },
+				),
+			);
+		} catch (error) {
+			if (error instanceof ValidationError) {
+				// "Class not found" is the only ValidationError raised once studentIds itself is well-formed (checked
+				// first in ClassesServer.assignStudents), so a details field of "classId" means 404; anything else
+				// (e.g. "studentIds" for a malformed body) is a genuine 400.
+				if (error.details.some((detail: ValidationErrorDetail): boolean => detail.field === 'classId')) {
+					res.status(404).end();
+					return;
+				}
+				res.status(400).json({ error: 'Validation failed', details: error.details });
+				return;
+			}
+			throw error;
+		}
+	}
+
+	private async unassignStudents(req: Request<{ id: string }, ClassValidationErrorResponse, AssignStudentsBody>, res: Response<ClassValidationErrorResponse>): Promise<void> {
+		try {
+			await this.classesServer.unassignStudents(Number(req.params.id), req.body.studentIds);
+			res.status(204).end();
+		} catch (error) {
+			if (error instanceof ValidationError) {
+				res.status(400).json({ error: 'Validation failed', details: error.details });
+				return;
+			}
+			throw error;
+		}
 	}
 }
