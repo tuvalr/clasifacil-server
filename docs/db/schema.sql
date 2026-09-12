@@ -36,6 +36,33 @@ CREATE TABLE operators (
 CREATE UNIQUE INDEX operators_email_active_key ON operators (email) WHERE (NOT is_deleted);
 
 -- ==========================================================================
+-- classes
+-- ==========================================================================
+-- Recurring weekly classes (schedule-type operators) and recurring 1:1 slots (assigned-type operators) share
+-- this same table — see docs/superpowers/specs/2026-09-12-operator-scheduling-design.md. For type='assigned'
+-- recurring slots, max_size is always 1 and min_size is always NULL (enforced in the server layer, not here).
+CREATE TABLE classes (
+    id                BIGSERIAL PRIMARY KEY,
+    operator_id       BIGINT        NOT NULL REFERENCES operators (id) ON DELETE CASCADE,
+    title             VARCHAR(255)  NOT NULL,
+    day_of_week       SMALLINT      NOT NULL,  -- 0 (Sunday) .. 6 (Saturday)
+    start_time        TIME          NOT NULL,  -- time-of-day, e.g. 16:00
+    duration_minutes  INTEGER       NOT NULL,
+    min_size          INTEGER,                  -- nullable, informational only
+    max_size          INTEGER       NOT NULL,   -- becomes each generated session's capacity_limit
+    status            VARCHAR(20)   NOT NULL DEFAULT 'active',  -- 'active' | 'paused'
+    paused_until      TIMESTAMPTZ,
+    is_deleted        BOOLEAN       NOT NULL DEFAULT FALSE,
+    deleted_at        TIMESTAMPTZ,
+    created_at        TIMESTAMPTZ   DEFAULT CURRENT_TIMESTAMP,
+    updated_at        TIMESTAMPTZ   DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT classes_day_of_week_check CHECK (day_of_week BETWEEN 0 AND 6),
+    CONSTRAINT classes_max_size_check CHECK (max_size >= 1),
+    CONSTRAINT classes_min_size_check CHECK (min_size IS NULL OR min_size <= max_size),
+    CONSTRAINT classes_status_check CHECK (status IN ('active', 'paused'))
+);
+
+-- ==========================================================================
 -- households
 -- ==========================================================================
 -- Unlike operators/users, email uniqueness here is a plain table-level UNIQUE constraint, not a partial

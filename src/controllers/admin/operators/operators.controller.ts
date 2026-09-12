@@ -3,6 +3,7 @@ import { inject, injectable } from 'inversify';
 import { TYPES } from '../../../container/types';
 import { OperatorsServer, OperatorHasActiveClassesError } from '../../../servers/operators.server';
 import { ValidationError } from '../../../servers/types/validation-error';
+import { ClassRepository } from '../../../repositories/class.repository';
 import { Student } from '../../../entities/student.entity';
 import { EnrollmentAndCredit } from '../../../entities/enrollment-and-credit.entity';
 import { Session } from '../../../entities/session.entity';
@@ -22,7 +23,10 @@ import { toPublic } from '../../../utils/to-public';
 
 @injectable()
 export class AdminOperatorsController extends BaseController {
-	public constructor(@inject(TYPES.OperatorsServer) private readonly operatorsServer: OperatorsServer) {
+	public constructor(
+		@inject(TYPES.OperatorsServer) private readonly operatorsServer: OperatorsServer,
+		@inject(TYPES.ClassRepository) private readonly classRepository: ClassRepository,
+	) {
 		super();
 
 		/**
@@ -385,11 +389,9 @@ export class AdminOperatorsController extends BaseController {
 		res: Response<GetOperatorResponse | { error: string }>,
 	): Promise<void> {
 		try {
-			// Task 2 replaces this stub with a real check against ClassRepository.existsActiveForOperator once that
-			// table/repository exists — for now, always reports "no active classes" so this endpoint is wireable and
-			// testable in isolation.
-			const hasActiveClassesStub = (): Promise<boolean> => Promise.resolve(false);
-			const operator = await this.operatorsServer.changeType(Number(req.params.id), req.body.type, hasActiveClassesStub);
+			const operator = await this.operatorsServer.changeType(Number(req.params.id), req.body.type, (operatorId: number) =>
+				this.classRepository.existsActiveForOperator(operatorId),
+			);
 			if (!operator) {
 				res.status(404).end();
 				return;

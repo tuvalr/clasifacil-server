@@ -24,6 +24,7 @@ import { SessionRepository } from '../repositories/session.repository';
 import { EnrollmentAndCreditRepository } from '../repositories/enrollment-and-credit.repository';
 import { InvoiceAndPaymentRepository } from '../repositories/invoice-and-payment.repository';
 import { UserRepository } from '../repositories/user.repository';
+import { ClassRepository } from '../repositories/class.repository';
 import { HouseholdsServer } from '../servers/households.server';
 import { SessionsServer } from '../servers/sessions.server';
 import { AttendanceCreditsServer } from '../servers/attendance-credits.server';
@@ -31,6 +32,7 @@ import { BillingServer } from '../servers/billing.server';
 import { AutopayServer } from '../servers/autopay.server';
 import { RemindersServer } from '../servers/reminders.server';
 import { OperatorsServer } from '../servers/operators.server';
+import { ClassesServer } from '../servers/classes.server';
 import { AvatarsServer } from '../servers/avatars.server';
 import { AvatarStorage } from '../servers/types/avatar-storage';
 import { LocalDiskAvatarStorage } from '../servers/local-disk-avatar-storage';
@@ -44,6 +46,7 @@ import { AttendanceCreditsController } from '../controllers/operator/attendance-
 import { BillingController } from '../controllers/operator/billing/billing.controller';
 import { RemindersController } from '../controllers/operator/reminders/reminders.controller';
 import { AutopayController } from '../controllers/operator/autopay/autopay.controller';
+import { ClassesController } from '../controllers/operator/classes/classes.controller';
 import { HouseholdController } from '../controllers/household/household.controller';
 import { HouseholdHouseholdsController } from '../controllers/household/households/households.controller';
 import { BookingController } from '../controllers/household/booking/booking.controller';
@@ -74,6 +77,7 @@ async function bootstrap(): Promise<void> {
 	container.bind<EnrollmentAndCreditRepository>(TYPES.EnrollmentAndCreditRepository).to(EnrollmentAndCreditRepository).inSingletonScope();
 	container.bind<InvoiceAndPaymentRepository>(TYPES.InvoiceAndPaymentRepository).to(InvoiceAndPaymentRepository).inSingletonScope();
 	container.bind<UserRepository>(TYPES.UserRepository).to(UserRepository).inSingletonScope();
+	container.bind<ClassRepository>(TYPES.ClassRepository).to(ClassRepository).inSingletonScope();
 
 	container.bind<HouseholdsServer>(TYPES.HouseholdsServer).to(HouseholdsServer).inSingletonScope();
 	container.bind<SessionsServer>(TYPES.SessionsServer).to(SessionsServer).inSingletonScope();
@@ -82,6 +86,7 @@ async function bootstrap(): Promise<void> {
 	container.bind<AutopayServer>(TYPES.AutopayServer).to(AutopayServer).inSingletonScope();
 	container.bind<RemindersServer>(TYPES.RemindersServer).to(RemindersServer).inSingletonScope();
 	container.bind<OperatorsServer>(TYPES.OperatorsServer).to(OperatorsServer).inSingletonScope();
+	container.bind<ClassesServer>(TYPES.ClassesServer).to(ClassesServer).inSingletonScope();
 	container.bind<AvatarStorage>(TYPES.AvatarStorage).to(LocalDiskAvatarStorage).inSingletonScope();
 	container.bind<AvatarsServer>(TYPES.AvatarsServer).to(AvatarsServer).inSingletonScope();
 
@@ -94,6 +99,7 @@ async function bootstrap(): Promise<void> {
 	container.bind<BillingController>(TYPES.BillingController).to(BillingController).inSingletonScope();
 	container.bind<RemindersController>(TYPES.RemindersController).to(RemindersController).inSingletonScope();
 	container.bind<AutopayController>(TYPES.AutopayController).to(AutopayController).inSingletonScope();
+	container.bind<ClassesController>(TYPES.ClassesController).to(ClassesController).inSingletonScope();
 	container.bind<OperatorController>(TYPES.OperatorController).to(OperatorController).inSingletonScope();
 	container.bind<HouseholdHouseholdsController>(TYPES.HouseholdHouseholdsController).to(HouseholdHouseholdsController).inSingletonScope();
 	container.bind<BookingController>(TYPES.BookingController).to(BookingController).inSingletonScope();

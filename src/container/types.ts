@@ -15,6 +15,7 @@ export const TYPES = {
 	EnrollmentAndCreditRepository: Symbol.for('EnrollmentAndCreditRepository'),
 	InvoiceAndPaymentRepository: Symbol.for('InvoiceAndPaymentRepository'),
 	UserRepository: Symbol.for('UserRepository'),
+	ClassRepository: Symbol.for('ClassRepository'),
 
 	HouseholdsServer: Symbol.for('HouseholdsServer'),
 	SessionsServer: Symbol.for('SessionsServer'),
@@ -23,6 +24,7 @@ export const TYPES = {
 	AutopayServer: Symbol.for('AutopayServer'),
 	RemindersServer: Symbol.for('RemindersServer'),
 	OperatorsServer: Symbol.for('OperatorsServer'),
+	ClassesServer: Symbol.for('ClassesServer'),
 	AvatarsServer: Symbol.for('AvatarsServer'),
 	AvatarStorage: Symbol.for('AvatarStorage'),
 
@@ -36,6 +38,7 @@ export const TYPES = {
 	BillingController: Symbol.for('BillingController'),
 	RemindersController: Symbol.for('RemindersController'),
 	AutopayController: Symbol.for('AutopayController'),
+	ClassesController: Symbol.for('ClassesController'),
 	HouseholdController: Symbol.for('HouseholdController'),
 	HouseholdHouseholdsController: Symbol.for('HouseholdHouseholdsController'),
 	BookingController: Symbol.for('BookingController'),
