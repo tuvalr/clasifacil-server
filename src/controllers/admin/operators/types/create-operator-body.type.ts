@@ -3,4 +3,5 @@ export interface CreateOperatorBody {
 	email: string;
 	phone: string;
 	countryCode: string;
+	type: 'schedule' | 'assigned';
 }

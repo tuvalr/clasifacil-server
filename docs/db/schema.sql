@@ -11,6 +11,7 @@
 -- ==========================================================================
 -- operators
 -- ==========================================================================
+-- type has no CHECK constraint at the DB level (validated in the server layer only), matching the households.status column's existing convention in this file.
 CREATE TABLE operators (
 	id                 BIGSERIAL PRIMARY KEY,
 	name               VARCHAR(255)             NOT NULL,
@@ -22,6 +23,7 @@ CREATE TABLE operators (
 	status             VARCHAR                  NOT NULL DEFAULT 'active',
 	paused_until       TIMESTAMPTZ,
 	avatar_url         TEXT,
+	type               VARCHAR(20)              NOT NULL DEFAULT 'schedule',
 	is_deleted         BOOLEAN                  NOT NULL DEFAULT FALSE,
 	deleted_at         TIMESTAMPTZ,
 	created_at         TIMESTAMPTZ              DEFAULT CURRENT_TIMESTAMP,

@@ -17,6 +17,13 @@ import { Student } from '../entities/student.entity';
 import { Household } from '../entities/household.entity';
 import { ValidationError, ValidationErrorDetail } from './types/validation-error';
 
+export class OperatorHasActiveClassesError extends Error {
+	public constructor() {
+		super('Cannot change operator type while active classes exist');
+		this.name = 'OperatorHasActiveClassesError';
+	}
+}
+
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const VALID_COUNTRY_CODES: ReadonlySet<string> = new Set(getCountries());
 
@@ -92,7 +99,7 @@ export class OperatorsServer {
 	// Creates the operators row and its login-capable users row (role: 'operator', associatedEntityId: the new operator's id) together —
 	// if either insert fails, both roll back, so an operator can never be left without a way to log in. auth_uid is generated here (not
 	// accepted from the client) since it's a uuid-typed, unique login identifier — the caller has no business choosing it.
-	public async create(data: { name: string; email: string; phone: string; countryCode: string }): Promise<{ operator: Operator; user: User }> {
+	public async create(data: { name: string; email: string; phone: string; countryCode: string; type: 'schedule' | 'assigned' }): Promise<{ operator: Operator; user: User }> {
 		const details = await this.validateCreate(data);
 		if (details.length > 0) {
 			throw new ValidationError(details);
@@ -101,7 +108,7 @@ export class OperatorsServer {
 		const authUid = randomUUID();
 
 		return this.db.transaction(async (transaction: TransactionHandle) => {
-			const operator = await this.operators.create({ name: data.name, email: data.email, phone: data.phone, countryCode: data.countryCode }, transaction);
+			const operator = await this.operators.create({ name: data.name, email: data.email, phone: data.phone, countryCode: data.countryCode, type: data.type }, transaction);
 			const user = await this.users.create({ authUid, email: data.email, role: 'operator', associatedEntityId: operator.id }, transaction);
 			return { operator, user };
 		});
@@ -144,6 +151,21 @@ export class OperatorsServer {
 			return null;
 		}
 		return this.operators.resume(id);
+	}
+
+	// Blocked while the operator has any active (non-deleted) classes, regardless of pause status — switching
+	// scheduling model out from under a live recurring class would orphan its occurrences/roster semantics.
+	// hasActiveClasses is injected as a callback (rather than this server depending on ClassesServer directly) to
+	// avoid a circular dependency between operators.server.ts and classes.server.ts — Task 2 wires the real check.
+	public async changeType(id: number, type: 'schedule' | 'assigned', hasActiveClasses: (operatorId: number) => Promise<boolean>): Promise<Operator | null> {
+		const operator = await this.operators.findById(id);
+		if (!operator) {
+			return null;
+		}
+		if (await hasActiveClasses(id)) {
+			throw new OperatorHasActiveClassesError();
+		}
+		return this.operators.updateType(id, type);
 	}
 
 	// findById first — same reasoning as pause()/resume(): update() has no is_deleted guard, so without this check a

@@ -46,6 +46,7 @@ export const swaggerSpec = swaggerJsdoc({
 						status: { type: 'string', enum: ['active', 'paused'] },
 						pausedUntil: { type: 'string', format: 'date-time', nullable: true },
 						avatarUrl: { type: 'string', nullable: true },
+						type: { type: 'string', enum: ['schedule', 'assigned'] },
 					},
 				},
 				OperatorDetails: {
@@ -61,6 +62,7 @@ export const swaggerSpec = swaggerJsdoc({
 						status: { type: 'string', enum: ['active', 'paused'] },
 						pausedUntil: { type: 'string', format: 'date-time', nullable: true },
 						avatarUrl: { type: 'string', nullable: true },
+						type: { type: 'string', enum: ['schedule', 'assigned'] },
 						sessions: {
 							type: 'array',
 							items: {

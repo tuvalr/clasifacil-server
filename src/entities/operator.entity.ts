@@ -10,6 +10,7 @@ export interface Operator extends BaseEntity {
 	status: 'active' | 'paused';
 	pausedUntil: Date | null;
 	avatarUrl: string | null;
+	type: 'schedule' | 'assigned';
 }
 
 export const OperatorEntity: EntityDescriptor<Operator> = {

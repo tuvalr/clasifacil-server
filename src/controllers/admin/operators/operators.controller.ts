@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { inject, injectable } from 'inversify';
 import { TYPES } from '../../../container/types';
-import { OperatorsServer } from '../../../servers/operators.server';
+import { OperatorsServer, OperatorHasActiveClassesError } from '../../../servers/operators.server';
 import { ValidationError } from '../../../servers/types/validation-error';
 import { Student } from '../../../entities/student.entity';
 import { EnrollmentAndCredit } from '../../../entities/enrollment-and-credit.entity';
@@ -15,6 +15,7 @@ import { GetOperatorDetailsResponse } from './types/get-operator-details-respons
 import { CreateOperatorBody } from './types/create-operator-body.type';
 import { CreateOperatorResponse } from './types/create-operator-response.type';
 import { CreateOperatorValidationErrorResponse } from './types/create-operator-validation-error-response.type';
+import { ChangeOperatorTypeBody } from './types/change-operator-type-body.type';
 import { PauseOperatorBody } from './types/pause-operator-body.type';
 import { UpdateOperatorBody } from './types/update-operator-body.type';
 import { toPublic } from '../../../utils/to-public';
@@ -249,6 +250,43 @@ export class AdminOperatorsController extends BaseController {
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
 		this.internalRouter.post('/:id/resume', RouteHandlers.wrap(this.resumeOperator.bind(this)));
+
+		/**
+		 * @openapi
+		 * /api/admin/operators/{id}/change-type:
+		 *   post:
+		 *     summary: Change an operator's scheduling type
+		 *     description: >
+		 *       Refused (409) while the operator has any active (non-deleted) classes, regardless of pause status —
+		 *       clear all classes first.
+		 *     tags: [Admin]
+		 *     parameters:
+		 *       - in: path
+		 *         name: id
+		 *         required: true
+		 *         schema: { type: integer }
+		 *     requestBody:
+		 *       required: true
+		 *       content:
+		 *         application/json:
+		 *           schema:
+		 *             type: object
+		 *             required: [type]
+		 *             properties:
+		 *               type: { type: string, enum: [schedule, assigned] }
+		 *     responses:
+		 *       200:
+		 *         description: OK
+		 *         content:
+		 *           application/json:
+		 *             schema: { $ref: '#/components/schemas/Operator' }
+		 *       400: { $ref: '#/components/responses/BadRequest' }
+		 *       401: { $ref: '#/components/responses/Unauthorized' }
+		 *       404: { description: Not found }
+		 *       409: { description: 'Operator has active classes' }
+		 *       500: { $ref: '#/components/responses/InternalError' }
+		 */
+		this.internalRouter.post('/:id/change-type', RouteHandlers.wrap(this.changeOperatorType.bind(this)));
 	}
 
 	private async listOperators(_req: Request, res: Response<ListOperatorsResponse>): Promise<void> {
@@ -279,9 +317,9 @@ export class AdminOperatorsController extends BaseController {
 		req: Request<unknown, CreateOperatorResponse | CreateOperatorValidationErrorResponse, CreateOperatorBody>,
 		res: Response<CreateOperatorResponse | CreateOperatorValidationErrorResponse>,
 	): Promise<void> {
-		const { name, email, phone, countryCode } = req.body;
+		const { name, email, phone, countryCode, type } = req.body;
 		try {
-			const result = await this.operatorsServer.create({ name, email, phone, countryCode });
+			const result = await this.operatorsServer.create({ name, email, phone, countryCode, type });
 			res.status(201).json({ operator: toPublic(result.operator), user: toPublic(result.user) });
 		} catch (error) {
 			if (error instanceof ValidationError) {
@@ -339,5 +377,29 @@ export class AdminOperatorsController extends BaseController {
 			return;
 		}
 		res.json(toPublic(operator));
+	}
+
+	private async changeOperatorType(
+		req: Request<{ id: string }, GetOperatorResponse | { error: string }, ChangeOperatorTypeBody>,
+		res: Response<GetOperatorResponse | { error: string }>,
+	): Promise<void> {
+		try {
+			// Task 2 replaces this stub with a real check against ClassRepository.existsActiveForOperator once that
+			// table/repository exists — for now, always reports "no active classes" so this endpoint is wireable and
+			// testable in isolation.
+			const hasActiveClassesStub = (): Promise<boolean> => Promise.resolve(false);
+			const operator = await this.operatorsServer.changeType(Number(req.params.id), req.body.type, hasActiveClassesStub);
+			if (!operator) {
+				res.status(404).end();
+				return;
+			}
+			res.json(toPublic(operator));
+		} catch (error) {
+			if (error instanceof OperatorHasActiveClassesError) {
+				res.status(409).json({ error: error.message });
+				return;
+			}
+			throw error;
+		}
 	}
 }
