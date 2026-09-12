@@ -83,12 +83,13 @@ export class AdminOperatorsController extends BaseController {
 		 *         application/json:
 		 *           schema:
 		 *             type: object
-		 *             required: [name, email, phone, countryCode]
+		 *             required: [name, email, phone, countryCode, type]
 		 *             properties:
 		 *               name: { type: string }
 		 *               email: { type: string }
 		 *               phone: { type: string, description: 'National-format phone number, validated against countryCode' }
 		 *               countryCode: { type: string, description: 'ISO 3166-1 alpha-2 country code, e.g. US' }
+		 *               type: { type: string, enum: [schedule, assigned] }
 		 *     responses:
 		 *       201:
 		 *         description: Created
