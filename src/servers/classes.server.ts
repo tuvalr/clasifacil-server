@@ -14,6 +14,11 @@ import { ValidationError, ValidationErrorDetail } from './types/validation-error
 const MAX_DAY_OF_WEEK = 6;
 const MAX_GENERATED_OCCURRENCES = 104;
 
+// Matches Postgres TIME's accepted 24-hour formats reasonably strictly (HH:MM or HH:MM:SS), rejecting inputs like
+// "banana" or "25:00:00" at the application layer instead of letting Postgres reject them raw (a raw 500 instead
+// of a clean 400) — see ClassesServer.validateRequired/validate's startTime checks below.
+const START_TIME_FORMAT = /^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/;
+
 export class ClassHasActiveEnrollmentsError extends Error {
 	public constructor() {
 		super('Cannot delete a class with active student enrollments');
@@ -153,23 +158,38 @@ export class ClassesServer {
 
 	public async update(
 		id: number,
-		data: Partial<{ title: string; dayOfWeek: number; startTime: string; durationMinutes: number; minSize: number | null; maxSize: number }>,
+		data: {
+			title?: unknown;
+			dayOfWeek?: unknown;
+			startTime?: unknown;
+			durationMinutes?: unknown;
+			minSize?: unknown;
+			maxSize?: unknown;
+		},
 	): Promise<Class | null> {
 		const existing = await this.classes.findById(id);
 		if (!existing) {
 			return null;
 		}
+
+		const typeDetails = this.validateUpdateTypes(data);
+		if (typeDetails.length > 0) {
+			throw new ValidationError(typeDetails);
+		}
+		// Narrowed by validateUpdateTypes: every field present in `data` is confirmed to be the correct type.
+		const narrowed = data as Partial<{ title: string; dayOfWeek: number; startTime: string; durationMinutes: number; minSize: number | null; maxSize: number }>;
+
 		const merged = {
-			dayOfWeek: data.dayOfWeek ?? existing.dayOfWeek,
-			durationMinutes: data.durationMinutes ?? existing.durationMinutes,
-			minSize: data.minSize === undefined ? existing.minSize : data.minSize,
-			maxSize: data.maxSize ?? existing.maxSize,
+			dayOfWeek: narrowed.dayOfWeek ?? existing.dayOfWeek,
+			durationMinutes: narrowed.durationMinutes ?? existing.durationMinutes,
+			minSize: narrowed.minSize === undefined ? existing.minSize : narrowed.minSize,
+			maxSize: narrowed.maxSize ?? existing.maxSize,
 		};
 		const details = this.validate(merged);
 		if (details.length > 0) {
 			throw new ValidationError(details);
 		}
-		return this.classes.update(id, data);
+		return this.classes.update(id, narrowed);
 	}
 
 	// findById first — same reasoning as OperatorsServer.pause(): the repository's UPDATE has no is_deleted guard,
@@ -402,8 +422,12 @@ export class ClassesServer {
 		});
 
 		for (const studentId of studentIds) {
-			// Small, bounded list of students for one ad hoc recup session.
+			// Small, bounded list of students for one ad hoc recup session. Every other enrollment-creation path in
+			// this codebase (see SessionsServer.book) increments the session's roster count alongside the enrollment
+			// insert — without this, a recup session's currentRosterCount would stay stale at 0 regardless of how
+			// many students are actually booked into it.
 			await this.enrollments.create({ studentId, sessionId: session.id, householdId: await this.householdIdForStudent(studentId), status: 'booked' });
+			await this.sessions.incrementRosterCount(session.id);
 		}
 
 		return session;
@@ -443,12 +467,51 @@ export class ClassesServer {
 		}
 		if (typeof data.startTime !== 'string' || data.startTime.length === 0) {
 			details.push({ field: 'startTime', message: 'startTime is required' });
+		} else if (!START_TIME_FORMAT.test(data.startTime)) {
+			details.push({ field: 'startTime', message: 'startTime must be a valid 24-hour time in HH:MM or HH:MM:SS format' });
 		}
 		if (typeof data.durationMinutes !== 'number') {
 			details.push({ field: 'durationMinutes', message: 'durationMinutes is required' });
 		}
 		if (typeof data.maxSize !== 'number') {
 			details.push({ field: 'maxSize', message: 'maxSize is required' });
+		}
+		return details;
+	}
+
+	// Runtime type-guard for update()'s partial-update fields: unlike create(), update() merges each present field
+	// into `merged` and only bounds-checks the result via validate() — a wrong-TYPE value (e.g. maxSize: "abc")
+	// passes those bounds checks (`"abc" < 1` is false in JS) and would otherwise reach the database update,
+	// likely as a raw 500 instead of a clean 400. Only fields that are actually present (not undefined) are
+	// checked — omitted fields fall back to the existing class's value in update()'s `merged` object.
+	private validateUpdateTypes(data: {
+		title?: unknown;
+		dayOfWeek?: unknown;
+		startTime?: unknown;
+		durationMinutes?: unknown;
+		minSize?: unknown;
+		maxSize?: unknown;
+	}): ValidationErrorDetail[] {
+		const details: ValidationErrorDetail[] = [];
+		if (data.title !== undefined && typeof data.title !== 'string') {
+			details.push({ field: 'title', message: 'title must be a string' });
+		}
+		if (data.dayOfWeek !== undefined && typeof data.dayOfWeek !== 'number') {
+			details.push({ field: 'dayOfWeek', message: 'dayOfWeek must be a number' });
+		}
+		if (data.startTime !== undefined) {
+			if (typeof data.startTime !== 'string' || !START_TIME_FORMAT.test(data.startTime)) {
+				details.push({ field: 'startTime', message: 'startTime must be a valid 24-hour time in HH:MM or HH:MM:SS format' });
+			}
+		}
+		if (data.durationMinutes !== undefined && typeof data.durationMinutes !== 'number') {
+			details.push({ field: 'durationMinutes', message: 'durationMinutes must be a number' });
+		}
+		if (data.minSize !== undefined && data.minSize !== null && typeof data.minSize !== 'number') {
+			details.push({ field: 'minSize', message: 'minSize must be a number or null' });
+		}
+		if (data.maxSize !== undefined && typeof data.maxSize !== 'number') {
+			details.push({ field: 'maxSize', message: 'maxSize must be a number' });
 		}
 		return details;
 	}

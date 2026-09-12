@@ -448,7 +448,13 @@ export class ClassesController extends BaseController {
 			if (error instanceof ValidationError) {
 				return { success: false, error: 'Validation failed', details: error.details };
 			}
-			throw error;
+			// Any other thrown error (e.g. a raw Postgres error that slipped past application-level validation) must
+			// NOT propagate out of this per-item helper: each array item's create() call is its own independent,
+			// already-committed insert (no transaction wraps the whole batch), so re-throwing here would 500 the
+			// entire bulk request and lose track of which earlier items already succeeded — violating the spec's
+			// partial-success requirement (one bad item doesn't roll back/corrupt the others). Report it as a failed
+			// item instead, using a generic message so internal error details aren't leaked to the caller.
+			return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
 		}
 	}
 

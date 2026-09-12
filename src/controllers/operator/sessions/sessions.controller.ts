@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { inject, injectable } from 'inversify';
 import { TYPES } from '../../../container/types';
 import { SessionsServer, PlainSessionNotAllowedError } from '../../../servers/sessions.server';
+import { ValidationError } from '../../../servers/types/validation-error';
 import { RouteHandlers } from '../../shared/route-handlers';
 import { BaseController } from '../../shared/base.controller';
 import { ListSessionsQuery } from './types/list-sessions-query.type';
@@ -12,6 +13,7 @@ import { CreateSessionBody } from './types/create-session-body.type';
 import { CreateSessionResponse } from './types/create-session-response.type';
 import { RescheduleSessionBody } from './types/reschedule-session-body.type';
 import { PlainSessionErrorResponse } from './types/plain-session-error-response.type';
+import { SessionValidationErrorResponse } from './types/session-validation-error-response.type';
 import { toPublic } from '../../../utils/to-public';
 
 // UC2: Automated Session Booking & Capacity Hard Limits
@@ -245,12 +247,23 @@ export class SessionsController extends BaseController {
 		res.status(204).end();
 	}
 
-	private async rescheduleSession(req: Request<{ id: string }, GetSessionResponse, RescheduleSessionBody>, res: Response<GetSessionResponse>): Promise<void> {
-		const rescheduled = await this.sessionsServer.reschedule(Number(req.params.id), new Date(req.body.startTime));
-		if (!rescheduled) {
-			res.status(404).end();
-			return;
+	private async rescheduleSession(
+		req: Request<{ id: string }, GetSessionResponse | SessionValidationErrorResponse, RescheduleSessionBody>,
+		res: Response<GetSessionResponse | SessionValidationErrorResponse>,
+	): Promise<void> {
+		try {
+			const rescheduled = await this.sessionsServer.reschedule(Number(req.params.id), req.body.startTime);
+			if (!rescheduled) {
+				res.status(404).end();
+				return;
+			}
+			res.json(toPublic(rescheduled));
+		} catch (error) {
+			if (error instanceof ValidationError) {
+				res.status(400).json({ error: 'Validation failed', details: error.details });
+				return;
+			}
+			throw error;
 		}
-		res.json(toPublic(rescheduled));
 	}
 }

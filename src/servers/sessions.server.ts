@@ -9,6 +9,7 @@ import { ClassEnrollmentRepository } from '../repositories/class-enrollment.repo
 import { Session } from '../entities/session.entity';
 import { EnrollmentAndCredit } from '../entities/enrollment-and-credit.entity';
 import { ClassEnrollment } from '../entities/class-enrollment.entity';
+import { ValidationError } from './types/validation-error';
 
 export interface BookingConflict {
 	conflict: true;
@@ -100,12 +101,25 @@ export class SessionsServer {
 
 	// Single-occurrence override — leaves the class definition and every sibling occurrence untouched. Works on
 	// any session (class-generated or plain), same as cancel() already does.
-	public async reschedule(sessionId: number, startTime: Date): Promise<Session | null> {
+	//
+	// Runtime presence/shape check: startTime arrives as untyped JSON, so a missing/malformed value would otherwise
+	// become an Invalid Date silently forwarded to SessionRepository.update, which pg would serialize as a garbage
+	// literal and Postgres would reject with a raw 500 instead of a clean 400. Same gotcha as
+	// ClassesServer.createRecupSession's startTime check.
+	public async reschedule(sessionId: number, startTime: unknown): Promise<Session | null> {
+		if (typeof startTime !== 'string' || startTime.length === 0) {
+			throw new ValidationError([{ field: 'startTime', message: 'startTime is required' }]);
+		}
+		const parsedStartTime = new Date(startTime);
+		if (Number.isNaN(parsedStartTime.getTime())) {
+			throw new ValidationError([{ field: 'startTime', message: 'startTime must be a valid date' }]);
+		}
+
 		const session = await this.sessions.findById(sessionId);
 		if (!session) {
 			return null;
 		}
-		return this.sessions.update(sessionId, { startTime });
+		return this.sessions.update(sessionId, { startTime: parsedStartTime });
 	}
 
 	// Household-side
