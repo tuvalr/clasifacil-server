@@ -4,11 +4,15 @@ import { ClassRepository } from '../repositories/class.repository';
 import { OperatorRepository } from '../repositories/operator.repository';
 import { ClassEnrollmentRepository } from '../repositories/class-enrollment.repository';
 import { StudentRepository } from '../repositories/student.repository';
+import { SessionRepository } from '../repositories/session.repository';
+import { EnrollmentAndCreditRepository } from '../repositories/enrollment-and-credit.repository';
 import { Class } from '../entities/class.entity';
 import { ClassEnrollment } from '../entities/class-enrollment.entity';
+import { Session } from '../entities/session.entity';
 import { ValidationError, ValidationErrorDetail } from './types/validation-error';
 
 const MAX_DAY_OF_WEEK = 6;
+const MAX_GENERATED_OCCURRENCES = 104;
 
 export class ClassHasActiveEnrollmentsError extends Error {
 	public constructor() {
@@ -50,6 +54,8 @@ export class ClassesServer {
 		@inject(TYPES.OperatorRepository) private readonly operators: OperatorRepository,
 		@inject(TYPES.ClassEnrollmentRepository) private readonly classEnrollments: ClassEnrollmentRepository,
 		@inject(TYPES.StudentRepository) private readonly students: StudentRepository,
+		@inject(TYPES.SessionRepository) private readonly sessions: SessionRepository,
+		@inject(TYPES.EnrollmentAndCreditRepository) private readonly enrollments: EnrollmentAndCreditRepository,
 	) {}
 
 	public async listByOperatorId(operatorId: number): Promise<Class[] | null> {
@@ -224,6 +230,141 @@ export class ClassesServer {
 				await this.classEnrollments.setStatus(existing.id, 'removed');
 			}
 		}
+	}
+
+	// Generates concrete `sessions` rows for every occurrence of this class's weekly pattern, starting from the
+	// next matching day-of-week on/after today, through either an explicit end date or a fixed count (exactly one
+	// of the two is required). Capped at MAX_GENERATED_OCCURRENCES per call to prevent runaway inserts — a larger
+	// request is a validation error, not silently truncated.
+	public async generateOccurrences(classId: number, options: { through?: unknown; count?: unknown }): Promise<Session[]> {
+		const foundClass = await this.classes.findById(classId);
+		if (!foundClass) {
+			throw new ValidationError([{ field: 'classId', message: 'Class not found' }]);
+		}
+		if (foundClass.status === 'paused') {
+			throw new ValidationError([{ field: 'classId', message: 'Class is paused' }]);
+		}
+
+		// Runtime presence/shape check: `through`/`count` arrive as untyped JSON, so a request that sends neither
+		// (or sends both as unrelated garbage) must be rejected here, not merely treated as "not present" by a
+		// `== null` check alone — a caller could send `through: "not-a-date"`, which `new Date(...)` would silently
+		// turn into an Invalid Date that then never breaks computeOccurrenceDates' loop (infinite loop / hangs the
+		// request) rather than failing cleanly. Same class of gap as ClassesServer.validateRequired elsewhere in
+		// this file.
+		const through = options.through == null ? undefined : new Date(options.through as string);
+		const count = options.count;
+		if (through !== undefined && Number.isNaN(through.getTime())) {
+			throw new ValidationError([{ field: 'through', message: 'through must be a valid date' }]);
+		}
+		if (count !== undefined && (typeof count !== 'number' || !Number.isInteger(count) || count < 1)) {
+			throw new ValidationError([{ field: 'count', message: 'count must be a positive integer' }]);
+		}
+		if ((through === undefined) === (count === undefined)) {
+			throw new ValidationError([{ field: 'generate', message: 'Exactly one of through or count is required' }]);
+		}
+
+		const dates = this.computeOccurrenceDates(foundClass.dayOfWeek, foundClass.startTime, { through, count });
+		if (dates.length > MAX_GENERATED_OCCURRENCES) {
+			throw new ValidationError([{ field: 'generate', message: `Cannot generate more than ${MAX_GENERATED_OCCURRENCES} occurrences per call` }]);
+		}
+
+		const created: Session[] = [];
+		for (const startTime of dates) {
+			// Bulk-insert of a bounded (<=104), operator-triggered batch; sequential is simplest and this isn't a hot path.
+			const session = await this.sessions.create({
+				operatorId: foundClass.operatorId,
+				title: foundClass.title,
+				startTime,
+				capacityLimit: foundClass.maxSize,
+				classId: foundClass.id,
+				isRecupSession: false,
+			});
+			created.push(session);
+		}
+		return created;
+	}
+
+	// Computes each concrete Date for the class's weekly day/time, starting from the next matching day-of-week
+	// on/after now, stopping at either `through` (inclusive) or after `count` occurrences. The caller
+	// (generateOccurrences) already validates that exactly one of `through`/`count` is set before calling this, so
+	// there's no "neither is set" case to handle here — the loop's two break conditions are exhaustive.
+	private computeOccurrenceDates(dayOfWeek: number, startTime: string, options: { through?: Date; count?: number }): Date[] {
+		const [hours, minutes, seconds]: number[] = startTime.split(':').map(Number);
+		const dates: Date[] = [];
+
+		const cursor = new Date();
+		cursor.setHours(hours, minutes, seconds ?? 0, 0);
+		const daysUntilNext = (dayOfWeek - cursor.getDay() + 7) % 7;
+		cursor.setDate(cursor.getDate() + daysUntilNext);
+		if (cursor.getTime() < Date.now()) {
+			cursor.setDate(cursor.getDate() + 7);
+		}
+
+		while (true) {
+			if (options.through && cursor.getTime() > options.through.getTime()) {
+				break;
+			}
+			if (options.count && dates.length >= options.count) {
+				break;
+			}
+			dates.push(new Date(cursor));
+			cursor.setDate(cursor.getDate() + 7);
+			if (dates.length > MAX_GENERATED_OCCURRENCES) {
+				break;
+			}
+		}
+
+		return dates;
+	}
+
+	// Recup sessions accept any studentId (not just active class members) — an operator may use a recup slot for
+	// a trial student, per the spec. Each student is booked via the existing enrollments_and_credits create path,
+	// so cancellation/credit logic downstream treats a recup booking exactly like any other enrollment.
+	public async createRecupSession(classId: number, startTime: unknown, studentIds: unknown): Promise<Session> {
+		const foundClass = await this.classes.findById(classId);
+		if (!foundClass) {
+			throw new ValidationError([{ field: 'classId', message: 'Class not found' }]);
+		}
+
+		// Runtime presence/shape check: both fields arrive as untyped JSON. A missing/malformed startTime would
+		// otherwise become an Invalid Date silently accepted by camelToSnake/the INSERT (Postgres stores it as
+		// NULL-equivalent garbage or rejects with a raw 500, depending on driver coercion); a missing/malformed
+		// studentIds would otherwise throw a raw TypeError iterating a non-array. Same gotcha as
+		// ClassesServer.assignStudents' isNumberArray check above.
+		if (typeof startTime !== 'string' || startTime.length === 0) {
+			throw new ValidationError([{ field: 'startTime', message: 'startTime is required' }]);
+		}
+		const parsedStartTime = new Date(startTime);
+		if (Number.isNaN(parsedStartTime.getTime())) {
+			throw new ValidationError([{ field: 'startTime', message: 'startTime must be a valid date' }]);
+		}
+		if (!isNumberArray(studentIds)) {
+			throw new ValidationError([{ field: 'studentIds', message: 'studentIds must be an array of numbers' }]);
+		}
+
+		const session = await this.sessions.create({
+			operatorId: foundClass.operatorId,
+			title: `${foundClass.title} (make-up)`,
+			startTime: parsedStartTime,
+			capacityLimit: foundClass.maxSize,
+			classId: foundClass.id,
+			isRecupSession: true,
+		});
+
+		for (const studentId of studentIds) {
+			// Small, bounded list of students for one ad hoc recup session.
+			await this.enrollments.create({ studentId, sessionId: session.id, householdId: await this.householdIdForStudent(studentId), status: 'booked' });
+		}
+
+		return session;
+	}
+
+	private async householdIdForStudent(studentId: number): Promise<number> {
+		const student = await this.students.findById(studentId);
+		if (!student) {
+			throw new ValidationError([{ field: 'studentIds', message: `Student ${studentId} not found` }]);
+		}
+		return student.householdId;
 	}
 
 	// Runtime-required check for create(): TypeScript's required fields on the create() signature only guard

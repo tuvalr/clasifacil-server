@@ -161,6 +161,8 @@ export const swaggerSpec = swaggerJsdoc({
 						startTime: { type: 'string', format: 'date-time' },
 						capacityLimit: { type: 'integer' },
 						currentRosterCount: { type: 'integer', nullable: true },
+						classId: { type: 'integer', nullable: true },
+						isRecupSession: { type: 'boolean' },
 					},
 				},
 				Class: {

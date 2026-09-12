@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { inject, injectable } from 'inversify';
 import { TYPES } from '../../../container/types';
-import { SessionsServer } from '../../../servers/sessions.server';
+import { SessionsServer, PlainSessionNotAllowedError } from '../../../servers/sessions.server';
 import { RouteHandlers } from '../../shared/route-handlers';
 import { BaseController } from '../../shared/base.controller';
 import { ListSessionsQuery } from './types/list-sessions-query.type';
@@ -10,6 +10,8 @@ import { GetSessionResponse } from './types/get-session-response.type';
 import { GetSessionRosterResponse } from './types/get-session-roster-response.type';
 import { CreateSessionBody } from './types/create-session-body.type';
 import { CreateSessionResponse } from './types/create-session-response.type';
+import { RescheduleSessionBody } from './types/reschedule-session-body.type';
+import { PlainSessionErrorResponse } from './types/plain-session-error-response.type';
 import { toPublic } from '../../../utils/to-public';
 
 // UC2: Automated Session Booking & Capacity Hard Limits
@@ -82,7 +84,11 @@ export class SessionsController extends BaseController {
 		 *         description: OK
 		 *         content:
 		 *           application/json:
-		 *             schema: { type: array, items: { $ref: '#/components/schemas/EnrollmentAndCredit' } }
+		 *             schema:
+		 *               type: object
+		 *               properties:
+		 *                 enrollments: { type: array, items: { $ref: '#/components/schemas/EnrollmentAndCredit' } }
+		 *                 classMemberStudentIds: { type: array, items: { type: integer } }
 		 *       400: { $ref: '#/components/responses/BadRequest' }
 		 *       401: { $ref: '#/components/responses/Unauthorized' }
 		 *       404: { description: Not found }
@@ -140,6 +146,40 @@ export class SessionsController extends BaseController {
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
 		this.internalRouter.post('/:id/cancel', RouteHandlers.wrap(this.cancelSession.bind(this)));
+
+		/**
+		 * @openapi
+		 * /api/operator/sessions/{id}/reschedule:
+		 *   patch:
+		 *     summary: Reschedule a single session occurrence
+		 *     description: Leaves the class definition and every other occurrence untouched.
+		 *     tags: [Operator - Sessions]
+		 *     parameters:
+		 *       - in: path
+		 *         name: id
+		 *         required: true
+		 *         schema: { type: integer }
+		 *     requestBody:
+		 *       required: true
+		 *       content:
+		 *         application/json:
+		 *           schema:
+		 *             type: object
+		 *             required: [startTime]
+		 *             properties:
+		 *               startTime: { type: string, format: date-time }
+		 *     responses:
+		 *       200:
+		 *         description: OK
+		 *         content:
+		 *           application/json:
+		 *             schema: { $ref: '#/components/schemas/Session' }
+		 *       400: { $ref: '#/components/responses/BadRequest' }
+		 *       401: { $ref: '#/components/responses/Unauthorized' }
+		 *       404: { description: Not found }
+		 *       500: { $ref: '#/components/responses/InternalError' }
+		 */
+		this.internalRouter.patch('/:id/reschedule', RouteHandlers.wrap(this.rescheduleSession.bind(this)));
 	}
 
 	private async listSessions(req: Request<unknown, ListSessionsResponse, unknown, ListSessionsQuery>, res: Response<ListSessionsResponse>): Promise<void> {
@@ -172,17 +212,28 @@ export class SessionsController extends BaseController {
 			res.status(404).end();
 			return;
 		}
-		res.json(roster.map(toPublic));
+		res.json({ enrollments: roster.enrollments.map(toPublic), classMemberStudentIds: roster.classMemberStudentIds });
 	}
 
-	private async createSession(req: Request<unknown, CreateSessionResponse, CreateSessionBody>, res: Response<CreateSessionResponse>): Promise<void> {
+	private async createSession(
+		req: Request<unknown, CreateSessionResponse | PlainSessionErrorResponse, CreateSessionBody>,
+		res: Response<CreateSessionResponse | PlainSessionErrorResponse>,
+	): Promise<void> {
 		const { operatorId, title, startTime, capacityLimit } = req.body;
-		const session = await this.sessionsServer.create({ operatorId, title, startTime: new Date(startTime), capacityLimit });
-		if (!session) {
-			res.status(404).end();
-			return;
+		try {
+			const session = await this.sessionsServer.create({ operatorId, title, startTime: new Date(startTime), capacityLimit });
+			if (!session) {
+				res.status(404).end();
+				return;
+			}
+			res.status(201).json(toPublic(session));
+		} catch (error) {
+			if (error instanceof PlainSessionNotAllowedError) {
+				res.status(400).json({ error: error.message });
+				return;
+			}
+			throw error;
 		}
-		res.status(201).json(toPublic(session));
 	}
 
 	private async cancelSession(req: Request<{ id: string }>, res: Response): Promise<void> {
@@ -192,5 +243,14 @@ export class SessionsController extends BaseController {
 			return;
 		}
 		res.status(204).end();
+	}
+
+	private async rescheduleSession(req: Request<{ id: string }, GetSessionResponse, RescheduleSessionBody>, res: Response<GetSessionResponse>): Promise<void> {
+		const rescheduled = await this.sessionsServer.reschedule(Number(req.params.id), new Date(req.body.startTime));
+		if (!rescheduled) {
+			res.status(404).end();
+			return;
+		}
+		res.json(toPublic(rescheduled));
 	}
 }

@@ -14,6 +14,10 @@ import { UpdateClassBody } from './types/update-class-body.type';
 import { PauseClassBody } from './types/pause-class-body.type';
 import { AssignStudentsBody } from './types/assign-students-body.type';
 import { AssignStudentsResponse, AssignStudentsResponseItem } from './types/assign-students-response.type';
+import { GenerateOccurrencesBody } from './types/generate-occurrences-body.type';
+import { GenerateOccurrencesResponse } from './types/generate-occurrences-response.type';
+import { RecupSessionBody } from './types/recup-session-body.type';
+import { GetSessionResponse } from '../sessions/types/get-session-response.type';
 import { toPublic } from '../../../utils/to-public';
 
 @injectable()
@@ -282,6 +286,72 @@ export class ClassesController extends BaseController {
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
 		this.internalRouter.post('/:id/unassign-students', RouteHandlers.wrap(this.unassignStudents.bind(this)));
+
+		/**
+		 * @openapi
+		 * /api/operator/classes/{id}/generate-occurrences:
+		 *   post:
+		 *     summary: Generate concrete session occurrences from a class's recurring pattern
+		 *     description: Exactly one of `through` or `count` is required. Capped at 104 occurrences per call.
+		 *     tags: [Operator - Classes]
+		 *     parameters:
+		 *       - in: path
+		 *         name: id
+		 *         required: true
+		 *         schema: { type: integer }
+		 *     requestBody:
+		 *       content:
+		 *         application/json:
+		 *           schema:
+		 *             type: object
+		 *             properties:
+		 *               through: { type: string, format: date }
+		 *               count: { type: integer }
+		 *     responses:
+		 *       201:
+		 *         description: Created
+		 *         content:
+		 *           application/json:
+		 *             schema: { type: array, items: { $ref: '#/components/schemas/Session' } }
+		 *       400: { $ref: '#/components/responses/BadRequest' }
+		 *       401: { $ref: '#/components/responses/Unauthorized' }
+		 *       500: { $ref: '#/components/responses/InternalError' }
+		 */
+		this.internalRouter.post('/:id/generate-occurrences', RouteHandlers.wrap(this.generateOccurrences.bind(this)));
+
+		/**
+		 * @openapi
+		 * /api/operator/classes/{id}/recup-session:
+		 *   post:
+		 *     summary: Create a make-up session tied to this class
+		 *     description: Any student id is accepted — not limited to active class members.
+		 *     tags: [Operator - Classes]
+		 *     parameters:
+		 *       - in: path
+		 *         name: id
+		 *         required: true
+		 *         schema: { type: integer }
+		 *     requestBody:
+		 *       required: true
+		 *       content:
+		 *         application/json:
+		 *           schema:
+		 *             type: object
+		 *             required: [startTime, studentIds]
+		 *             properties:
+		 *               startTime: { type: string, format: date-time }
+		 *               studentIds: { type: array, items: { type: integer } }
+		 *     responses:
+		 *       201:
+		 *         description: Created
+		 *         content:
+		 *           application/json:
+		 *             schema: { $ref: '#/components/schemas/Session' }
+		 *       400: { $ref: '#/components/responses/BadRequest' }
+		 *       401: { $ref: '#/components/responses/Unauthorized' }
+		 *       500: { $ref: '#/components/responses/InternalError' }
+		 */
+		this.internalRouter.post('/:id/recup-session', RouteHandlers.wrap(this.createRecupSession.bind(this)));
 	}
 
 	private async listClasses(req: Request<unknown, ListClassesResponse, unknown, { operatorId?: string }>, res: Response<ListClassesResponse>): Promise<void> {
@@ -415,6 +485,46 @@ export class ClassesController extends BaseController {
 			if (error instanceof ValidationError) {
 				// "Class not found" is indicated by a details field of "classId" (404); anything else
 				// (e.g. "studentIds" for a malformed body, or "operatorType" for wrong operator type) is a genuine 400.
+				if (error.details.some((detail: ValidationErrorDetail): boolean => detail.field === 'classId')) {
+					res.status(404).end();
+					return;
+				}
+				res.status(400).json({ error: 'Validation failed', details: error.details });
+				return;
+			}
+			throw error;
+		}
+	}
+
+	private async generateOccurrences(
+		req: Request<{ id: string }, GenerateOccurrencesResponse | ClassValidationErrorResponse, GenerateOccurrencesBody>,
+		res: Response<GenerateOccurrencesResponse | ClassValidationErrorResponse>,
+	): Promise<void> {
+		try {
+			const sessions = await this.classesServer.generateOccurrences(Number(req.params.id), { through: req.body.through, count: req.body.count });
+			res.status(201).json(sessions.map(toPublic));
+		} catch (error) {
+			if (error instanceof ValidationError) {
+				if (error.details.some((detail: ValidationErrorDetail): boolean => detail.field === 'classId')) {
+					res.status(404).end();
+					return;
+				}
+				res.status(400).json({ error: 'Validation failed', details: error.details });
+				return;
+			}
+			throw error;
+		}
+	}
+
+	private async createRecupSession(
+		req: Request<{ id: string }, GetSessionResponse | ClassValidationErrorResponse, RecupSessionBody>,
+		res: Response<GetSessionResponse | ClassValidationErrorResponse>,
+	): Promise<void> {
+		try {
+			const session = await this.classesServer.createRecupSession(Number(req.params.id), req.body.startTime, req.body.studentIds);
+			res.status(201).json(toPublic(session));
+		} catch (error) {
+			if (error instanceof ValidationError) {
 				if (error.details.some((detail: ValidationErrorDetail): boolean => detail.field === 'classId')) {
 					res.status(404).end();
 					return;

@@ -5,12 +5,21 @@ import { EnrollmentAndCreditRepository } from '../repositories/enrollment-and-cr
 import { OperatorRepository } from '../repositories/operator.repository';
 import { StudentRepository } from '../repositories/student.repository';
 import { HouseholdRepository } from '../repositories/household.repository';
+import { ClassEnrollmentRepository } from '../repositories/class-enrollment.repository';
 import { Session } from '../entities/session.entity';
 import { EnrollmentAndCredit } from '../entities/enrollment-and-credit.entity';
+import { ClassEnrollment } from '../entities/class-enrollment.entity';
 
 export interface BookingConflict {
 	conflict: true;
 	waitlisted: false;
+}
+
+export class PlainSessionNotAllowedError extends Error {
+	public constructor() {
+		super('Schedule-type operators cannot create plain one-off sessions — use a class instead');
+		this.name = 'PlainSessionNotAllowedError';
+	}
 }
 
 // UC2: Automated Session Booking & Capacity Hard Limits. Operator-side
@@ -25,6 +34,7 @@ export class SessionsServer {
 		@inject(TYPES.OperatorRepository) private readonly operators: OperatorRepository,
 		@inject(TYPES.StudentRepository) private readonly students: StudentRepository,
 		@inject(TYPES.HouseholdRepository) private readonly households: HouseholdRepository,
+		@inject(TYPES.ClassEnrollmentRepository) private readonly classEnrollments: ClassEnrollmentRepository,
 	) {}
 
 	// Operator-side
@@ -41,18 +51,29 @@ export class SessionsServer {
 		return this.sessions.findById(id);
 	}
 
-	public async getRoster(sessionId: number): Promise<EnrollmentAndCredit[] | null> {
+	// A class-generated occurrence's roster includes the class's standing members (class_enrollments) in addition
+	// to whoever's individually booked via enrollments_and_credits — except for recup sessions, which are ad hoc
+	// and only ever show the students explicitly booked into them, never the whole class's standing roster.
+	public async getRoster(sessionId: number): Promise<{ enrollments: EnrollmentAndCredit[]; classMemberStudentIds: number[] } | null> {
 		const session = await this.sessions.findById(sessionId);
 		if (!session) {
 			return null;
 		}
-		return this.enrollments.findBySessionId(sessionId);
+		const enrollments = await this.enrollments.findBySessionId(sessionId);
+		if (!session.classId || session.isRecupSession) {
+			return { enrollments, classMemberStudentIds: [] };
+		}
+		const classEnrollments = await this.classEnrollments.findActiveByClassId(session.classId);
+		return { enrollments, classMemberStudentIds: classEnrollments.map((enrollment: ClassEnrollment): number => enrollment.studentId) };
 	}
 
 	public async create(data: { operatorId: number; title: string; startTime: Date; capacityLimit: number }): Promise<Session | null> {
 		const operator = await this.operators.findById(data.operatorId);
 		if (!operator) {
 			return null;
+		}
+		if (operator.type === 'schedule') {
+			throw new PlainSessionNotAllowedError();
 		}
 		return this.sessions.create(data);
 	}
@@ -75,6 +96,16 @@ export class SessionsServer {
 		// audit_logs entry — requires the credit-issuance logic from UC3
 		// and a defined audit-log write path, neither implemented yet.
 		return session;
+	}
+
+	// Single-occurrence override — leaves the class definition and every sibling occurrence untouched. Works on
+	// any session (class-generated or plain), same as cancel() already does.
+	public async reschedule(sessionId: number, startTime: Date): Promise<Session | null> {
+		const session = await this.sessions.findById(sessionId);
+		if (!session) {
+			return null;
+		}
+		return this.sessions.update(sessionId, { startTime });
 	}
 
 	// Household-side
