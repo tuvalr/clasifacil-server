@@ -15,8 +15,8 @@ export class SessionRepository {
 		return this.db.findById(SessionEntity, id);
 	}
 
-	public async create(data: { operatorId: number; title: string; startTime: Date; capacityLimit: number; classId?: number | null; isRecupSession?: boolean }): Promise<Session> {
-		return this.db.insert(SessionEntity, { ...data, classId: data.classId ?? null, isRecupSession: data.isRecupSession ?? false, currentRosterCount: 0, isDeleted: false });
+	public async create(data: { operatorId: number; title: string; startTime: Date; capacityLimit: number; classId?: number | null; isMakeupSession?: boolean }): Promise<Session> {
+		return this.db.insert(SessionEntity, { ...data, classId: data.classId ?? null, isMakeupSession: data.isMakeupSession ?? false, currentRosterCount: 0, isDeleted: false });
 	}
 
 	public async update(id: number, data: Partial<{ title: string; startTime: Date; capacityLimit: number }>): Promise<Session | null> {

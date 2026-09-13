@@ -93,7 +93,7 @@ CREATE TABLE sessions (
 	capacity_limit         INTEGER       NOT NULL,
 	current_roster_count   INTEGER       DEFAULT 0,
 	class_id               BIGINT        REFERENCES classes (id) ON DELETE CASCADE,
-	is_recup_session       BOOLEAN       NOT NULL DEFAULT FALSE,
+	is_makeup_session      BOOLEAN       NOT NULL DEFAULT FALSE,
 	is_deleted             BOOLEAN       NOT NULL DEFAULT FALSE,
 	deleted_at             TIMESTAMPTZ,
 	created_at             TIMESTAMPTZ   DEFAULT CURRENT_TIMESTAMP,

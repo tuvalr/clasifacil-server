@@ -162,7 +162,7 @@ export const swaggerSpec = swaggerJsdoc({
 						capacityLimit: { type: 'integer' },
 						currentRosterCount: { type: 'integer', nullable: true },
 						classId: { type: 'integer', nullable: true },
-						isRecupSession: { type: 'boolean' },
+						isMakeupSession: { type: 'boolean' },
 					},
 				},
 				Class: {

@@ -17,7 +17,7 @@ import { AssignStudentsBody } from './types/assign-students-body.type';
 import { AssignStudentsResponse, AssignStudentsResponseItem } from './types/assign-students-response.type';
 import { GenerateOccurrencesBody } from './types/generate-occurrences-body.type';
 import { GenerateOccurrencesResponse } from './types/generate-occurrences-response.type';
-import { RecupSessionBody } from './types/recup-session-body.type';
+import { MakeupSessionBody } from './types/makeup-session-body.type';
 import { GetSessionResponse } from '../sessions/types/get-session-response.type';
 import { toPublic } from '../../../utils/to-public';
 
@@ -82,7 +82,7 @@ export class ClassesController extends BaseController {
 		 *     description: >
 		 *       Accepts a single class object or an array for bulk creation (satisfies bulk class definitions in one call).
 		 *       Array requests return one per-item success/error result instead of a single class object — partial success is possible.
-		 *       This endpoint creates the class definition only — occurrence generation and recup sessions are separate
+		 *       This endpoint creates the class definition only — occurrence generation and makeup sessions are separate
 		 *       endpoints (see Task 4 of the implementation plan). For assigned-type operators (padel instructors,
 		 *       personal trainers), studentId is required and maxSize must be exactly 1 — the single student is
 		 *       assigned atomically at creation. For schedule-type operators, studentId is forbidden; use
@@ -358,7 +358,7 @@ export class ClassesController extends BaseController {
 
 		/**
 		 * @openapi
-		 * /api/operator/classes/{id}/recup-session:
+		 * /api/operator/classes/{id}/makeup-session:
 		 *   post:
 		 *     summary: Create a make-up session tied to this class
 		 *     description: Any student id is accepted — not limited to active class members.
@@ -388,7 +388,7 @@ export class ClassesController extends BaseController {
 		 *       401: { $ref: '#/components/responses/Unauthorized' }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.post('/:id/recup-session', RouteHandlers.wrap(this.createRecupSession.bind(this)));
+		this.internalRouter.post('/:id/makeup-session', RouteHandlers.wrap(this.createMakeupSession.bind(this)));
 	}
 
 	private async listClasses(req: Request<unknown, ListClassesResponse, unknown, { operatorId?: string }>, res: Response<ListClassesResponse>): Promise<void> {
@@ -580,12 +580,12 @@ export class ClassesController extends BaseController {
 		}
 	}
 
-	private async createRecupSession(
-		req: Request<{ id: string }, GetSessionResponse | ClassValidationErrorResponse, RecupSessionBody>,
+	private async createMakeupSession(
+		req: Request<{ id: string }, GetSessionResponse | ClassValidationErrorResponse, MakeupSessionBody>,
 		res: Response<GetSessionResponse | ClassValidationErrorResponse>,
 	): Promise<void> {
 		try {
-			const session = await this.classesServer.createRecupSession(Number(req.params.id), req.body.startTime, req.body.studentIds);
+			const session = await this.classesServer.createMakeupSession(Number(req.params.id), req.body.startTime, req.body.studentIds);
 			res.status(201).json(toPublic(session));
 		} catch (error) {
 			if (error instanceof ValidationError) {

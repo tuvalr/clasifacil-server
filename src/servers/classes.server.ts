@@ -347,7 +347,7 @@ export class ClassesServer {
 				startTime,
 				capacityLimit: foundClass.maxSize,
 				classId: foundClass.id,
-				isRecupSession: false,
+				isMakeupSession: false,
 			});
 			created.push(session);
 		}
@@ -387,10 +387,10 @@ export class ClassesServer {
 		return dates;
 	}
 
-	// Recup sessions accept any studentId (not just active class members) — an operator may use a recup slot for
+	// Makeup sessions accept any studentId (not just active class members) — an operator may use a makeup slot for
 	// a trial student, per the spec. Each student is booked via the existing enrollments_and_credits create path,
-	// so cancellation/credit logic downstream treats a recup booking exactly like any other enrollment.
-	public async createRecupSession(classId: number, startTime: unknown, studentIds: unknown): Promise<Session> {
+	// so cancellation/credit logic downstream treats a makeup booking exactly like any other enrollment.
+	public async createMakeupSession(classId: number, startTime: unknown, studentIds: unknown): Promise<Session> {
 		const foundClass = await this.classes.findById(classId);
 		if (!foundClass) {
 			throw new ValidationError([{ field: 'classId', message: 'Class not found' }]);
@@ -418,13 +418,13 @@ export class ClassesServer {
 			startTime: parsedStartTime,
 			capacityLimit: foundClass.maxSize,
 			classId: foundClass.id,
-			isRecupSession: true,
+			isMakeupSession: true,
 		});
 
 		for (const studentId of studentIds) {
-			// Small, bounded list of students for one ad hoc recup session. Every other enrollment-creation path in
+			// Small, bounded list of students for one ad hoc makeup session. Every other enrollment-creation path in
 			// this codebase (see SessionsServer.book) increments the session's roster count alongside the enrollment
-			// insert — without this, a recup session's currentRosterCount would stay stale at 0 regardless of how
+			// insert — without this, a makeup session's currentRosterCount would stay stale at 0 regardless of how
 			// many students are actually booked into it.
 			await this.enrollments.create({ studentId, sessionId: session.id, householdId: await this.householdIdForStudent(studentId), status: 'booked' });
 			await this.sessions.incrementRosterCount(session.id);

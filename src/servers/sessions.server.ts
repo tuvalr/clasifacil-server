@@ -53,7 +53,7 @@ export class SessionsServer {
 	}
 
 	// A class-generated occurrence's roster includes the class's standing members (class_enrollments) in addition
-	// to whoever's individually booked via enrollments_and_credits — except for recup sessions, which are ad hoc
+	// to whoever's individually booked via enrollments_and_credits — except for makeup sessions, which are ad hoc
 	// and only ever show the students explicitly booked into them, never the whole class's standing roster.
 	public async getRoster(sessionId: number): Promise<{ enrollments: EnrollmentAndCredit[]; classMemberStudentIds: number[] } | null> {
 		const session = await this.sessions.findById(sessionId);
@@ -61,7 +61,7 @@ export class SessionsServer {
 			return null;
 		}
 		const enrollments = await this.enrollments.findBySessionId(sessionId);
-		if (!session.classId || session.isRecupSession) {
+		if (!session.classId || session.isMakeupSession) {
 			return { enrollments, classMemberStudentIds: [] };
 		}
 		const classEnrollments = await this.classEnrollments.findActiveByClassId(session.classId);
@@ -105,7 +105,7 @@ export class SessionsServer {
 	// Runtime presence/shape check: startTime arrives as untyped JSON, so a missing/malformed value would otherwise
 	// become an Invalid Date silently forwarded to SessionRepository.update, which pg would serialize as a garbage
 	// literal and Postgres would reject with a raw 500 instead of a clean 400. Same gotcha as
-	// ClassesServer.createRecupSession's startTime check.
+	// ClassesServer.createMakeupSession's startTime check.
 	public async reschedule(sessionId: number, startTime: unknown): Promise<Session | null> {
 		if (typeof startTime !== 'string' || startTime.length === 0) {
 			throw new ValidationError([{ field: 'startTime', message: 'startTime is required' }]);

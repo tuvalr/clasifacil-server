@@ -7,7 +7,7 @@ export interface Session extends BaseEntity {
 	capacityLimit: number;
 	currentRosterCount: number | null;
 	classId: number | null;
-	isRecupSession: boolean;
+	isMakeupSession: boolean;
 }
 
 export const SessionEntity: EntityDescriptor<Session> = {
