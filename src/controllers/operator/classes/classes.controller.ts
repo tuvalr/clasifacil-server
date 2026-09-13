@@ -8,7 +8,6 @@ import { BaseController } from '../../shared/base.controller';
 import { ListClassesResponse } from './types/list-classes-response.type';
 import { GetClassResponse } from './types/get-class-response.type';
 import { CreateClassBody } from './types/create-class-body.type';
-import { CreateClassResponse } from './types/create-class-response.type';
 import { ClassValidationErrorResponse } from './types/class-validation-error-response.type';
 import { CreateClassResult } from './types/create-class-result.type';
 import { UpdateClassBody } from './types/update-class-body.type';
@@ -80,66 +79,37 @@ export class ClassesController extends BaseController {
 		 *   post:
 		 *     summary: Create a recurring class
 		 *     description: >
-		 *       Accepts a single class object or an array for bulk creation (satisfies bulk class definitions in one call).
-		 *       Array requests return one per-item success/error result instead of a single class object — partial success is possible.
-		 *       This endpoint creates the class definition only — occurrence generation and makeup sessions are separate
-		 *       endpoints (see Task 4 of the implementation plan). For assigned-type operators (padel instructors,
-		 *       personal trainers), studentId is required and maxSize must be exactly 1 — the single student is
-		 *       assigned atomically at creation. For schedule-type operators, studentId is forbidden; use
-		 *       assign-students instead.
+		 *       Creates the class definition only — occurrence generation and makeup sessions are separate endpoints.
+		 *       For assigned-type operators (padel instructors, personal trainers), studentId is required and
+		 *       maxSize must be exactly 1 — the single student is assigned atomically at creation. For schedule-type
+		 *       operators, studentId is forbidden; use assign-students instead.
 		 *     tags: [Operator - Classes]
 		 *     requestBody:
 		 *       required: true
 		 *       content:
 		 *         application/json:
 		 *           schema:
-		 *             oneOf:
-		 *               - type: object
-		 *                 required: [operatorId, title, dayOfWeek, startTime, durationMinutes, maxSize]
-		 *                 properties:
-		 *                   operatorId: { type: integer }
-		 *                   title: { type: string }
-		 *                   dayOfWeek: { type: integer, minimum: 0, maximum: 6 }
-		 *                   startTime: { type: string, description: 'HH:MM:SS' }
-		 *                   durationMinutes: { type: integer }
-		 *                   minSize: { type: integer, nullable: true }
-		 *                   maxSize: { type: integer }
-		 *                   studentId: { type: integer, description: 'Required for assigned-type operators; forbidden otherwise' }
-		 *               - type: array
-		 *                 items:
-		 *                   type: object
-		 *                   required: [operatorId, title, dayOfWeek, startTime, durationMinutes, maxSize]
-		 *                   properties:
-		 *                     operatorId: { type: integer }
-		 *                     title: { type: string }
-		 *                     dayOfWeek: { type: integer, minimum: 0, maximum: 6 }
-		 *                     startTime: { type: string, description: 'HH:MM:SS' }
-		 *                     durationMinutes: { type: integer }
-		 *                     minSize: { type: integer, nullable: true }
-		 *                     maxSize: { type: integer }
-		 *                     studentId: { type: integer, description: 'Required for assigned-type operators; forbidden otherwise' }
+		 *             type: object
+		 *             required: [operatorId, title, dayOfWeek, startTime, durationMinutes, maxSize]
+		 *             properties:
+		 *               operatorId: { type: integer }
+		 *               title: { type: string }
+		 *               dayOfWeek: { type: integer, minimum: 0, maximum: 6 }
+		 *               startTime: { type: string, description: 'HH:MM:SS' }
+		 *               durationMinutes: { type: integer }
+		 *               minSize: { type: integer, nullable: true }
+		 *               maxSize: { type: integer }
+		 *               studentId: { type: integer, description: 'Required for assigned-type operators; forbidden otherwise' }
 		 *     responses:
 		 *       201:
 		 *         description: Created
 		 *         content:
 		 *           application/json:
 		 *             schema:
-		 *               oneOf:
-		 *                 - { $ref: '#/components/schemas/Class' }
-		 *                 - type: array
-		 *                   items:
-		 *                     type: object
-		 *                     properties:
-		 *                       success: { type: boolean }
-		 *                       class: { $ref: '#/components/schemas/Class' }
-		 *                       error: { type: string }
-		 *                       details:
-		 *                         type: array
-		 *                         items:
-		 *                           type: object
-		 *                           properties:
-		 *                             field: { type: string }
-		 *                             message: { type: string }
+		 *               type: object
+		 *               properties:
+		 *                 success: { type: boolean }
+		 *                 class: { $ref: '#/components/schemas/Class' }
 		 *       400:
 		 *         description: Validation failed
 		 *         content:
@@ -147,6 +117,7 @@ export class ClassesController extends BaseController {
 		 *             schema:
 		 *               type: object
 		 *               properties:
+		 *                 success: { type: boolean }
 		 *                 error: { type: string }
 		 *                 details:
 		 *                   type: array
@@ -414,47 +385,19 @@ export class ClassesController extends BaseController {
 		res.json(toPublic(foundClass));
 	}
 
-	private async createClass(
-		req: Request<unknown, CreateClassResponse | ClassValidationErrorResponse | CreateClassResult[], CreateClassBody | CreateClassBody[]>,
-		res: Response<CreateClassResponse | ClassValidationErrorResponse | CreateClassResult[]>,
-	): Promise<void> {
-		if (Array.isArray(req.body)) {
-			const results: CreateClassResult[] = [];
-			for (const item of req.body) {
-				results.push(await this.createOneClass(item));
-			}
-			res.status(201).json(results);
-			return;
-		}
-
-		const { operatorId, title, dayOfWeek, startTime, durationMinutes, minSize, maxSize, studentId } = req.body;
+	private async createClass(req: Request<unknown, CreateClassResult, CreateClassBody>, res: Response<CreateClassResult>): Promise<void> {
 		try {
-			const created = await this.classesServer.create({ operatorId, title, dayOfWeek, startTime, durationMinutes, minSize, maxSize, studentId });
-			res.status(201).json(toPublic(created));
+			const created = await this.classesServer.create(req.body);
+			res.status(201).json({ success: true, class: toPublic(created) });
 		} catch (error) {
 			if (error instanceof ValidationError) {
-				res.status(400).json({ error: 'Validation failed', details: error.details });
+				res.status(400).json({ success: false, error: 'Validation failed', details: error.details });
 				return;
 			}
-			throw error;
-		}
-	}
-
-	private async createOneClass(body: CreateClassBody): Promise<CreateClassResult> {
-		try {
-			const created = await this.classesServer.create(body);
-			return { success: true, class: toPublic(created) };
-		} catch (error) {
-			if (error instanceof ValidationError) {
-				return { success: false, error: 'Validation failed', details: error.details };
-			}
-			// Any other thrown error (e.g. a raw Postgres error that slipped past application-level validation) must
-			// NOT propagate out of this per-item helper: each array item's create() call is its own independent,
-			// already-committed insert (no transaction wraps the whole batch), so re-throwing here would 500 the
-			// entire bulk request and lose track of which earlier items already succeeded — violating the spec's
-			// partial-success requirement (one bad item doesn't roll back/corrupt the others). Report it as a failed
-			// item instead, using a generic message so internal error details aren't leaked to the caller.
-			return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+			// Any other thrown error (e.g. a raw Postgres error that slipped past application-level validation) is
+			// reported as a failed result with a generic message, rather than propagating into the generic 500
+			// handler, so internal error details aren't leaked to the caller.
+			res.status(400).json({ success: false, error: error instanceof Error ? error.message : 'Unknown error' });
 		}
 	}
 
