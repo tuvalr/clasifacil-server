@@ -165,6 +165,28 @@ export const swaggerSpec = swaggerJsdoc({
 						isMakeupSession: { type: 'boolean' },
 					},
 				},
+				// A class occurrence is either virtual (derived on-the-fly from the class's recurring pattern, never
+				// persisted) or materialized (a real row in `sessions`, once rescheduled/cancelled/attendance-recorded
+				// or explicitly backfilled) — isVirtual discriminates which fields are populated: classId only on
+				// virtual entries, sessionId/isMakeupSession only on materialized ones.
+				Occurrence: {
+					type: 'object',
+					properties: {
+						isVirtual: { type: 'boolean' },
+						classId: { type: 'integer', nullable: true, description: 'Present only when isVirtual is true' },
+						sessionId: { type: 'integer', nullable: true, description: 'Present only when isVirtual is false' },
+						startTime: { type: 'string', format: 'date-time' },
+						isMakeupSession: { type: 'boolean', nullable: true, description: 'Present only when isVirtual is false' },
+						title: { type: 'string', nullable: true },
+					},
+				},
+				SessionAttendanceEntry: {
+					type: 'object',
+					properties: {
+						studentId: { type: 'integer' },
+						status: { type: 'string', enum: ['present', 'absent', 'approved_absent'] },
+					},
+				},
 				Class: {
 					type: 'object',
 					properties: {

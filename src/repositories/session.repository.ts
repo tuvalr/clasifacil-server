@@ -11,11 +11,38 @@ export class SessionRepository {
 		return this.db.queryActive(SessionEntity, 'operator_id = $1', [operatorId]);
 	}
 
+	public async findByClassIdInRange(classId: number, from: Date, to: Date): Promise<Session[]> {
+		return this.db.queryActive(SessionEntity, 'class_id = $1 AND start_time >= $2 AND start_time <= $3', [classId, from, to]);
+	}
+
+	// Latest materialized session for a class, regardless of date range — used by the nightly backfill job (Task
+	// 6) to find where to resume materializing from. Returns null if the class has no materialized sessions yet.
+	public async findLatestByClassId(classId: number): Promise<Session | null> {
+		const rows = await this.db.queryActive(SessionEntity, 'class_id = $1 ORDER BY start_time DESC LIMIT 1', [classId]);
+		return rows[0] ?? null;
+	}
+
+	public async findByClassIdAndDate(classId: number, date: Date): Promise<Session | null> {
+		// Matches on the calendar date portion of start_time — a materialized session's exact time-of-day may
+		// differ from the class's pattern (e.g. already rescheduled), but there is still only ever one
+		// materialized session per class per calendar day, by construction (materializeOccurrence is idempotent
+		// per date).
+		const rows = await this.db.queryActive(SessionEntity, 'class_id = $1 AND DATE(start_time) = $2::date', [classId, date.toISOString().slice(0, 10)]);
+		return rows[0] ?? null;
+	}
+
 	public async findById(id: number): Promise<Session | null> {
 		return this.db.findById(SessionEntity, id);
 	}
 
-	public async create(data: { operatorId: number; title: string | null; startTime: Date; capacityLimit: number; classId?: number | null; isMakeupSession?: boolean }): Promise<Session> {
+	public async create(data: {
+		operatorId: number;
+		title: string | null;
+		startTime: Date;
+		capacityLimit: number;
+		classId?: number | null;
+		isMakeupSession?: boolean;
+	}): Promise<Session> {
 		return this.db.insert(SessionEntity, { ...data, classId: data.classId ?? null, isMakeupSession: data.isMakeupSession ?? false, currentRosterCount: 0, isDeleted: false });
 	}
 

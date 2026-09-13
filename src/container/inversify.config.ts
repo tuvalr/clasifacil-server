@@ -35,6 +35,7 @@ import { AutopayServer } from '../servers/autopay.server';
 import { RemindersServer } from '../servers/reminders.server';
 import { OperatorsServer } from '../servers/operators.server';
 import { ClassesServer } from '../servers/classes.server';
+import { ClassOccurrencesServer } from '../servers/class-occurrences.server';
 import { SessionAttendanceServer } from '../servers/session-attendance.server';
 import { AvatarsServer } from '../servers/avatars.server';
 import { AvatarStorage } from '../servers/types/avatar-storage';
@@ -51,6 +52,7 @@ import { BillingController } from '../controllers/operator/billing/billing.contr
 import { RemindersController } from '../controllers/operator/reminders/reminders.controller';
 import { AutopayController } from '../controllers/operator/autopay/autopay.controller';
 import { ClassesController } from '../controllers/operator/classes/classes.controller';
+import { ClassOccurrencesController } from '../controllers/operator/classes/class-occurrences.controller';
 import { HouseholdController } from '../controllers/household/household.controller';
 import { HouseholdHouseholdsController } from '../controllers/household/households/households.controller';
 import { BookingController } from '../controllers/household/booking/booking.controller';
@@ -93,6 +95,7 @@ async function bootstrap(): Promise<void> {
 	container.bind<RemindersServer>(TYPES.RemindersServer).to(RemindersServer).inSingletonScope();
 	container.bind<OperatorsServer>(TYPES.OperatorsServer).to(OperatorsServer).inSingletonScope();
 	container.bind<ClassesServer>(TYPES.ClassesServer).to(ClassesServer).inSingletonScope();
+	container.bind<ClassOccurrencesServer>(TYPES.ClassOccurrencesServer).to(ClassOccurrencesServer).inSingletonScope();
 	container.bind<SessionAttendanceServer>(TYPES.SessionAttendanceServer).to(SessionAttendanceServer).inSingletonScope();
 	container.bind<AvatarStorage>(TYPES.AvatarStorage).to(LocalDiskAvatarStorage).inSingletonScope();
 	container.bind<AvatarsServer>(TYPES.AvatarsServer).to(AvatarsServer).inSingletonScope();
@@ -108,6 +111,7 @@ async function bootstrap(): Promise<void> {
 	container.bind<RemindersController>(TYPES.RemindersController).to(RemindersController).inSingletonScope();
 	container.bind<AutopayController>(TYPES.AutopayController).to(AutopayController).inSingletonScope();
 	container.bind<ClassesController>(TYPES.ClassesController).to(ClassesController).inSingletonScope();
+	container.bind<ClassOccurrencesController>(TYPES.ClassOccurrencesController).to(ClassOccurrencesController).inSingletonScope();
 	container.bind<OperatorController>(TYPES.OperatorController).to(OperatorController).inSingletonScope();
 	container.bind<HouseholdHouseholdsController>(TYPES.HouseholdHouseholdsController).to(HouseholdHouseholdsController).inSingletonScope();
 	container.bind<BookingController>(TYPES.BookingController).to(BookingController).inSingletonScope();
