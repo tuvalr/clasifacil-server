@@ -176,8 +176,8 @@ export const swaggerSpec = swaggerJsdoc({
 						durationMinutes: { type: 'integer' },
 						minSize: { type: 'integer', nullable: true },
 						maxSize: { type: 'integer' },
-						status: { type: 'string', enum: ['active', 'paused'] },
-						pausedUntil: { type: 'string', format: 'date-time', nullable: true },
+						status: { type: 'string', enum: ['active', 'stopped'] },
+						stoppedAt: { type: 'string', format: 'date-time', nullable: true },
 					},
 				},
 				EnrollmentAndCredit: {
