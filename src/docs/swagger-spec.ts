@@ -157,7 +157,7 @@ export const swaggerSpec = swaggerJsdoc({
 					properties: {
 						...swaggerBaseFields,
 						operatorId: { type: 'integer' },
-						title: { type: 'string' },
+						title: { type: 'string', nullable: true },
 						startTime: { type: 'string', format: 'date-time' },
 						capacityLimit: { type: 'integer' },
 						currentRosterCount: { type: 'integer', nullable: true },

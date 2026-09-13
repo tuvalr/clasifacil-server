@@ -2,6 +2,8 @@ import { Request, Response } from 'express';
 import { inject, injectable } from 'inversify';
 import { TYPES } from '../../../container/types';
 import { SessionsServer, PlainSessionNotAllowedError } from '../../../servers/sessions.server';
+import { SessionAttendanceServer } from '../../../servers/session-attendance.server';
+import { SessionAttendance } from '../../../entities/session-attendance.entity';
 import { ValidationError } from '../../../servers/types/validation-error';
 import { RouteHandlers } from '../../shared/route-handlers';
 import { BaseController } from '../../shared/base.controller';
@@ -14,12 +16,17 @@ import { CreateSessionResponse } from './types/create-session-response.type';
 import { RescheduleSessionBody } from './types/reschedule-session-body.type';
 import { PlainSessionErrorResponse } from './types/plain-session-error-response.type';
 import { SessionValidationErrorResponse } from './types/session-validation-error-response.type';
+import { SessionAttendanceBody } from './types/session-attendance-body.type';
+import { SessionAttendanceResponse, SessionAttendanceResponseItem } from './types/session-attendance-response.type';
 import { toPublic } from '../../../utils/to-public';
 
 // UC2: Automated Session Booking & Capacity Hard Limits
 @injectable()
 export class SessionsController extends BaseController {
-	public constructor(@inject(TYPES.SessionsServer) private readonly sessionsServer: SessionsServer) {
+	public constructor(
+		@inject(TYPES.SessionsServer) private readonly sessionsServer: SessionsServer,
+		@inject(TYPES.SessionAttendanceServer) private readonly sessionAttendanceServer: SessionAttendanceServer,
+	) {
 		super();
 
 		/**
@@ -182,6 +189,52 @@ export class SessionsController extends BaseController {
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
 		this.internalRouter.patch('/:id/reschedule', RouteHandlers.wrap(this.rescheduleSession.bind(this)));
+
+		/**
+		 * @openapi
+		 * /api/operator/sessions/{id}/attendance:
+		 *   put:
+		 *     summary: Record or correct attendance for a true one-off session
+		 *     description: Upserts one row per given student — marking again updates the existing record, never duplicates it.
+		 *     tags: [Operator - Sessions]
+		 *     parameters:
+		 *       - in: path
+		 *         name: id
+		 *         required: true
+		 *         schema: { type: integer }
+		 *     requestBody:
+		 *       required: true
+		 *       content:
+		 *         application/json:
+		 *           schema:
+		 *             type: object
+		 *             required: [attendance]
+		 *             properties:
+		 *               attendance:
+		 *                 type: array
+		 *                 items:
+		 *                   type: object
+		 *                   properties:
+		 *                     studentId: { type: integer }
+		 *                     status: { type: string, enum: [present, absent, approved_absent] }
+		 *     responses:
+		 *       200:
+		 *         description: OK
+		 *         content:
+		 *           application/json:
+		 *             schema:
+		 *               type: array
+		 *               items:
+		 *                 type: object
+		 *                 properties:
+		 *                   studentId: { type: integer }
+		 *                   status: { type: string, enum: [present, absent, approved_absent] }
+		 *       400: { $ref: '#/components/responses/BadRequest' }
+		 *       401: { $ref: '#/components/responses/Unauthorized' }
+		 *       404: { description: Not found }
+		 *       500: { $ref: '#/components/responses/InternalError' }
+		 */
+		this.internalRouter.put('/:id/attendance', RouteHandlers.wrap(this.recordAttendance.bind(this)));
 	}
 
 	private async listSessions(req: Request<unknown, ListSessionsResponse, unknown, ListSessionsQuery>, res: Response<ListSessionsResponse>): Promise<void> {
@@ -258,6 +311,26 @@ export class SessionsController extends BaseController {
 				return;
 			}
 			res.json(toPublic(rescheduled));
+		} catch (error) {
+			if (error instanceof ValidationError) {
+				res.status(400).json({ error: 'Validation failed', details: error.details });
+				return;
+			}
+			throw error;
+		}
+	}
+
+	private async recordAttendance(
+		req: Request<{ id: string }, SessionAttendanceResponse | SessionValidationErrorResponse, SessionAttendanceBody>,
+		res: Response<SessionAttendanceResponse | SessionValidationErrorResponse>,
+	): Promise<void> {
+		try {
+			const result = await this.sessionAttendanceServer.recordForSessionId(Number(req.params.id), null, req.body?.attendance);
+			if (!result) {
+				res.status(404).end();
+				return;
+			}
+			res.json(result.map((row: SessionAttendance): SessionAttendanceResponseItem => ({ studentId: row.studentId, status: row.status })));
 		} catch (error) {
 			if (error instanceof ValidationError) {
 				res.status(400).json({ error: 'Validation failed', details: error.details });
