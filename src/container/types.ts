@@ -17,6 +17,7 @@ export const TYPES = {
 	UserRepository: Symbol.for('UserRepository'),
 	ClassRepository: Symbol.for('ClassRepository'),
 	ClassEnrollmentRepository: Symbol.for('ClassEnrollmentRepository'),
+	SessionAttendanceRepository: Symbol.for('SessionAttendanceRepository'),
 
 	HouseholdsServer: Symbol.for('HouseholdsServer'),
 	SessionsServer: Symbol.for('SessionsServer'),
@@ -26,12 +27,14 @@ export const TYPES = {
 	RemindersServer: Symbol.for('RemindersServer'),
 	OperatorsServer: Symbol.for('OperatorsServer'),
 	ClassesServer: Symbol.for('ClassesServer'),
+	SessionAttendanceServer: Symbol.for('SessionAttendanceServer'),
 	AvatarsServer: Symbol.for('AvatarsServer'),
 	AvatarStorage: Symbol.for('AvatarStorage'),
 
 	AdminController: Symbol.for('AdminController'),
 	AdminOperatorsController: Symbol.for('AdminOperatorsController'),
 	AdminHouseholdsController: Symbol.for('AdminHouseholdsController'),
+	AdminSessionAttendanceController: Symbol.for('AdminSessionAttendanceController'),
 	OperatorController: Symbol.for('OperatorController'),
 	HouseholdsController: Symbol.for('HouseholdsController'),
 	SessionsController: Symbol.for('SessionsController'),

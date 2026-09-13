@@ -26,6 +26,7 @@ import { InvoiceAndPaymentRepository } from '../repositories/invoice-and-payment
 import { UserRepository } from '../repositories/user.repository';
 import { ClassRepository } from '../repositories/class.repository';
 import { ClassEnrollmentRepository } from '../repositories/class-enrollment.repository';
+import { SessionAttendanceRepository } from '../repositories/session-attendance.repository';
 import { HouseholdsServer } from '../servers/households.server';
 import { SessionsServer } from '../servers/sessions.server';
 import { AttendanceCreditsServer } from '../servers/attendance-credits.server';
@@ -34,12 +35,14 @@ import { AutopayServer } from '../servers/autopay.server';
 import { RemindersServer } from '../servers/reminders.server';
 import { OperatorsServer } from '../servers/operators.server';
 import { ClassesServer } from '../servers/classes.server';
+import { SessionAttendanceServer } from '../servers/session-attendance.server';
 import { AvatarsServer } from '../servers/avatars.server';
 import { AvatarStorage } from '../servers/types/avatar-storage';
 import { LocalDiskAvatarStorage } from '../servers/local-disk-avatar-storage';
 import { AdminController } from '../controllers/admin/admin.controller';
 import { AdminOperatorsController } from '../controllers/admin/operators/operators.controller';
 import { AdminHouseholdsController } from '../controllers/admin/households/households.controller';
+import { AdminSessionAttendanceController } from '../controllers/admin/session-attendance/session-attendance.controller';
 import { OperatorController } from '../controllers/operator/operator.controller';
 import { HouseholdsController } from '../controllers/operator/households/households.controller';
 import { SessionsController } from '../controllers/operator/sessions/sessions.controller';
@@ -80,6 +83,7 @@ async function bootstrap(): Promise<void> {
 	container.bind<UserRepository>(TYPES.UserRepository).to(UserRepository).inSingletonScope();
 	container.bind<ClassRepository>(TYPES.ClassRepository).to(ClassRepository).inSingletonScope();
 	container.bind<ClassEnrollmentRepository>(TYPES.ClassEnrollmentRepository).to(ClassEnrollmentRepository).inSingletonScope();
+	container.bind<SessionAttendanceRepository>(TYPES.SessionAttendanceRepository).to(SessionAttendanceRepository).inSingletonScope();
 
 	container.bind<HouseholdsServer>(TYPES.HouseholdsServer).to(HouseholdsServer).inSingletonScope();
 	container.bind<SessionsServer>(TYPES.SessionsServer).to(SessionsServer).inSingletonScope();
@@ -89,11 +93,13 @@ async function bootstrap(): Promise<void> {
 	container.bind<RemindersServer>(TYPES.RemindersServer).to(RemindersServer).inSingletonScope();
 	container.bind<OperatorsServer>(TYPES.OperatorsServer).to(OperatorsServer).inSingletonScope();
 	container.bind<ClassesServer>(TYPES.ClassesServer).to(ClassesServer).inSingletonScope();
+	container.bind<SessionAttendanceServer>(TYPES.SessionAttendanceServer).to(SessionAttendanceServer).inSingletonScope();
 	container.bind<AvatarStorage>(TYPES.AvatarStorage).to(LocalDiskAvatarStorage).inSingletonScope();
 	container.bind<AvatarsServer>(TYPES.AvatarsServer).to(AvatarsServer).inSingletonScope();
 
 	container.bind<AdminOperatorsController>(TYPES.AdminOperatorsController).to(AdminOperatorsController).inSingletonScope();
 	container.bind<AdminHouseholdsController>(TYPES.AdminHouseholdsController).to(AdminHouseholdsController).inSingletonScope();
+	container.bind<AdminSessionAttendanceController>(TYPES.AdminSessionAttendanceController).to(AdminSessionAttendanceController).inSingletonScope();
 	container.bind<AdminController>(TYPES.AdminController).to(AdminController).inSingletonScope();
 	container.bind<HouseholdsController>(TYPES.HouseholdsController).to(HouseholdsController).inSingletonScope();
 	container.bind<SessionsController>(TYPES.SessionsController).to(SessionsController).inSingletonScope();
