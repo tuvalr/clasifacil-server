@@ -50,8 +50,8 @@ CREATE TABLE classes (
     duration_minutes  INTEGER       NOT NULL,
     min_size          INTEGER,                  -- nullable, informational only
     max_size          INTEGER       NOT NULL,   -- becomes each generated session's capacity_limit
-    status            VARCHAR(20)   NOT NULL DEFAULT 'active',  -- 'active' | 'paused'
-    paused_until      TIMESTAMPTZ,
+    status            VARCHAR(20)   NOT NULL DEFAULT 'active',  -- 'active' | 'stopped'
+    stopped_at        TIMESTAMPTZ,
     is_deleted        BOOLEAN       NOT NULL DEFAULT FALSE,
     deleted_at        TIMESTAMPTZ,
     created_at        TIMESTAMPTZ   DEFAULT CURRENT_TIMESTAMP,
@@ -59,7 +59,7 @@ CREATE TABLE classes (
     CONSTRAINT classes_day_of_week_check CHECK (day_of_week BETWEEN 0 AND 6),
     CONSTRAINT classes_max_size_check CHECK (max_size >= 1),
     CONSTRAINT classes_min_size_check CHECK (min_size IS NULL OR min_size <= max_size),
-    CONSTRAINT classes_status_check CHECK (status IN ('active', 'paused'))
+    CONSTRAINT classes_status_check CHECK (status IN ('active', 'stopped'))
 );
 
 -- ==========================================================================
@@ -88,7 +88,9 @@ CREATE TABLE households (
 CREATE TABLE sessions (
 	id                     BIGSERIAL PRIMARY KEY,
 	operator_id            BIGINT        NOT NULL REFERENCES operators (id) ON DELETE CASCADE,
-	title                  VARCHAR(255)  NOT NULL,
+	title                  VARCHAR(255),  -- NULL for any class-linked session (class_id IS NOT NULL) — display
+	                                       -- always reads the parent class's current title live. Only populated
+	                                       -- for a true one-off session (class_id IS NULL).
 	start_time             TIMESTAMPTZ   NOT NULL,
 	capacity_limit         INTEGER       NOT NULL,
 	current_roster_count   INTEGER       DEFAULT 0,
@@ -132,6 +134,42 @@ CREATE TABLE class_enrollments (
     updated_at  TIMESTAMPTZ   DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT class_enrollments_status_check CHECK (status IN ('active', 'removed')),
     CONSTRAINT class_enrollments_unique_active UNIQUE (class_id, student_id)
+);
+
+-- ==========================================================================
+-- session_attendance
+-- ==========================================================================
+-- One row per (session_id, student_id) — marking again updates in place (bumps updated_at), never inserts a
+-- duplicate. Not an audit log. class_id is nullable: populated for a class-linked session, NULL for a true
+-- one-off session's attendance. student_id has no required relationship to class_enrollments — a "trial"
+-- student (never enrolled) can still get a row here for one specific session.
+CREATE TABLE session_attendance (
+	id           BIGSERIAL PRIMARY KEY,
+	session_id   BIGINT        NOT NULL REFERENCES sessions (id) ON DELETE CASCADE,
+	class_id     BIGINT        REFERENCES classes (id) ON DELETE CASCADE,
+	student_id   BIGINT        NOT NULL REFERENCES students (id) ON DELETE CASCADE,
+	status       VARCHAR(20)   NOT NULL,  -- 'present' | 'absent' | 'approved_absent'
+	created_at   TIMESTAMPTZ   DEFAULT CURRENT_TIMESTAMP,
+	updated_at   TIMESTAMPTZ   DEFAULT CURRENT_TIMESTAMP,
+	CONSTRAINT session_attendance_status_check CHECK (status IN ('present', 'absent', 'approved_absent')),
+	CONSTRAINT session_attendance_unique UNIQUE (session_id, student_id)
+);
+
+-- ==========================================================================
+-- session_attendance_history
+-- ==========================================================================
+-- Same shape as session_attendance plus archived_at. Populated by POST /api/admin/session-attendance/archive,
+-- which moves any session_attendance row older than 6 months (by updated_at) here and deletes it from the live
+-- table, in one transaction. FKs kept (not decoupled) so archived rows stay referentially valid.
+CREATE TABLE session_attendance_history (
+	id           BIGINT        PRIMARY KEY,
+	session_id   BIGINT        NOT NULL REFERENCES sessions (id) ON DELETE CASCADE,
+	class_id     BIGINT        REFERENCES classes (id) ON DELETE CASCADE,
+	student_id   BIGINT        NOT NULL REFERENCES students (id) ON DELETE CASCADE,
+	status       VARCHAR(20)   NOT NULL,
+	created_at   TIMESTAMPTZ,
+	updated_at   TIMESTAMPTZ,
+	archived_at  TIMESTAMPTZ   DEFAULT CURRENT_TIMESTAMP
 );
 
 -- ==========================================================================

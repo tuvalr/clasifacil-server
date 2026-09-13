@@ -22,7 +22,7 @@ export class SessionRepository {
 		return this.db.findById(SessionEntity, id);
 	}
 
-	public async create(data: { operatorId: number; title: string; startTime: Date; capacityLimit: number; classId?: number | null; isMakeupSession?: boolean }): Promise<Session> {
+	public async create(data: { operatorId: number; title: string | null; startTime: Date; capacityLimit: number; classId?: number | null; isMakeupSession?: boolean }): Promise<Session> {
 		return this.db.insert(SessionEntity, { ...data, classId: data.classId ?? null, isMakeupSession: data.isMakeupSession ?? false, currentRosterCount: 0, isDeleted: false });
 	}
 

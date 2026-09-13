@@ -30,12 +30,12 @@ export class ClassRepository {
 		return this.db.update(ClassEntity, id, data);
 	}
 
-	public async pause(id: number, pausedUntil: Date | null): Promise<Class | null> {
-		return this.db.update(ClassEntity, id, { status: 'paused', pausedUntil });
+	public async stop(id: number): Promise<Class | null> {
+		return this.db.update(ClassEntity, id, { status: 'stopped', stoppedAt: new Date() });
 	}
 
-	public async resume(id: number): Promise<Class | null> {
-		return this.db.update(ClassEntity, id, { status: 'active', pausedUntil: null });
+	public async unstop(id: number): Promise<Class | null> {
+		return this.db.update(ClassEntity, id, { status: 'active', stoppedAt: null });
 	}
 
 	public async archive(id: number): Promise<void> {

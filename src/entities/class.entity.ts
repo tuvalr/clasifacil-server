@@ -8,8 +8,8 @@ export interface Class extends BaseEntity {
 	durationMinutes: number;
 	minSize: number | null;
 	maxSize: number;
-	status: 'active' | 'paused';
-	pausedUntil: Date | null;
+	status: 'active' | 'stopped';
+	stoppedAt: Date | null;
 }
 
 export const ClassEntity: EntityDescriptor<Class> = {
