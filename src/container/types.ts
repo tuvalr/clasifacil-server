@@ -28,6 +28,7 @@ export const TYPES = {
 	OperatorsServer: Symbol.for('OperatorsServer'),
 	ClassesServer: Symbol.for('ClassesServer'),
 	ClassOccurrencesServer: Symbol.for('ClassOccurrencesServer'),
+	NightlyBackfillJob: Symbol.for('NightlyBackfillJob'),
 	SessionAttendanceServer: Symbol.for('SessionAttendanceServer'),
 	AvatarsServer: Symbol.for('AvatarsServer'),
 	AvatarStorage: Symbol.for('AvatarStorage'),

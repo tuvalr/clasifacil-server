@@ -11,6 +11,13 @@ export class ClassRepository {
 		return this.db.queryActive(ClassEntity, 'operator_id = $1', [operatorId]);
 	}
 
+	// Every non-stopped class across all operators, regardless of operator.type (schedule or recurring
+	// assigned) — used by the nightly backfill job, which applies uniformly per the spec (maxSize only affects
+	// roster capacity, never derivation).
+	public async findAllActive(): Promise<Class[]> {
+		return this.db.queryActive(ClassEntity, "status = 'active'");
+	}
+
 	public async findById(id: number): Promise<Class | null> {
 		return this.db.findById(ClassEntity, id);
 	}

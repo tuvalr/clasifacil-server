@@ -36,6 +36,7 @@ import { RemindersServer } from '../servers/reminders.server';
 import { OperatorsServer } from '../servers/operators.server';
 import { ClassesServer } from '../servers/classes.server';
 import { ClassOccurrencesServer } from '../servers/class-occurrences.server';
+import { NightlyBackfillJob } from '../jobs/nightly-backfill.job';
 import { SessionAttendanceServer } from '../servers/session-attendance.server';
 import { AvatarsServer } from '../servers/avatars.server';
 import { AvatarStorage } from '../servers/types/avatar-storage';
@@ -96,6 +97,7 @@ async function bootstrap(): Promise<void> {
 	container.bind<OperatorsServer>(TYPES.OperatorsServer).to(OperatorsServer).inSingletonScope();
 	container.bind<ClassesServer>(TYPES.ClassesServer).to(ClassesServer).inSingletonScope();
 	container.bind<ClassOccurrencesServer>(TYPES.ClassOccurrencesServer).to(ClassOccurrencesServer).inSingletonScope();
+	container.bind<NightlyBackfillJob>(TYPES.NightlyBackfillJob).to(NightlyBackfillJob).inSingletonScope();
 	container.bind<SessionAttendanceServer>(TYPES.SessionAttendanceServer).to(SessionAttendanceServer).inSingletonScope();
 	container.bind<AvatarStorage>(TYPES.AvatarStorage).to(LocalDiskAvatarStorage).inSingletonScope();
 	container.bind<AvatarsServer>(TYPES.AvatarsServer).to(AvatarsServer).inSingletonScope();
