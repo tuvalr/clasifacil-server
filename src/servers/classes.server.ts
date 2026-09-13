@@ -165,6 +165,7 @@ export class ClassesServer {
 			durationMinutes?: unknown;
 			minSize?: unknown;
 			maxSize?: unknown;
+			renameRelatedSessions?: unknown;
 		},
 	): Promise<Class | null> {
 		const existing = await this.classes.findById(id);
@@ -176,8 +177,19 @@ export class ClassesServer {
 		if (typeDetails.length > 0) {
 			throw new ValidationError(typeDetails);
 		}
-		// Narrowed by validateUpdateTypes: every field present in `data` is confirmed to be the correct type.
-		const narrowed = data as Partial<{ title: string; dayOfWeek: number; startTime: string; durationMinutes: number; minSize: number | null; maxSize: number }>;
+		// Narrowed by validateUpdateTypes: every field present in `data` is confirmed to be the correct type. Only
+		// the class table's own columns are picked out here — data may also carry renameRelatedSessions, which is
+		// not a column and must never reach ClassRepository.update (the generic EntityQueryHelper writes every key
+		// it's given straight into the SQL UPDATE's column list).
+		const untyped = data as Partial<{ title: string; dayOfWeek: number; startTime: string; durationMinutes: number; minSize: number | null; maxSize: number }>;
+		const narrowed = {
+			title: untyped.title,
+			dayOfWeek: untyped.dayOfWeek,
+			startTime: untyped.startTime,
+			durationMinutes: untyped.durationMinutes,
+			minSize: untyped.minSize,
+			maxSize: untyped.maxSize,
+		};
 
 		const merged = {
 			dayOfWeek: narrowed.dayOfWeek ?? existing.dayOfWeek,
@@ -189,7 +201,22 @@ export class ClassesServer {
 		if (details.length > 0) {
 			throw new ValidationError(details);
 		}
-		return this.classes.update(id, narrowed);
+		const updated = await this.classes.update(id, narrowed);
+
+		// Only takes effect when title is actually being changed in this same request — with no new title, there's
+		// nothing to propagate, so the flag is a no-op rather than re-syncing every session to the pre-existing
+		// title. Future, non-makeup occurrences only: past sessions aren't rewritten, and makeup sessions keep
+		// whatever title they were given independently at creation.
+		if (updated && narrowed.title !== undefined && data.renameRelatedSessions === true) {
+			const futureSessions = await this.sessions.findFutureNonMakeupByClassId(id);
+			for (const session of futureSessions) {
+				// Small, bounded set of a single class's upcoming occurrences (capped by the same
+				// MAX_GENERATED_OCCURRENCES limit that bounds generateOccurrences) — sequential is simplest here.
+				await this.sessions.update(session.id, { title: narrowed.title });
+			}
+		}
+
+		return updated;
 	}
 
 	// findById first — same reasoning as OperatorsServer.pause(): the repository's UPDATE has no is_deleted guard,

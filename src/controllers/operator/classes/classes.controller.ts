@@ -136,13 +136,30 @@ export class ClassesController extends BaseController {
 		 * /api/operator/classes/{id}:
 		 *   put:
 		 *     summary: Update a class's recurring pattern
-		 *     description: Never touches already-generated sessions — only affects future generate-occurrences calls.
+		 *     description: >
+		 *       Never touches already-generated sessions — only affects future generate-occurrences calls — unless
+		 *       `title` is changed and `renameRelatedSessions` is true, in which case the class's future, non-makeup
+		 *       generated sessions are also renamed to the new title. renameRelatedSessions has no effect without a
+		 *       title change in the same request.
 		 *     tags: [Operator - Classes]
 		 *     parameters:
 		 *       - in: path
 		 *         name: id
 		 *         required: true
 		 *         schema: { type: integer }
+		 *     requestBody:
+		 *       content:
+		 *         application/json:
+		 *           schema:
+		 *             type: object
+		 *             properties:
+		 *               title: { type: string }
+		 *               dayOfWeek: { type: integer, minimum: 0, maximum: 6 }
+		 *               startTime: { type: string, description: 'HH:MM:SS' }
+		 *               durationMinutes: { type: integer }
+		 *               minSize: { type: integer, nullable: true }
+		 *               maxSize: { type: integer }
+		 *               renameRelatedSessions: { type: boolean, description: 'Only takes effect when title is also present' }
 		 *     responses:
 		 *       200:
 		 *         description: OK

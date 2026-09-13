@@ -11,6 +11,13 @@ export class SessionRepository {
 		return this.db.queryActive(SessionEntity, 'operator_id = $1', [operatorId]);
 	}
 
+	// Future, non-makeup occurrences only — used by ClassesServer.update's optional rename-related-sessions flag,
+	// which is meant to propagate a class's new title to its still-upcoming generated occurrences, not to rewrite
+	// history (past sessions) or one-off makeup sessions (whose title was set independently at creation).
+	public async findFutureNonMakeupByClassId(classId: number): Promise<Session[]> {
+		return this.db.queryActive(SessionEntity, 'class_id = $1 AND is_makeup_session = FALSE AND start_time >= NOW()', [classId]);
+	}
+
 	public async findById(id: number): Promise<Session | null> {
 		return this.db.findById(SessionEntity, id);
 	}
