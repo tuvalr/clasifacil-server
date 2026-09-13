@@ -37,12 +37,15 @@ export class NightlyBackfillJob {
 	}
 
 	private async backfillClass(foundClass: Class): Promise<void> {
-		const latest = await this.sessions.findLatestByClassId(foundClass.id);
-		const startFrom = latest ? new Date(latest.startTime.getTime() + MS_PER_DAY) : foundClass.createdAt;
-
 		const yesterday = new Date();
 		yesterday.setUTCHours(0, 0, 0, 0);
 		yesterday.setUTCDate(yesterday.getUTCDate() - 1);
+
+		// Excludes makeup sessions (ad hoc, can land far in the future) from the "latest materialized" lookup — a
+		// future makeup session must never make this job think the class's regular pattern is already backfilled
+		// past that point (see findLatestRegularByClassIdBefore).
+		const latest = await this.sessions.findLatestRegularByClassIdBefore(foundClass.id, yesterday);
+		const startFrom = latest ? new Date(latest.startTime.getTime() + MS_PER_DAY) : foundClass.createdAt;
 
 		if (startFrom.getTime() > yesterday.getTime()) {
 			return;

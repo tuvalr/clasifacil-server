@@ -6,9 +6,11 @@ import { OperatorRepository } from '../repositories/operator.repository';
 import { StudentRepository } from '../repositories/student.repository';
 import { HouseholdRepository } from '../repositories/household.repository';
 import { ClassEnrollmentRepository } from '../repositories/class-enrollment.repository';
+import { ClassRepository } from '../repositories/class.repository';
 import { Session } from '../entities/session.entity';
 import { EnrollmentAndCredit } from '../entities/enrollment-and-credit.entity';
 import { ClassEnrollment } from '../entities/class-enrollment.entity';
+import { Class } from '../entities/class.entity';
 import { ValidationError } from './types/validation-error';
 
 export interface BookingConflict {
@@ -36,7 +38,34 @@ export class SessionsServer {
 		@inject(TYPES.StudentRepository) private readonly students: StudentRepository,
 		@inject(TYPES.HouseholdRepository) private readonly households: HouseholdRepository,
 		@inject(TYPES.ClassEnrollmentRepository) private readonly classEnrollments: ClassEnrollmentRepository,
+		@inject(TYPES.ClassRepository) private readonly classes: ClassRepository,
 	) {}
+
+	// Class-linked sessions never store their own title (see ClassOccurrencesServer.materializeOccurrence) — this
+	// resolves each one's display title live from its parent class, batching by distinct classId so a list of many
+	// sessions from the same class costs one extra query, not N.
+	private async resolveDisplayTitles(sessions: Session[]): Promise<Session[]> {
+		const classIds = [...new Set(sessions.filter((session: Session): boolean => session.classId !== null).map((session: Session): number => session.classId as number))];
+		const classById = new Map<number, Class>();
+		for (const classId of classIds) {
+			// Small, bounded set of distinct classes across one operator's session list — sequential, matching this
+			// codebase's existing style for similarly-bounded per-item lookups.
+			const foundClass = await this.classes.findById(classId);
+			if (foundClass) {
+				classById.set(classId, foundClass);
+			}
+		}
+		return sessions.map((session: Session): Session => {
+			if (session.classId === null) {
+				return session;
+			}
+			const foundClass = classById.get(session.classId);
+			if (!foundClass) {
+				return session;
+			}
+			return { ...session, title: session.isMakeupSession ? `${foundClass.title} — Makeup` : foundClass.title };
+		});
+	}
 
 	// Operator-side
 
@@ -45,11 +74,17 @@ export class SessionsServer {
 		if (!operator) {
 			return null;
 		}
-		return this.sessions.findByOperatorId(operatorId);
+		const sessions = await this.sessions.findByOperatorId(operatorId);
+		return this.resolveDisplayTitles(sessions);
 	}
 
 	public async findById(id: number): Promise<Session | null> {
-		return this.sessions.findById(id);
+		const session = await this.sessions.findById(id);
+		if (!session) {
+			return null;
+		}
+		const resolved: Session[] = await this.resolveDisplayTitles([session]);
+		return resolved[0];
 	}
 
 	// A class-generated occurrence's roster includes the class's standing members (class_enrollments) in addition

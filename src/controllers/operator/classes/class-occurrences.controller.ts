@@ -19,14 +19,15 @@ import { toPublic } from '../../../utils/to-public';
 
 function toOccurrenceResponseItem(occurrence: Occurrence): OccurrenceResponseItem {
 	if (occurrence.isVirtual) {
-		return { isVirtual: true, classId: occurrence.classId, startTime: occurrence.startTime.toISOString(), title: null };
+		return { isVirtual: true, classId: occurrence.classId, startTime: occurrence.startTime.toISOString(), title: occurrence.displayTitle, attendance: occurrence.attendance };
 	}
 	return {
 		isVirtual: false,
 		sessionId: occurrence.session.id,
 		startTime: occurrence.session.startTime.toISOString(),
 		isMakeupSession: occurrence.session.isMakeupSession,
-		title: occurrence.session.title,
+		title: occurrence.displayTitle,
+		attendance: occurrence.attendance,
 	};
 }
 

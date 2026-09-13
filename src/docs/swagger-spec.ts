@@ -178,6 +178,18 @@ export const swaggerSpec = swaggerJsdoc({
 						startTime: { type: 'string', format: 'date-time' },
 						isMakeupSession: { type: 'boolean', nullable: true, description: 'Present only when isVirtual is false' },
 						title: { type: 'string', nullable: true },
+						attendance: {
+							type: 'array',
+							nullable: true,
+							description: 'Present only on GET .../occurrences/past — one entry per roster student, present per session, or not_recorded if unmarked',
+							items: {
+								type: 'object',
+								properties: {
+									studentId: { type: 'integer' },
+									status: { type: 'string', enum: ['present', 'absent', 'approved_absent', 'not_recorded'] },
+								},
+							},
+						},
 					},
 				},
 				SessionAttendanceEntry: {

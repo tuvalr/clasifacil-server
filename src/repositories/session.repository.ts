@@ -16,35 +16,30 @@ export class SessionRepository {
 		return this.db.queryActive(SessionEntity, 'class_id = $1 AND start_time >= $2 AND start_time <= $3', [classId, from, to]);
 	}
 
-	// Latest materialized session for a class, regardless of date range — used by the nightly backfill job (Task
-	// 6) to find where to resume materializing from. Returns null if the class has no materialized sessions yet.
-	// Raw query rather than PostgresHandler.queryActive: queryActive wraps its `where` argument as `AND (${where})`,
-	// so an ORDER BY/LIMIT clause passed through it would land inside that parenthesized boolean expression and be
-	// invalid SQL — matching this file's findByClassIdAndDateIncludingDeleted precedent for going straight to
-	// db.query when the shape doesn't fit queryActive's where-only contract.
-	public async findLatestByClassId(classId: number): Promise<Session | null> {
-		const rows = await this.db.query<Record<string, unknown>>('SELECT * FROM "sessions" WHERE class_id = $1 AND is_deleted = FALSE ORDER BY start_time DESC LIMIT 1', [classId]);
+	// Latest non-makeup, non-future materialized session for a class, at or before the given cutoff date — used by
+	// the nightly backfill job to find where to resume. Excludes makeup sessions (which are ad hoc and can land far
+	// in the future, e.g. "next week's recovery class") and anything after cutoff, so a future makeup session never
+	// causes the job to think a class's regular pattern is already backfilled past that point. Returns null if no
+	// such session exists yet. Raw query rather than PostgresHandler.queryActive: queryActive wraps its `where`
+	// argument as `AND (${where})`, so an ORDER BY/LIMIT clause passed through it would land inside that
+	// parenthesized boolean expression and be invalid SQL — matching this file's findByClassIdAndDateIncludingDeleted
+	// precedent for going straight to db.query when the shape doesn't fit queryActive's where-only contract.
+	public async findLatestRegularByClassIdBefore(classId: number, cutoff: Date): Promise<Session | null> {
+		const rows = await this.db.query<Record<string, unknown>>(
+			'SELECT * FROM "sessions" WHERE class_id = $1 AND is_deleted = FALSE AND is_makeup_session = FALSE AND start_time <= $2 ORDER BY start_time DESC LIMIT 1',
+			[classId, cutoff],
+		);
 		return rows[0] ? snakeToCamel<Session>(rows[0]) : null;
 	}
 
-	public async findByClassIdAndDate(classId: number, date: Date): Promise<Session | null> {
-		// Matches on the calendar date portion of start_time — a materialized session's exact time-of-day may
-		// differ from the class's pattern (e.g. already rescheduled), but there is still only ever one
-		// materialized session per class per calendar day, by construction (materializeOccurrence is idempotent
-		// per date). DATE(start_time) alone evaluates in the DB session's configured timezone (e.g. Europe/Paris),
-		// not UTC — since the comparison value is always a UTC calendar-day string, the cast must force UTC too
-		// (AT TIME ZONE 'UTC'), or a local-timezone day rollover silently breaks the match and this "idempotent"
-		// lookup starts returning null for a date that's already materialized, creating a duplicate row.
-		const rows = await this.db.queryActive(SessionEntity, "class_id = $1 AND DATE(start_time AT TIME ZONE 'UTC') = $2::date", [classId, date.toISOString().slice(0, 10)]);
-		return rows[0] ?? null;
-	}
-
-	// Same lookup as findByClassIdAndDate, but INCLUDING soft-deleted (cancelled) rows — raw query rather than
-	// PostgresHandler.queryActive, matching this file's own incrementRosterCount/decrementRosterCount precedent
-	// (no generic "ignore-deleted by arbitrary where-clause" helper exists on PostgresHandler; only
+	// Looks up a class's materialized session for one calendar date, INCLUDING soft-deleted (cancelled) rows — raw
+	// query rather than PostgresHandler.queryActive, matching this file's own incrementRosterCount/decrementRosterCount
+	// precedent (no generic "ignore-deleted by arbitrary where-clause" helper exists on PostgresHandler; only
 	// findByIdIgnoringDeleted, which is by numeric id). Used by ClassOccurrencesServer.materializeOccurrence so a
 	// previously-cancelled date is recognized as already materialized (and left alone) instead of getting a second
-	// sessions row. Same UTC-forcing cast as findByClassIdAndDate, for the same reason.
+	// sessions row. DATE(start_time) alone evaluates in the DB session's configured timezone (e.g. Europe/Paris),
+	// not UTC — since the comparison value is always a UTC calendar-day string, the cast must force UTC too
+	// (AT TIME ZONE 'UTC'), or a local-timezone day rollover silently breaks the match.
 	public async findByClassIdAndDateIncludingDeleted(classId: number, date: Date): Promise<Session | null> {
 		const rows = await this.db.query<Record<string, unknown>>('SELECT * FROM "sessions" WHERE class_id = $1 AND DATE(start_time AT TIME ZONE \'UTC\') = $2::date', [
 			classId,

@@ -8,20 +8,31 @@ import { StudentRepository } from '../repositories/student.repository';
 import { EnrollmentAndCreditRepository } from '../repositories/enrollment-and-credit.repository';
 import { Class } from '../entities/class.entity';
 import { Session } from '../entities/session.entity';
+import { SessionAttendance } from '../entities/session-attendance.entity';
+import { SessionAttendanceServer } from './session-attendance.server';
 import { ValidationError } from './types/validation-error';
 
 const MAX_RANGE_DAYS = 90;
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
+export interface OccurrenceAttendanceEntry {
+	studentId: number;
+	status: 'present' | 'absent' | 'approved_absent' | 'not_recorded';
+}
+
 export interface VirtualOccurrence {
 	classId: number;
 	startTime: Date;
 	isVirtual: true;
+	displayTitle: string;
+	attendance?: OccurrenceAttendanceEntry[];
 }
 
 export interface MaterializedOccurrence {
 	session: Session;
 	isVirtual: false;
+	displayTitle: string;
+	attendance?: OccurrenceAttendanceEntry[];
 }
 
 export type Occurrence = VirtualOccurrence | MaterializedOccurrence;
@@ -60,13 +71,27 @@ export class ClassOccurrencesServer {
 		@inject(TYPES.ClassEnrollmentRepository) private readonly classEnrollments: ClassEnrollmentRepository,
 		@inject(TYPES.StudentRepository) private readonly students: StudentRepository,
 		@inject(TYPES.EnrollmentAndCreditRepository) private readonly enrollments: EnrollmentAndCreditRepository,
+		@inject(TYPES.SessionAttendanceServer) private readonly sessionAttendance: SessionAttendanceServer,
 	) {}
 
 	// Walks every date in [from, to] matching the class's dayOfWeek, clipped to stoppedAt if the class is stopped
-	// (no dates on/after the stop moment). Pure computation — never reads or writes sessions.
+	// (no dates on/after the stop day). Pure computation — never reads or writes sessions.
 	private computeOccurrenceDates(foundClass: Class, from: Date, to: Date): Date[] {
 		const [hours, minutes, seconds]: number[] = foundClass.startTime.split(':').map(Number);
-		const effectiveTo = foundClass.status === 'stopped' && foundClass.stoppedAt && foundClass.stoppedAt.getTime() < to.getTime() ? foundClass.stoppedAt : to;
+		let effectiveTo = to;
+		if (foundClass.status === 'stopped' && foundClass.stoppedAt) {
+			// Clip to the start of the UTC day the class was stopped on (not the exact stop instant) — this feature
+			// is calendar-day-based everywhere else (parseDateOnly, the DATE(... AT TIME ZONE 'UTC') lookups, the
+			// 90-day cap), and clipping on a wall-clock instant would make the stop-day occurrence's inclusion
+			// depend on what time of day the operator happened to click "stop," which the spec doesn't intend. A
+			// class is considered stopped as of the start of its stop day, so that day's own occurrence never
+			// occurs, regardless of whether the stop happened before or after the class's usual startTime.
+			const stoppedDay = new Date(foundClass.stoppedAt.toISOString().slice(0, 10) + 'T00:00:00.000Z');
+			const dayBeforeStop = new Date(stoppedDay.getTime() - MS_PER_DAY);
+			if (dayBeforeStop.getTime() < effectiveTo.getTime()) {
+				effectiveTo = dayBeforeStop;
+			}
+		}
 
 		const dates: Date[] = [];
 		const cursor = new Date(from);
@@ -100,11 +125,21 @@ export class ClassOccurrencesServer {
 		const allDatesEverTouched = await this.sessions.findByClassIdInRangeIncludingDeleted(classId, from, to);
 		const cancelledDateKeys = new Set(allDatesEverTouched.filter((session: Session) => session.isDeleted).map((session: Session) => session.startTime.toISOString().slice(0, 10)));
 
-		const occurrences: Occurrence[] = materialized.map((session: Session) => ({ session, isVirtual: false }));
+		// Class-linked sessions never store their own title (see materializeOccurrence's title: null) — display
+		// title is always resolved live from the parent class's current title, computed once per call here since
+		// foundClass is already loaded for the whole list.
+		const regularDisplayTitle = foundClass.title;
+		const makeupDisplayTitle = `${foundClass.title} — Makeup`;
+
+		const occurrences: Occurrence[] = materialized.map((session: Session) => ({
+			session,
+			isVirtual: false,
+			displayTitle: session.isMakeupSession ? makeupDisplayTitle : regularDisplayTitle,
+		}));
 		for (const date of virtualDates) {
 			const key = date.toISOString().slice(0, 10);
 			if (!materializedDateKeys.has(key) && !cancelledDateKeys.has(key)) {
-				occurrences.push({ classId, startTime: date, isVirtual: true });
+				occurrences.push({ classId, startTime: date, isVirtual: true, displayTitle: regularDisplayTitle });
 			}
 		}
 		occurrences.sort((a: Occurrence, b: Occurrence) => {
@@ -136,7 +171,47 @@ export class ClassOccurrencesServer {
 			throw new ValidationError([{ field: 'to', message: 'to must be today or earlier' }]);
 		}
 		validateRange(parsedFrom, parsedTo);
-		return this.buildOccurrenceList(classId, parsedFrom, parsedTo);
+		const result = await this.buildOccurrenceList(classId, parsedFrom, parsedTo);
+		if (!result) {
+			return null;
+		}
+		return this.attachAttendance(result);
+	}
+
+	// For each materialized occurrence, synthesizes 'not_recorded' for any roster/class-member student who has no
+	// session_attendance row yet — never stored, computed only at read time (see the spec's not_recorded
+	// semantics). Virtual (never-materialized) past dates get the same treatment: every roster student reported
+	// not_recorded, since no session_attendance rows can exist for a date with no sessions row at all. Only called
+	// from listPast — listFuture must not pay for these extra attendance queries.
+	private async attachAttendance(result: OccurrenceListResult): Promise<OccurrenceListResult> {
+		const occurrencesWithAttendance: Occurrence[] = [];
+		for (const occurrence of result.occurrences) {
+			if (occurrence.isVirtual) {
+				occurrencesWithAttendance.push({
+					...occurrence,
+					attendance: result.classMemberStudentIds.map((studentId: number): OccurrenceAttendanceEntry => ({ studentId, status: 'not_recorded' })),
+				});
+				continue;
+			}
+			// One query per materialized session in range — bounded by the 90-day range cap, same order of
+			// magnitude as buildOccurrenceList's own per-call queries.
+			const recorded = await this.sessionAttendance.findBySessionId(occurrence.session.id);
+			const recordedByStudentId = new Map(recorded.map((row: SessionAttendance): [number, SessionAttendance] => [row.studentId, row]));
+			const attendance: OccurrenceAttendanceEntry[] = result.classMemberStudentIds.map((studentId: number): OccurrenceAttendanceEntry => {
+				const row = recordedByStudentId.get(studentId);
+				return { studentId, status: row ? row.status : 'not_recorded' };
+			});
+			// Include any recorded row for a student NOT in the current standing roster too (a trial student, or
+			// someone since unassigned) — the spec's trial-student attendance must still be visible in the past
+			// view.
+			for (const row of recorded) {
+				if (!result.classMemberStudentIds.includes(row.studentId)) {
+					attendance.push({ studentId: row.studentId, status: row.status });
+				}
+			}
+			occurrencesWithAttendance.push({ ...occurrence, attendance });
+		}
+		return { ...result, occurrences: occurrencesWithAttendance };
 	}
 
 	// Idempotent: returns the existing materialized row for this class+date if one already exists, otherwise
@@ -196,7 +271,14 @@ export class ClassOccurrencesServer {
 		if (session.isDeleted) {
 			return null;
 		}
-		return this.sessions.update(session.id, { startTime: parsedNewStartTime });
+		const updated = await this.sessions.update(session.id, { startTime: parsedNewStartTime });
+		if (!updated) {
+			return null;
+		}
+		// The DB row's title stays null (see materializeOccurrence) — this patches only the in-memory object
+		// returned to the caller so the response shows the class-linked display title, same resolution as
+		// buildOccurrenceList uses for the occurrence-list endpoints.
+		return { ...updated, title: updated.isMakeupSession ? `${foundClass.title} — Makeup` : foundClass.title };
 	}
 
 	public async cancelOccurrence(classId: number, date: unknown): Promise<Session | null> {
@@ -253,6 +335,8 @@ export class ClassOccurrencesServer {
 			await this.sessions.incrementRosterCount(session.id);
 		}
 
-		return session;
+		// The DB row's title stays null (see materializeOccurrence) — this patches only the in-memory object
+		// returned to the caller so the response shows the class-linked display title.
+		return { ...session, title: `${foundClass.title} — Makeup` };
 	}
 }

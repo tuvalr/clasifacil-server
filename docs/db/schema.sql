@@ -159,8 +159,8 @@ CREATE TABLE session_attendance (
 -- session_attendance_history
 -- ==========================================================================
 -- Same shape as session_attendance plus archived_at. Populated by POST /api/admin/session-attendance/archive,
--- which moves any session_attendance row older than 6 months (by updated_at) here and deletes it from the live
--- table, in one transaction. FKs kept (not decoupled) so archived rows stay referentially valid.
+-- which moves matching rows here and deletes them from the live table (not wrapped in an explicit transaction —
+-- see SessionAttendanceServer.archive). FKs kept (not decoupled) so archived rows stay referentially valid.
 CREATE TABLE session_attendance_history (
 	id           BIGINT        PRIMARY KEY,
 	session_id   BIGINT        NOT NULL REFERENCES sessions (id) ON DELETE CASCADE,
