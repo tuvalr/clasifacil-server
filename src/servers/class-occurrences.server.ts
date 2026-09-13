@@ -91,10 +91,19 @@ export class ClassOccurrencesServer {
 		const materialized = await this.sessions.findByClassIdInRange(classId, from, to);
 		const materializedDateKeys = new Set(materialized.map((session: Session) => session.startTime.toISOString().slice(0, 10)));
 
+		// A cancelled (soft-deleted) date must never reappear as a fresh virtual occurrence — findByClassIdInRange
+		// above already excludes it from the materialized list (it's not "live"), but computeOccurrenceDates has no
+		// idea it was ever touched, so without this it would derive the same date as virtual again, and a later
+		// reschedule/attendance call against it would risk creating a second sessions row. Querying all sessions in
+		// range including soft-deleted ones (rather than a per-date lookup per virtual date) keeps this a single
+		// extra query regardless of range size.
+		const allDatesEverTouched = await this.sessions.findByClassIdInRangeIncludingDeleted(classId, from, to);
+		const cancelledDateKeys = new Set(allDatesEverTouched.filter((session: Session) => session.isDeleted).map((session: Session) => session.startTime.toISOString().slice(0, 10)));
+
 		const occurrences: Occurrence[] = materialized.map((session: Session) => ({ session, isVirtual: false }));
 		for (const date of virtualDates) {
 			const key = date.toISOString().slice(0, 10);
-			if (!materializedDateKeys.has(key)) {
+			if (!materializedDateKeys.has(key) && !cancelledDateKeys.has(key)) {
 				occurrences.push({ classId, startTime: date, isVirtual: true });
 			}
 		}
@@ -133,8 +142,16 @@ export class ClassOccurrencesServer {
 	// Idempotent: returns the existing materialized row for this class+date if one already exists, otherwise
 	// creates one with the pattern's default startTime and title: null (display always reads the class's current
 	// title live — see docs/superpowers/specs/2026-09-13-derived-class-sessions-design.md).
+	//
+	// Looks up INCLUDING soft-deleted rows (findByClassIdAndDateIncludingDeleted), not just live ones: if this date
+	// was already cancelled, that cancelled row is the correct "existing" answer — returned as-is, never
+	// un-deleted, never duplicated. Without this, a cancelled date's row would be invisible to the plain
+	// (queryActive-based) lookup and a second sessions row would get created for the same class+date the next time
+	// this date is touched (reschedule/cancel/attendance). Callers that need "not found" semantics for an
+	// already-cancelled date (reschedule, attendance) check the returned session's isDeleted themselves;
+	// cancelOccurrence treats re-cancelling as an idempotent no-op instead.
 	public async materializeOccurrence(classId: number, date: Date): Promise<Session> {
-		const existing = await this.sessions.findByClassIdAndDate(classId, date);
+		const existing = await this.sessions.findByClassIdAndDateIncludingDeleted(classId, date);
 		if (existing) {
 			return existing;
 		}
@@ -169,6 +186,16 @@ export class ClassOccurrencesServer {
 			throw new ValidationError([{ field: 'startTime', message: 'startTime must be a valid date' }]);
 		}
 		const session = await this.materializeOccurrence(classId, parsedDate);
+		// A cancelled date reported as "not found" for reschedule mirrors the existing numeric-id-addressed
+		// endpoint's behavior exactly: SessionsServer.reschedule looks a session up via SessionRepository.findById,
+		// which (built on queryActive) already returns null for a soft-deleted session, so rescheduling an
+		// already-cancelled one-off session 404s today. Silently updating startTime on the cancelled row instead
+		// would return 200 while changing nothing visible (the row stays invisible to every listing), which is
+		// worse than a clear 404 — an operator who wants a cancelled date back should un-cancel it explicitly
+		// (no such endpoint exists yet; out of this task's scope), not have a reschedule call resurrect it.
+		if (session.isDeleted) {
+			return null;
+		}
 		return this.sessions.update(session.id, { startTime: parsedNewStartTime });
 	}
 
@@ -179,7 +206,13 @@ export class ClassOccurrencesServer {
 		}
 		const parsedDate = parseDateOnly(date, 'date');
 		const session = await this.materializeOccurrence(classId, parsedDate);
-		await this.sessions.cancel(session.id);
+		// Cancelling an already-cancelled date is treated as an idempotent no-op success (matching how
+		// PostgresHandler.delete/EntityQueryHelper.delete is itself idempotent — re-running the same UPDATE ...
+		// SET is_deleted = TRUE has no further effect) rather than an error: the caller's desired end state
+		// ("this date is cancelled") already holds, so there's nothing to reject.
+		if (!session.isDeleted) {
+			await this.sessions.cancel(session.id);
+		}
 		return session;
 	}
 

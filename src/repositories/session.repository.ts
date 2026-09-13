@@ -2,6 +2,7 @@ import { inject, injectable } from 'inversify';
 import { TYPES } from '../container/types';
 import { PostgresHandler } from '../handlers/postgres-handler';
 import { Session, SessionEntity } from '../entities/session.entity';
+import { snakeToCamel } from '../utils/case-mapper';
 
 @injectable()
 export class SessionRepository {
@@ -29,6 +30,28 @@ export class SessionRepository {
 		// per date).
 		const rows = await this.db.queryActive(SessionEntity, 'class_id = $1 AND DATE(start_time) = $2::date', [classId, date.toISOString().slice(0, 10)]);
 		return rows[0] ?? null;
+	}
+
+	// Same lookup as findByClassIdAndDate, but INCLUDING soft-deleted (cancelled) rows — raw query rather than
+	// PostgresHandler.queryActive, matching this file's own incrementRosterCount/decrementRosterCount precedent
+	// (no generic "ignore-deleted by arbitrary where-clause" helper exists on PostgresHandler; only
+	// findByIdIgnoringDeleted, which is by numeric id). Used by ClassOccurrencesServer.materializeOccurrence so a
+	// previously-cancelled date is recognized as already materialized (and left alone) instead of getting a second
+	// sessions row.
+	public async findByClassIdAndDateIncludingDeleted(classId: number, date: Date): Promise<Session | null> {
+		const rows = await this.db.query<Record<string, unknown>>('SELECT * FROM "sessions" WHERE class_id = $1 AND DATE(start_time) = $2::date', [
+			classId,
+			date.toISOString().slice(0, 10),
+		]);
+		return rows[0] ? snakeToCamel<Session>(rows[0]) : null;
+	}
+
+	// Same range query as findByClassIdInRange, but INCLUDING soft-deleted (cancelled) rows — used by
+	// ClassOccurrencesServer.buildOccurrenceList to build the set of dates that must be excluded from virtual-date
+	// generation entirely (a cancelled date must never reappear as a fresh virtual occurrence).
+	public async findByClassIdInRangeIncludingDeleted(classId: number, from: Date, to: Date): Promise<Session[]> {
+		const rows = await this.db.query<Record<string, unknown>>('SELECT * FROM "sessions" WHERE class_id = $1 AND start_time >= $2 AND start_time <= $3', [classId, from, to]);
+		return rows.map((row: Record<string, unknown>) => snakeToCamel<Session>(row));
 	}
 
 	public async findById(id: number): Promise<Session | null> {

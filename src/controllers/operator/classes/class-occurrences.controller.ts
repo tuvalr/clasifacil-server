@@ -343,6 +343,14 @@ export class ClassOccurrencesController extends BaseController {
 		try {
 			const classId = Number(req.params.id);
 			const session = await this.classOccurrencesServer.materializeOccurrence(classId, new Date(`${req.params.date}T00:00:00.000Z`));
+			// A cancelled date reports as not-found, same reasoning as ClassOccurrencesServer.rescheduleOccurrence:
+			// recording attendance against an already-cancelled occurrence would silently succeed on a row that's
+			// invisible to every listing (queryActive excludes it), rather than the caller's intent (marking
+			// attendance for a real, upcoming/past occurrence) ever taking visible effect.
+			if (session.isDeleted) {
+				res.status(404).end();
+				return;
+			}
 			const result = await this.sessionAttendanceServer.recordForSessionId(session.id, classId, req.body?.attendance);
 			if (!result) {
 				res.status(404).end();
