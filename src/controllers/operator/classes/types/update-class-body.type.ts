@@ -5,4 +5,5 @@ export interface UpdateClassBody {
 	durationMinutes?: number;
 	minSize?: number | null;
 	maxSize?: number;
+	color?: string | null;
 }

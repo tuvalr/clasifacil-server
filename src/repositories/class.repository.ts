@@ -23,7 +23,7 @@ export class ClassRepository {
 	}
 
 	public async create(
-		data: { operatorId: number; title: string; dayOfWeek: number; startTime: string; durationMinutes: number; minSize: number | null; maxSize: number },
+		data: { operatorId: number; title: string; dayOfWeek: number; startTime: string; durationMinutes: number; minSize: number | null; maxSize: number; color: string | null },
 		tx?: TransactionHandle,
 	): Promise<Class> {
 		const db = tx ?? this.db;
@@ -32,7 +32,7 @@ export class ClassRepository {
 
 	public async update(
 		id: number,
-		data: Partial<{ title: string; dayOfWeek: number; startTime: string; durationMinutes: number; minSize: number | null; maxSize: number }>,
+		data: Partial<{ title: string; dayOfWeek: number; startTime: string; durationMinutes: number; minSize: number | null; maxSize: number; color: string | null }>,
 	): Promise<Class | null> {
 		return this.db.update(ClassEntity, id, data);
 	}

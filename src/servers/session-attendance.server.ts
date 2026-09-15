@@ -27,6 +27,12 @@ export class SessionAttendanceServer {
 			return null;
 		}
 
+		// Attendance reports whether a student showed up — a session that hasn't happened yet has no attendance to
+		// report. Cutoff is the exact startTime, not the calendar day: a session later today is still "future."
+		if (session.startTime.getTime() > Date.now()) {
+			throw new ValidationError([{ field: 'attendance', message: 'Cannot record attendance for a session that has not started yet' }]);
+		}
+
 		if (!Array.isArray(entries)) {
 			throw new ValidationError([{ field: 'attendance', message: 'attendance must be an array' }]);
 		}

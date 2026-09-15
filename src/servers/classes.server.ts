@@ -36,6 +36,10 @@ export interface AssignStudentFailure {
 
 export type AssignStudentResult = AssignStudentSuccess | AssignStudentFailure;
 
+export interface ClassWithEnrolledCount extends Class {
+	enrolledCount: number;
+}
+
 // Runtime type guard for the assign/unassign-students request body's studentIds: it arrives as untyped JSON, so
 // the `number[]` signature on ClassesServer's methods only guards call sites within this codebase, not an actual
 // HTTP request. Without this check, a missing/malformed studentIds (undefined, a single number, a string, etc.)
@@ -57,16 +61,34 @@ export class ClassesServer {
 		@inject(TYPES.StudentRepository) private readonly students: StudentRepository,
 	) {}
 
-	public async listByOperatorId(operatorId: number): Promise<Class[] | null> {
+	public async listByOperatorId(operatorId: number): Promise<ClassWithEnrolledCount[] | null> {
 		const operator = await this.operators.findById(operatorId);
 		if (!operator) {
 			return null;
 		}
-		return this.classes.findByOperatorId(operatorId);
+		const found = await this.classes.findByOperatorId(operatorId);
+		return this.withEnrolledCounts(found);
 	}
 
-	public async findById(id: number): Promise<Class | null> {
-		return this.classes.findById(id);
+	public async findById(id: number): Promise<ClassWithEnrolledCount | null> {
+		const foundClass = await this.classes.findById(id);
+		if (!foundClass) {
+			return null;
+		}
+		const withCounts: ClassWithEnrolledCount[] = await this.withEnrolledCounts([foundClass]);
+		return withCounts[0];
+	}
+
+	// Counts active class_enrollments per class — applies uniformly to schedule-type (many students) and
+	// assigned-type (single student, also enrolled via class_enrollments at creation) classes alike. Sequential,
+	// matching this file's existing style for similarly-bounded per-item operations (one operator's class list).
+	private async withEnrolledCounts(found: Class[]): Promise<ClassWithEnrolledCount[]> {
+		const results: ClassWithEnrolledCount[] = [];
+		for (const foundClass of found) {
+			const enrolledCount = await this.classEnrollments.countActiveByClassId(foundClass.id);
+			results.push({ ...foundClass, enrolledCount });
+		}
+		return results;
 	}
 
 	public async create(data: {
@@ -78,6 +100,7 @@ export class ClassesServer {
 		minSize?: unknown;
 		maxSize?: unknown;
 		studentId?: unknown;
+		color?: unknown;
 	}): Promise<Class> {
 		const requiredDetails = this.validateRequired(data);
 		if (requiredDetails.length > 0) {
@@ -90,8 +113,13 @@ export class ClassesServer {
 		if (data.studentId !== undefined && typeof data.studentId !== 'number') {
 			throw new ValidationError([{ field: 'studentId', message: 'studentId must be a number' }]);
 		}
-		// Narrowed by validateRequired and the studentId check above: every required field is confirmed present and
-		// of the correct type, and studentId (if present) is a number.
+		// color is optional and unenforced in format — but if present it must be a string or null, same reasoning as
+		// studentId above.
+		if (data.color !== undefined && data.color !== null && typeof data.color !== 'string') {
+			throw new ValidationError([{ field: 'color', message: 'color must be a string or null' }]);
+		}
+		// Narrowed by validateRequired and the studentId/color checks above: every required field is confirmed
+		// present and of the correct type, and studentId/color (if present) are of the correct type.
 		const narrowed = data as {
 			operatorId: number;
 			title: string;
@@ -101,6 +129,7 @@ export class ClassesServer {
 			minSize?: number;
 			maxSize: number;
 			studentId?: number;
+			color?: string | null;
 		};
 
 		const operator = await this.operators.findById(narrowed.operatorId);
@@ -141,6 +170,7 @@ export class ClassesServer {
 			durationMinutes: narrowed.durationMinutes,
 			minSize: narrowed.minSize ?? null,
 			maxSize: narrowed.maxSize,
+			color: narrowed.color ?? null,
 		});
 
 		if (student) {
@@ -159,6 +189,7 @@ export class ClassesServer {
 			durationMinutes?: unknown;
 			minSize?: unknown;
 			maxSize?: unknown;
+			color?: unknown;
 		},
 	): Promise<Class | null> {
 		const existing = await this.classes.findById(id);
@@ -170,7 +201,15 @@ export class ClassesServer {
 		if (typeDetails.length > 0) {
 			throw new ValidationError(typeDetails);
 		}
-		const narrowed = data as Partial<{ title: string; dayOfWeek: number; startTime: string; durationMinutes: number; minSize: number | null; maxSize: number }>;
+		const narrowed = data as Partial<{
+			title: string;
+			dayOfWeek: number;
+			startTime: string;
+			durationMinutes: number;
+			minSize: number | null;
+			maxSize: number;
+			color: string | null;
+		}>;
 
 		const merged = {
 			dayOfWeek: narrowed.dayOfWeek ?? existing.dayOfWeek,
@@ -346,6 +385,7 @@ export class ClassesServer {
 		durationMinutes?: unknown;
 		minSize?: unknown;
 		maxSize?: unknown;
+		color?: unknown;
 	}): ValidationErrorDetail[] {
 		const details: ValidationErrorDetail[] = [];
 		if (data.title !== undefined && typeof data.title !== 'string') {
@@ -367,6 +407,9 @@ export class ClassesServer {
 		}
 		if (data.maxSize !== undefined && typeof data.maxSize !== 'number') {
 			details.push({ field: 'maxSize', message: 'maxSize must be a number' });
+		}
+		if (data.color !== undefined && data.color !== null && typeof data.color !== 'string') {
+			details.push({ field: 'color', message: 'color must be a string or null' });
 		}
 		return details;
 	}

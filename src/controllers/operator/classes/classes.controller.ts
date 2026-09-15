@@ -7,6 +7,7 @@ import { RouteHandlers } from '../../shared/route-handlers';
 import { BaseController } from '../../shared/base.controller';
 import { ListClassesResponse } from './types/list-classes-response.type';
 import { GetClassResponse } from './types/get-class-response.type';
+import { ClassMutationResponse } from './types/class-mutation-response.type';
 import { CreateClassBody } from './types/create-class-body.type';
 import { ClassValidationErrorResponse } from './types/class-validation-error-response.type';
 import { CreateClassResult } from './types/create-class-result.type';
@@ -95,6 +96,7 @@ export class ClassesController extends BaseController {
 		 *               minSize: { type: integer, nullable: true }
 		 *               maxSize: { type: integer }
 		 *               studentId: { type: integer, description: 'Required for assigned-type operators; forbidden otherwise' }
+		 *               color: { type: string, nullable: true, description: 'Operator-chosen display color, unenforced format. Defaults to null.' }
 		 *     responses:
 		 *       201:
 		 *         description: Created
@@ -150,6 +152,7 @@ export class ClassesController extends BaseController {
 		 *               durationMinutes: { type: integer }
 		 *               minSize: { type: integer, nullable: true }
 		 *               maxSize: { type: integer }
+		 *               color: { type: string, nullable: true, description: 'Operator-chosen display color, unenforced format.' }
 		 *     responses:
 		 *       200:
 		 *         description: OK
@@ -298,6 +301,7 @@ export class ClassesController extends BaseController {
 		this.internalRouter.post('/:id/unassign-students', RouteHandlers.wrap(this.unassignStudents.bind(this)));
 	}
 
+	// Lists all classes belonging to the given operator.
 	private async listClasses(req: Request<unknown, ListClassesResponse, unknown, { operatorId?: string }>, res: Response<ListClassesResponse>): Promise<void> {
 		const operatorId = Number(req.query.operatorId);
 		if (!req.query.operatorId || Number.isNaN(operatorId)) {
@@ -312,6 +316,7 @@ export class ClassesController extends BaseController {
 		res.json(classes.map(toPublic));
 	}
 
+	// Fetches a single class by id.
 	private async getClassById(req: Request<{ id: string }>, res: Response<GetClassResponse>): Promise<void> {
 		const foundClass = await this.classesServer.findById(Number(req.params.id));
 		if (!foundClass) {
@@ -321,6 +326,7 @@ export class ClassesController extends BaseController {
 		res.json(toPublic(foundClass));
 	}
 
+	// Creates a new recurring class definition, including atomic student assignment for assigned-type operators.
 	private async createClass(req: Request<unknown, CreateClassResult, CreateClassBody>, res: Response<CreateClassResult>): Promise<void> {
 		try {
 			const created = await this.classesServer.create(req.body);
@@ -331,15 +337,16 @@ export class ClassesController extends BaseController {
 				return;
 			}
 			// Any other thrown error (e.g. a raw Postgres error that slipped past application-level validation) is
-			// reported as a failed result with a generic message, rather than propagating into the generic 500
-			// handler, so internal error details aren't leaked to the caller.
+			// reported as a failed result with a generic message, rather than propagating into the generic 500 handler,
+			// so internal error details aren't leaked to the caller.
 			res.status(400).json({ success: false, error: error instanceof Error ? error.message : 'Unknown error' });
 		}
 	}
 
+	// Updates a class's stored recurring pattern (title, day/time, capacity) — never touches existing sessions.
 	private async updateClass(
-		req: Request<{ id: string }, GetClassResponse | ClassValidationErrorResponse, UpdateClassBody>,
-		res: Response<GetClassResponse | ClassValidationErrorResponse>,
+		req: Request<{ id: string }, ClassMutationResponse | ClassValidationErrorResponse, UpdateClassBody>,
+		res: Response<ClassMutationResponse | ClassValidationErrorResponse>,
 	): Promise<void> {
 		try {
 			const updated = await this.classesServer.update(Number(req.params.id), req.body);
@@ -357,6 +364,7 @@ export class ClassesController extends BaseController {
 		}
 	}
 
+	// Soft-deletes a class; rejected with 409 if it still has active student enrollments.
 	private async deleteClass(req: Request<{ id: string }>, res: Response): Promise<void> {
 		try {
 			const deleted = await this.classesServer.delete(Number(req.params.id));
@@ -374,7 +382,8 @@ export class ClassesController extends BaseController {
 		}
 	}
 
-	private async stopClass(req: Request<{ id: string }>, res: Response<GetClassResponse>): Promise<void> {
+	// Stops a class, blocking new derived occurrences past this point; reversible via unstop.
+	private async stopClass(req: Request<{ id: string }>, res: Response<ClassMutationResponse>): Promise<void> {
 		const stopped = await this.classesServer.stop(Number(req.params.id));
 		if (!stopped) {
 			res.status(404).end();
@@ -383,7 +392,8 @@ export class ClassesController extends BaseController {
 		res.json(toPublic(stopped));
 	}
 
-	private async unstopClass(req: Request<{ id: string }>, res: Response<GetClassResponse>): Promise<void> {
+	// Reverses a previous stop, resuming derived occurrences.
+	private async unstopClass(req: Request<{ id: string }>, res: Response<ClassMutationResponse>): Promise<void> {
 		const unstopped = await this.classesServer.unstop(Number(req.params.id));
 		if (!unstopped) {
 			res.status(404).end();
@@ -392,6 +402,7 @@ export class ClassesController extends BaseController {
 		res.json(toPublic(unstopped));
 	}
 
+	// Bulk-assigns students to a class's standing roster; each studentId succeeds or fails independently.
 	private async assignStudents(
 		req: Request<{ id: string }, AssignStudentsResponse | ClassValidationErrorResponse, AssignStudentsBody>,
 		res: Response<AssignStudentsResponse | ClassValidationErrorResponse>,
@@ -419,6 +430,7 @@ export class ClassesController extends BaseController {
 		}
 	}
 
+	// Bulk-removes students from a class's standing roster.
 	private async unassignStudents(req: Request<{ id: string }, ClassValidationErrorResponse, AssignStudentsBody>, res: Response<ClassValidationErrorResponse>): Promise<void> {
 		try {
 			await this.classesServer.unassignStudents(Number(req.params.id), req.body.studentIds);

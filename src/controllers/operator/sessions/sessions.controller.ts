@@ -193,9 +193,47 @@ export class SessionsController extends BaseController {
 		/**
 		 * @openapi
 		 * /api/operator/sessions/{id}/attendance:
+		 *   get:
+		 *     summary: Get recorded attendance for a true one-off session
+		 *     description: Returns only recorded rows — a student with no session_attendance row simply doesn't appear (not synthesized as not_recorded here).
+		 *     tags: [Operator - Sessions]
+		 *     parameters:
+		 *       - in: path
+		 *         name: id
+		 *         required: true
+		 *         schema: { type: integer }
+		 *     responses:
+		 *       200:
+		 *         description: OK
+		 *         content:
+		 *           application/json:
+		 *             schema:
+		 *               type: array
+		 *               items:
+		 *                 type: object
+		 *                 properties:
+		 *                   studentId: { type: integer }
+		 *                   status: { type: string, enum: [present, absent, approved_absent] }
+		 *             example:
+		 *               - studentId: 100
+		 *                 status: present
+		 *               - studentId: 101
+		 *                 status: absent
+		 *       400: { $ref: '#/components/responses/BadRequest' }
+		 *       401: { $ref: '#/components/responses/Unauthorized' }
+		 *       404: { description: Not found }
+		 *       500: { $ref: '#/components/responses/InternalError' }
+		 */
+		this.internalRouter.get('/:id/attendance', RouteHandlers.wrap(this.getAttendance.bind(this)));
+
+		/**
+		 * @openapi
+		 * /api/operator/sessions/{id}/attendance:
 		 *   put:
 		 *     summary: Record or correct attendance for a true one-off session
-		 *     description: Upserts one row per given student — marking again updates the existing record, never duplicates it.
+		 *     description: >
+		 *       Upserts one row per given student — marking again updates the existing record, never duplicates it.
+		 *       Rejected with 400 if the session's startTime is still in the future.
 		 *     tags: [Operator - Sessions]
 		 *     parameters:
 		 *       - in: path
@@ -229,6 +267,11 @@ export class SessionsController extends BaseController {
 		 *                 properties:
 		 *                   studentId: { type: integer }
 		 *                   status: { type: string, enum: [present, absent, approved_absent] }
+		 *             example:
+		 *               - studentId: 100
+		 *                 status: present
+		 *               - studentId: 101
+		 *                 status: absent
 		 *       400: { $ref: '#/components/responses/BadRequest' }
 		 *       401: { $ref: '#/components/responses/Unauthorized' }
 		 *       404: { description: Not found }
@@ -318,6 +361,18 @@ export class SessionsController extends BaseController {
 			}
 			throw error;
 		}
+	}
+
+	// Returns recorded attendance for a true one-off session; 404 if the session itself doesn't exist.
+	private async getAttendance(req: Request<{ id: string }>, res: Response<SessionAttendanceResponse>): Promise<void> {
+		const sessionId = Number(req.params.id);
+		const session = await this.sessionsServer.findById(sessionId);
+		if (!session) {
+			res.status(404).end();
+			return;
+		}
+		const rows = await this.sessionAttendanceServer.findBySessionId(sessionId);
+		res.json(rows.map((row: SessionAttendance): SessionAttendanceResponseItem => ({ studentId: row.studentId, status: row.status })));
 	}
 
 	private async recordAttendance(

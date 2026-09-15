@@ -7,4 +7,5 @@ export interface CreateClassBody {
 	minSize?: number;
 	maxSize: number;
 	studentId?: number;
+	color?: string | null;
 }

@@ -17,6 +17,7 @@ import { SessionAttendanceResponse, SessionAttendanceResponseItem } from '../ses
 import { SessionAttendance } from '../../../entities/session-attendance.entity';
 import { toPublic } from '../../../utils/to-public';
 
+// Internal helper, not an exposed route.
 function toOccurrenceResponseItem(occurrence: Occurrence): OccurrenceResponseItem {
 	if (occurrence.isVirtual) {
 		return { isVirtual: true, classId: occurrence.classId, startTime: occurrence.startTime.toISOString(), title: occurrence.displayTitle, attendance: occurrence.attendance };
@@ -181,7 +182,8 @@ export class ClassOccurrencesController extends BaseController {
 		 *     summary: Record or correct attendance for one occurrence, materializing it if needed
 		 *     description: >
 		 *       Accepts any studentId, not just current class members — this is how a trial student's attendance
-		 *       can be recorded without a standing class_enrollments row.
+		 *       can be recorded without a standing class_enrollments row. Rejected with 400 if the occurrence's
+		 *       startTime is still in the future.
 		 *     tags: [Operator - Classes]
 		 *     parameters:
 		 *       - in: path
@@ -252,10 +254,12 @@ export class ClassOccurrencesController extends BaseController {
 		this.internalRouter.post('/:id/makeup-session', RouteHandlers.wrap(this.createMakeupSession.bind(this)));
 	}
 
+	// Internal helper, not an exposed route.
 	private isClassIdError(error: ValidationError): boolean {
 		return error.details.some((detail: ValidationErrorDetail): boolean => detail.field === 'classId');
 	}
 
+	// Lists a class's future occurrences (virtual and materialized) in a date range.
 	private async listFuture(
 		req: Request<{ id: string }, ListOccurrencesResponse | ClassValidationErrorResponse, unknown, ListOccurrencesQuery>,
 		res: Response<ListOccurrencesResponse | ClassValidationErrorResponse>,
@@ -276,6 +280,7 @@ export class ClassOccurrencesController extends BaseController {
 		}
 	}
 
+	// Lists a class's past occurrences in a date range, including synthesized not_recorded attendance.
 	private async listPast(
 		req: Request<{ id: string }, ListOccurrencesResponse | ClassValidationErrorResponse, unknown, ListOccurrencesQuery>,
 		res: Response<ListOccurrencesResponse | ClassValidationErrorResponse>,
@@ -296,6 +301,7 @@ export class ClassOccurrencesController extends BaseController {
 		}
 	}
 
+	// Reschedules one occurrence to a new startTime, materializing it first if it was still virtual.
 	private async rescheduleOccurrence(
 		req: Request<{ id: string; date: string }, GetSessionResponse | ClassValidationErrorResponse, RescheduleOccurrenceBody>,
 		res: Response<GetSessionResponse | ClassValidationErrorResponse>,
@@ -320,6 +326,7 @@ export class ClassOccurrencesController extends BaseController {
 		}
 	}
 
+	// Cancels one occurrence (materializing it first if needed); re-cancelling an already-cancelled date is an idempotent no-op.
 	private async cancelOccurrence(req: Request<{ id: string; date: string }>, res: Response): Promise<void> {
 		try {
 			const cancelled = await this.classOccurrencesServer.cancelOccurrence(Number(req.params.id), req.params.date);
@@ -337,6 +344,7 @@ export class ClassOccurrencesController extends BaseController {
 		}
 	}
 
+	// Records or corrects attendance for one occurrence (materializing it first if needed); accepts any studentId, including trial students.
 	private async recordOccurrenceAttendance(
 		req: Request<{ id: string; date: string }, SessionAttendanceResponse | ClassValidationErrorResponse, SessionAttendanceBody>,
 		res: Response<SessionAttendanceResponse | ClassValidationErrorResponse>,
@@ -371,6 +379,7 @@ export class ClassOccurrencesController extends BaseController {
 		}
 	}
 
+	// Creates a make-up session tied to this class, with roster auto-filled from its current standing members.
 	private async createMakeupSession(
 		req: Request<{ id: string }, GetSessionResponse | ClassValidationErrorResponse, MakeupSessionBody>,
 		res: Response<GetSessionResponse | ClassValidationErrorResponse>,

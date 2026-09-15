@@ -52,6 +52,7 @@ CREATE TABLE classes (
     max_size          INTEGER       NOT NULL,   -- becomes each generated session's capacity_limit
     status            VARCHAR(20)   NOT NULL DEFAULT 'active',  -- 'active' | 'stopped'
     stopped_at        TIMESTAMPTZ,
+    color             VARCHAR(20),              -- nullable, operator-chosen, unenforced format (client picks a default when NULL)
     is_deleted        BOOLEAN       NOT NULL DEFAULT FALSE,
     deleted_at        TIMESTAMPTZ,
     created_at        TIMESTAMPTZ   DEFAULT CURRENT_TIMESTAMP,

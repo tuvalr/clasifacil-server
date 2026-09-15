@@ -10,6 +10,7 @@ export interface Class extends BaseEntity {
 	maxSize: number;
 	status: 'active' | 'stopped';
 	stoppedAt: Date | null;
+	color: string | null;
 }
 
 export const ClassEntity: EntityDescriptor<Class> = {

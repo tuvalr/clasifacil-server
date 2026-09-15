@@ -212,6 +212,8 @@ export const swaggerSpec = swaggerJsdoc({
 						maxSize: { type: 'integer' },
 						status: { type: 'string', enum: ['active', 'stopped'] },
 						stoppedAt: { type: 'string', format: 'date-time', nullable: true },
+						color: { type: 'string', nullable: true },
+						enrolledCount: { type: 'integer', description: 'Active class_enrollments count. Only present on GET (list/single), not on create/update/stop/unstop responses.' },
 					},
 				},
 				EnrollmentAndCredit: {

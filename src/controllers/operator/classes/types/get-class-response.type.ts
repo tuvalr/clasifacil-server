@@ -1,4 +1,4 @@
-import { Class } from '../../../../entities/class.entity';
+import { ClassWithEnrolledCount } from '../../../../servers/classes.server';
 import { PublicEntity } from '../../../../entities/base.entity';
 
-export type GetClassResponse = PublicEntity<Class>;
+export type GetClassResponse = PublicEntity<ClassWithEnrolledCount>;
