@@ -114,16 +114,15 @@ export class ClassOccurrencesServer {
 
 		const virtualDates = this.computeOccurrenceDates(foundClass, from, to);
 		const materialized = await this.sessions.findByClassIdInRange(classId, from, to);
-		const materializedDateKeys = new Set(materialized.map((session: Session) => session.startTime.toISOString().slice(0, 10)));
 
-		// A cancelled (soft-deleted) date must never reappear as a fresh virtual occurrence — findByClassIdInRange
-		// above already excludes it from the materialized list (it's not "live"), but computeOccurrenceDates has no
-		// idea it was ever touched, so without this it would derive the same date as virtual again, and a later
-		// reschedule/attendance call against it would risk creating a second sessions row. Querying all sessions in
-		// range including soft-deleted ones (rather than a per-date lookup per virtual date) keeps this a single
-		// extra query regardless of range size.
-		const allDatesEverTouched = await this.sessions.findByClassIdInRangeIncludingDeleted(classId, from, to);
-		const cancelledDateKeys = new Set(allDatesEverTouched.filter((session: Session) => session.isDeleted).map((session: Session) => session.startTime.toISOString().slice(0, 10)));
+		// Every pattern date this class has EVER materialized a session for in range — keyed by original_date (the
+		// date the session was first derived for), not its current start_time. This single set correctly excludes
+		// a virtual re-derivation for all three ways a pattern date can already have a real row: cancelled in
+		// place, materialized in place (already covered by `materialized` above, but harmless to also list here),
+		// and rescheduled away to some other date/time (session's start_time may now even fall outside this very
+		// range, which is exactly why this must be keyed by original_date and queried independently of
+		// findByClassIdInRange's start_time-based range filter).
+		const originalDateKeys = new Set(await this.sessions.findOriginalDatesByClassIdInRange(classId, from, to));
 
 		// Class-linked sessions never store their own title (see materializeOccurrence's title: null) — display
 		// title is always resolved live from the parent class's current title, computed once per call here since
@@ -138,7 +137,7 @@ export class ClassOccurrencesServer {
 		}));
 		for (const date of virtualDates) {
 			const key = date.toISOString().slice(0, 10);
-			if (!materializedDateKeys.has(key) && !cancelledDateKeys.has(key)) {
+			if (!originalDateKeys.has(key)) {
 				occurrences.push({ classId, startTime: date, isVirtual: true, displayTitle: regularDisplayTitle });
 			}
 		}
@@ -216,17 +215,19 @@ export class ClassOccurrencesServer {
 
 	// Idempotent: returns the existing materialized row for this class+date if one already exists, otherwise
 	// creates one with the pattern's default startTime and title: null (display always reads the class's current
-	// title live — see docs/superpowers/specs/2026-09-13-derived-class-sessions-design.md).
+	// title live — see docs/superpowers/specs/2026-09-13-derived-class-sessions-design.md). originalDate is set to
+	// this same `date` at creation and never changes afterward — it's the occurrence's permanent identity, so a
+	// later reschedule (which moves startTime elsewhere) never causes this original slot to be re-derived as a
+	// fresh virtual occurrence, and never causes a second sessions row to be created for it.
 	//
-	// Looks up INCLUDING soft-deleted rows (findByClassIdAndDateIncludingDeleted), not just live ones: if this date
-	// was already cancelled, that cancelled row is the correct "existing" answer — returned as-is, never
-	// un-deleted, never duplicated. Without this, a cancelled date's row would be invisible to the plain
-	// (queryActive-based) lookup and a second sessions row would get created for the same class+date the next time
-	// this date is touched (reschedule/cancel/attendance). Callers that need "not found" semantics for an
-	// already-cancelled date (reschedule, attendance) check the returned session's isDeleted themselves;
-	// cancelOccurrence treats re-cancelling as an idempotent no-op instead.
+	// Looks up by originalDate INCLUDING soft-deleted rows (findByClassIdAndOriginalDateIncludingDeleted), not just
+	// live ones and not by current startTime: if this date was already cancelled OR already rescheduled to some
+	// other date/time, that existing row (wherever its startTime now points, or however it's marked deleted) is the
+	// correct "existing" answer — returned as-is, never un-deleted, never duplicated. Callers that need "not found"
+	// semantics for an already-cancelled date (reschedule, attendance) check the returned session's isDeleted
+	// themselves; cancelOccurrence treats re-cancelling as an idempotent no-op instead.
 	public async materializeOccurrence(classId: number, date: Date): Promise<Session> {
-		const existing = await this.sessions.findByClassIdAndDateIncludingDeleted(classId, date);
+		const existing = await this.sessions.findByClassIdAndOriginalDateIncludingDeleted(classId, date);
 		if (existing) {
 			return existing;
 		}
@@ -243,6 +244,7 @@ export class ClassOccurrencesServer {
 			startTime,
 			capacityLimit: foundClass.maxSize,
 			classId: foundClass.id,
+			originalDate: date,
 			isMakeupSession: false,
 		});
 	}

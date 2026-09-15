@@ -96,6 +96,11 @@ CREATE TABLE sessions (
 	capacity_limit         INTEGER       NOT NULL,
 	current_roster_count   INTEGER       DEFAULT 0,
 	class_id               BIGINT        REFERENCES classes (id) ON DELETE CASCADE,
+	original_date          DATE,          -- the class pattern's derived date this row was first materialized for
+	                                       -- (UTC calendar day). Set once at materialization, never changed by a
+	                                       -- later reschedule — start_time can move, but this stays the occurrence's
+	                                       -- true identity, so a rescheduled-away slot never reappears as virtual.
+	                                       -- NULL for true one-off sessions and makeup sessions (no pattern date).
 	is_makeup_session      BOOLEAN       NOT NULL DEFAULT FALSE,
 	is_deleted             BOOLEAN       NOT NULL DEFAULT FALSE,
 	deleted_at             TIMESTAMPTZ,

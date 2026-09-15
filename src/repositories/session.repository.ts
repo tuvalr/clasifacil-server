@@ -32,28 +32,38 @@ export class SessionRepository {
 		return rows[0] ? snakeToCamel<Session>(rows[0]) : null;
 	}
 
-	// Looks up a class's materialized session for one calendar date, INCLUDING soft-deleted (cancelled) rows — raw
-	// query rather than PostgresHandler.queryActive, matching this file's own incrementRosterCount/decrementRosterCount
+	// Looks up a class's materialized session by the ORIGINAL pattern date it was derived from — not its current
+	// start_time, which a reschedule may have moved elsewhere — INCLUDING soft-deleted (cancelled) rows. Raw query
+	// rather than PostgresHandler.queryActive, matching this file's own incrementRosterCount/decrementRosterCount
 	// precedent (no generic "ignore-deleted by arbitrary where-clause" helper exists on PostgresHandler; only
 	// findByIdIgnoringDeleted, which is by numeric id). Used by ClassOccurrencesServer.materializeOccurrence so a
-	// previously-cancelled date is recognized as already materialized (and left alone) instead of getting a second
-	// sessions row. DATE(start_time) alone evaluates in the DB session's configured timezone (e.g. Europe/Paris),
-	// not UTC — since the comparison value is always a UTC calendar-day string, the cast must force UTC too
-	// (AT TIME ZONE 'UTC'), or a local-timezone day rollover silently breaks the match.
-	public async findByClassIdAndDateIncludingDeleted(classId: number, date: Date): Promise<Session | null> {
-		const rows = await this.db.query<Record<string, unknown>>('SELECT * FROM "sessions" WHERE class_id = $1 AND DATE(start_time AT TIME ZONE \'UTC\') = $2::date', [
+	// previously-cancelled OR previously-rescheduled-away date is recognized as already materialized (and left
+	// alone / not re-derived) instead of getting a second sessions row for the same original slot.
+	public async findByClassIdAndOriginalDateIncludingDeleted(classId: number, date: Date): Promise<Session | null> {
+		const rows = await this.db.query<Record<string, unknown>>('SELECT * FROM "sessions" WHERE class_id = $1 AND original_date = $2::date', [
 			classId,
 			date.toISOString().slice(0, 10),
 		]);
 		return rows[0] ? snakeToCamel<Session>(rows[0]) : null;
 	}
 
-	// Same range query as findByClassIdInRange, but INCLUDING soft-deleted (cancelled) rows — used by
-	// ClassOccurrencesServer.buildOccurrenceList to build the set of dates that must be excluded from virtual-date
-	// generation entirely (a cancelled date must never reappear as a fresh virtual occurrence).
-	public async findByClassIdInRangeIncludingDeleted(classId: number, from: Date, to: Date): Promise<Session[]> {
-		const rows = await this.db.query<Record<string, unknown>>('SELECT * FROM "sessions" WHERE class_id = $1 AND start_time >= $2 AND start_time <= $3', [classId, from, to]);
-		return rows.map((row: Record<string, unknown>) => snakeToCamel<Session>(row));
+	// Every original_date a class has ever materialized a session for within [from, to] — regardless of the
+	// session's CURRENT start_time (which reschedule may have moved outside this very range) and regardless of
+	// is_deleted (cancelled dates must stay excluded too). Used by ClassOccurrencesServer.buildOccurrenceList to
+	// build the full set of pattern dates that must never reappear as a fresh virtual occurrence: a cancelled slot,
+	// or a slot that was rescheduled to some other date/time, both already have their one true sessions row
+	// elsewhere (or soft-deleted) and must not be re-derived from the pattern.
+	//
+	// Returns YYYY-MM-DD strings (original_date::text), not Date objects: node-postgres parses a DATE column into
+	// a JS Date at LOCAL midnight, not UTC midnight — in any timezone ahead of UTC (this deployment's included),
+	// re-serializing that Date via toISOString().slice(0, 10) shifts the result back by one calendar day. Casting
+	// to text in SQL sidesteps the round-trip entirely and returns exactly what's stored.
+	public async findOriginalDatesByClassIdInRange(classId: number, from: Date, to: Date): Promise<string[]> {
+		const rows = await this.db.query<{ original_date: string }>(
+			'SELECT DISTINCT original_date::text AS original_date FROM "sessions" WHERE class_id = $1 AND original_date IS NOT NULL AND original_date >= $2::date AND original_date <= $3::date',
+			[classId, from.toISOString().slice(0, 10), to.toISOString().slice(0, 10)],
+		);
+		return rows.map((row: { original_date: string }) => row.original_date);
 	}
 
 	public async findById(id: number): Promise<Session | null> {
@@ -66,9 +76,17 @@ export class SessionRepository {
 		startTime: Date;
 		capacityLimit: number;
 		classId?: number | null;
+		originalDate?: Date | null;
 		isMakeupSession?: boolean;
 	}): Promise<Session> {
-		return this.db.insert(SessionEntity, { ...data, classId: data.classId ?? null, isMakeupSession: data.isMakeupSession ?? false, currentRosterCount: 0, isDeleted: false });
+		return this.db.insert(SessionEntity, {
+			...data,
+			classId: data.classId ?? null,
+			originalDate: data.originalDate ?? null,
+			isMakeupSession: data.isMakeupSession ?? false,
+			currentRosterCount: 0,
+			isDeleted: false,
+		});
 	}
 
 	public async update(id: number, data: Partial<{ title: string; startTime: Date; capacityLimit: number }>): Promise<Session | null> {
