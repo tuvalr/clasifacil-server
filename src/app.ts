@@ -50,7 +50,7 @@ export class App {
 				origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void): void => {
 					callback(null, !origin || this.config.corsAllowedOrigins.includes(origin));
 				},
-				methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+				methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
 				allowedHeaders: ['Content-Type'],
 			}),
 		);
