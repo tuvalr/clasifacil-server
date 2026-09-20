@@ -11,6 +11,8 @@ import { Session } from '../entities/session.entity';
 import { SessionAttendance } from '../entities/session-attendance.entity';
 import { SessionAttendanceServer } from './session-attendance.server';
 import { ValidationError } from './types/validation-error';
+import { OperatorRepository } from '../repositories/operator.repository';
+import { walkLocalWeekday, localWallClockToUtc, startOfLocalDay } from '../utils/timezone.util';
 
 const MAX_RANGE_DAYS = 90;
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
@@ -72,37 +74,32 @@ export class ClassOccurrencesServer {
 		@inject(TYPES.StudentRepository) private readonly students: StudentRepository,
 		@inject(TYPES.EnrollmentAndCreditRepository) private readonly enrollments: EnrollmentAndCreditRepository,
 		@inject(TYPES.SessionAttendanceServer) private readonly sessionAttendance: SessionAttendanceServer,
+		@inject(TYPES.OperatorRepository) private readonly operators: OperatorRepository,
 	) {}
 
-	// Walks every date in [from, to] matching the class's dayOfWeek, clipped to stoppedAt if the class is stopped
-	// (no dates on/after the stop day). Pure computation — never reads or writes sessions.
-	private computeOccurrenceDates(foundClass: Class, from: Date, to: Date): Date[] {
-		const [hours, minutes, seconds]: number[] = foundClass.startTime.split(':').map(Number);
+	// Walks every date in [from, to] matching the class's dayOfWeek IN THE OPERATOR'S LOCAL TIMEZONE, clipped to
+	// stoppedAt (in local-day terms) if the class is stopped. Pure computation — never reads or writes sessions.
+	// Class.dayOfWeek/startTime are always the operator's local wall-clock values (see
+	// docs/superpowers/specs/2026-09-20-operator-timezone-occurrence-generation-design.md) — this is the one place
+	// (along with materializeOccurrence and NightlyBackfillJob.backfillClass) that converts them to real UTC
+	// instants, using that specific occurrence date's correct DST-aware offset.
+	private computeOccurrenceDates(foundClass: Class, timezone: string, from: Date, to: Date): Date[] {
 		let effectiveTo = to;
 		if (foundClass.status === 'stopped' && foundClass.stoppedAt) {
-			// Clip to the start of the UTC day the class was stopped on (not the exact stop instant) — this feature
-			// is calendar-day-based everywhere else (parseDateOnly, the DATE(... AT TIME ZONE 'UTC') lookups, the
-			// 90-day cap), and clipping on a wall-clock instant would make the stop-day occurrence's inclusion
-			// depend on what time of day the operator happened to click "stop," which the spec doesn't intend. A
-			// class is considered stopped as of the start of its stop day, so that day's own occurrence never
-			// occurs, regardless of whether the stop happened before or after the class's usual startTime.
-			const stoppedDay = new Date(foundClass.stoppedAt.toISOString().slice(0, 10) + 'T00:00:00.000Z');
-			const dayBeforeStop = new Date(stoppedDay.getTime() - MS_PER_DAY);
+			// Clip to the start of the OPERATOR'S LOCAL day the class was stopped on — not the exact stop instant,
+			// and not the UTC day. A stop registered near midnight UTC could otherwise clip the wrong local day.
+			const stoppedDayStartLocal = startOfLocalDay(foundClass.stoppedAt, timezone);
+			const dayBeforeStop = new Date(stoppedDayStartLocal.getTime() - MS_PER_DAY);
 			if (dayBeforeStop.getTime() < effectiveTo.getTime()) {
 				effectiveTo = dayBeforeStop;
 			}
 		}
 
-		const dates: Date[] = [];
-		const cursor = new Date(from);
-		cursor.setUTCHours(hours, minutes, seconds ?? 0, 0);
-		while (cursor.getUTCDay() !== foundClass.dayOfWeek) {
-			cursor.setUTCDate(cursor.getUTCDate() + 1);
-		}
-		while (cursor.getTime() <= effectiveTo.getTime()) {
-			dates.push(new Date(cursor));
-			cursor.setUTCDate(cursor.getUTCDate() + 7);
-		}
+		const localMidnights = walkLocalWeekday(from, effectiveTo, timezone, foundClass.dayOfWeek);
+		const dates = localMidnights
+			.map((localMidnight: Date): Date => localWallClockToUtc(localMidnight, foundClass.startTime, timezone))
+			.filter((occurrenceUtc: Date): boolean => occurrenceUtc.getTime() >= from.getTime() && occurrenceUtc.getTime() <= effectiveTo.getTime());
+		dates.sort((a: Date, b: Date): number => a.getTime() - b.getTime());
 		return dates;
 	}
 
@@ -111,8 +108,12 @@ export class ClassOccurrencesServer {
 		if (!foundClass) {
 			return null;
 		}
+		const operator = await this.operators.findById(foundClass.operatorId);
+		if (!operator) {
+			return null;
+		}
 
-		const virtualDates = this.computeOccurrenceDates(foundClass, from, to);
+		const virtualDates = this.computeOccurrenceDates(foundClass, operator.timezone, from, to);
 		const materialized = await this.sessions.findByClassIdInRange(classId, from, to);
 
 		// Every pattern date this class has EVER materialized a session for in range — keyed by original_date (the
@@ -235,9 +236,14 @@ export class ClassOccurrencesServer {
 		if (!foundClass) {
 			throw new ValidationError([{ field: 'classId', message: 'Class not found' }]);
 		}
-		const [hours, minutes, seconds]: number[] = foundClass.startTime.split(':').map(Number);
-		const startTime = new Date(date);
-		startTime.setUTCHours(hours, minutes, seconds ?? 0, 0);
+		const operator = await this.operators.findById(foundClass.operatorId);
+		if (!operator) {
+			throw new ValidationError([{ field: 'classId', message: 'Class not found' }]);
+		}
+		// `date` is a UTC instant representing the calendar day's identity (originalDate), not itself a real
+		// wall-clock moment — localWallClockToUtc composes the class's local startTime on top of that day, in the
+		// operator's timezone, producing the true DST-aware UTC instant for this specific occurrence.
+		const startTime = localWallClockToUtc(date, foundClass.startTime, operator.timezone);
 		return this.sessions.create({
 			operatorId: foundClass.operatorId,
 			title: null,
