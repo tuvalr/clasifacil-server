@@ -9,11 +9,12 @@ import { ClassRepository } from '../../../repositories/class.repository';
 import { RouteHandlers } from '../../shared/route-handlers';
 import { BaseController } from '../../shared/base.controller';
 import { avatarUpload } from '../../shared/avatar-upload.middleware';
+import { Results } from '../../shared/results';
+import { Result } from '../../shared/types/result.type';
 import { toPublic } from '../../../utils/to-public';
 import { GetOperatorSettingsResponse } from './types/get-operator-settings-response.type';
 import { UpdateOperatorSettingsBody } from './types/update-operator-settings-body.type';
 import { UpdateOperatorSettingsResponse } from './types/update-operator-settings-response.type';
-import { UpdateOperatorSettingsValidationErrorResponse } from './types/update-operator-settings-validation-error-response.type';
 import { UpdateOperatorAvatarResponse } from './types/update-operator-avatar-response.type';
 import { AvatarErrorResponse } from './types/avatar-error-response.type';
 
@@ -48,7 +49,7 @@ export class OperatorSettingsController extends BaseController {
 		 *       404: { description: Not found }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.get('/:id', RouteHandlers.wrap(this.getSettings.bind(this)));
+		this.internalRouter.get('/:id', RouteHandlers.wrapResult(['id'], this.getSettings.bind(this)));
 
 		/**
 		 * @openapi
@@ -101,7 +102,7 @@ export class OperatorSettingsController extends BaseController {
 		 *       404: { description: Not found }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.put('/:id', RouteHandlers.wrap(this.updateSettings.bind(this)));
+		this.internalRouter.put('/:id', RouteHandlers.wrapResult(['id'], this.updateSettings.bind(this)));
 
 		/**
 		 * @openapi
@@ -141,35 +142,28 @@ export class OperatorSettingsController extends BaseController {
 		this.internalRouter.put('/:id/avatar', avatarUpload, RouteHandlers.wrap(this.updateAvatar.bind(this)));
 	}
 
-	private async getSettings(req: Request<{ id: string }>, res: Response<GetOperatorSettingsResponse>): Promise<void> {
-		const operator = await this.operatorsServer.findById(Number(req.params.id));
+	private async getSettings(id: string, _body: unknown, _query: unknown): Promise<Result<GetOperatorSettingsResponse>> {
+		const operator = await this.operatorsServer.findById(Number(id));
 		if (!operator) {
-			res.status(404).end();
-			return;
+			return Results.notFound();
 		}
-		res.json(toPublic(operator));
+		return Results.ok(toPublic(operator));
 	}
 
-	private async updateSettings(
-		req: Request<{ id: string }, UpdateOperatorSettingsResponse | UpdateOperatorSettingsValidationErrorResponse | { error: string }, UpdateOperatorSettingsBody>,
-		res: Response<UpdateOperatorSettingsResponse | UpdateOperatorSettingsValidationErrorResponse | { error: string }>,
-	): Promise<void> {
-		const { name, email, phone, countryCode, timezone } = req.body;
+	private async updateSettings(id: string, body: UpdateOperatorSettingsBody, _query: unknown): Promise<Result<UpdateOperatorSettingsResponse>> {
+		const { name, email, phone, countryCode, timezone } = body;
 		try {
-			const operator = await this.operatorsServer.update(Number(req.params.id), { name, email, phone, countryCode, timezone }, (operatorId: number) => this.classRepository.existsAnyForOperator(operatorId));
+			const operator = await this.operatorsServer.update(Number(id), { name, email, phone, countryCode, timezone }, (operatorId: number) => this.classRepository.existsAnyForOperator(operatorId));
 			if (!operator) {
-				res.status(404).end();
-				return;
+				return Results.notFound();
 			}
-			res.json(toPublic(operator));
+			return Results.ok(toPublic(operator));
 		} catch (error) {
 			if (error instanceof ValidationError) {
-				res.status(400).json({ error: 'Validation failed', details: error.details });
-				return;
+				return Results.validationError(error.details);
 			}
 			if (error instanceof OperatorTimezoneLockedError) {
-				res.status(409).json({ error: error.message });
-				return;
+				return Results.conflict(error.message);
 			}
 			throw error;
 		}
