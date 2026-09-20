@@ -37,6 +37,17 @@ export class OperatorController extends BaseController {
 	) {
 		super();
 
+		this.internalRouter.use('/sessions', sessionsController.router);
+		this.internalRouter.use('/classes', classesController.router);
+		this.internalRouter.use('/classes', classOccurrencesController.router);
+
+		this.internalRouter.use('/households', householdsController.router);
+		this.internalRouter.use('/attendance-credits', attendanceCreditsController.router);
+		this.internalRouter.use('/billing', billingController.router);
+		this.internalRouter.use('/reminders', remindersController.router);
+		this.internalRouter.use('/autopay', autopayController.router);
+		this.internalRouter.use('/settings', settingsController.router);
+
 		/**
 		 * @openapi
 		 * /api/operator/{id}:
@@ -60,17 +71,6 @@ export class OperatorController extends BaseController {
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
 		this.internalRouter.get('/:id', RouteHandlers.wrapOneParam('id', this.getOperatorById.bind(this)));
-
-		this.internalRouter.use('/sessions', sessionsController.router);
-		this.internalRouter.use('/classes', classesController.router);
-		this.internalRouter.use('/classes', classOccurrencesController.router);
-
-		this.internalRouter.use('/households', householdsController.router);
-		this.internalRouter.use('/attendance-credits', attendanceCreditsController.router);
-		this.internalRouter.use('/billing', billingController.router);
-		this.internalRouter.use('/reminders', remindersController.router);
-		this.internalRouter.use('/autopay', autopayController.router);
-		this.internalRouter.use('/settings', settingsController.router);
 	}
 
 	private async getOperatorById(id: string): Promise<Result<GetOperatorDetailsResponse>> {
