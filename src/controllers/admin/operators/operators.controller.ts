@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { inject, injectable } from 'inversify';
 import { TYPES } from '../../../container/types';
-import { OperatorsServer, OperatorHasActiveClassesError } from '../../../servers/operators.server';
+import { OperatorsServer, OperatorHasActiveClassesError, OperatorTimezoneLockedError } from '../../../servers/operators.server';
 import { ValidationError } from '../../../servers/types/validation-error';
 import { ClassRepository } from '../../../repositories/class.repository';
 import { Student } from '../../../entities/student.entity';
@@ -174,6 +174,7 @@ export class AdminOperatorsController extends BaseController {
 		 *                       field: { type: string }
 		 *                       message: { type: string }
 		 *       401: { $ref: '#/components/responses/Unauthorized' }
+		 *       409: { description: 'timezone cannot be changed once the operator has any class' }
 		 *       404: { description: Not found }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
@@ -339,12 +340,14 @@ export class AdminOperatorsController extends BaseController {
 	}
 
 	private async updateOperator(
-		req: Request<{ id: string }, GetOperatorResponse | CreateOperatorValidationErrorResponse, UpdateOperatorBody>,
-		res: Response<GetOperatorResponse | CreateOperatorValidationErrorResponse>,
+		req: Request<{ id: string }, GetOperatorResponse | CreateOperatorValidationErrorResponse | { error: string }, UpdateOperatorBody>,
+		res: Response<GetOperatorResponse | CreateOperatorValidationErrorResponse | { error: string }>,
 	): Promise<void> {
 		const { name, email, phone, countryCode, timezone } = req.body;
 		try {
-			const operator = await this.operatorsServer.update(Number(req.params.id), { name, email, phone, countryCode, timezone });
+			const operator = await this.operatorsServer.update(Number(req.params.id), { name, email, phone, countryCode, timezone }, (operatorId: number) =>
+				this.classRepository.existsAnyForOperator(operatorId),
+			);
 			if (!operator) {
 				res.status(404).end();
 				return;
@@ -353,6 +356,10 @@ export class AdminOperatorsController extends BaseController {
 		} catch (error) {
 			if (error instanceof ValidationError) {
 				res.status(400).json({ error: 'Validation failed', details: error.details });
+				return;
+			}
+			if (error instanceof OperatorTimezoneLockedError) {
+				res.status(409).json({ error: error.message });
 				return;
 			}
 			throw error;

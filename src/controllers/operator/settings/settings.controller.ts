@@ -1,9 +1,10 @@
 import { Request, Response } from 'express';
 import { inject, injectable } from 'inversify';
 import { TYPES } from '../../../container/types';
-import { OperatorsServer } from '../../../servers/operators.server';
+import { OperatorsServer, OperatorTimezoneLockedError } from '../../../servers/operators.server';
 import { AvatarsServer } from '../../../servers/avatars.server';
 import { ValidationError } from '../../../servers/types/validation-error';
+import { ClassRepository } from '../../../repositories/class.repository';
 import { RouteHandlers } from '../../shared/route-handlers';
 import { BaseController } from '../../shared/base.controller';
 import { avatarUpload } from '../../shared/avatar-upload.middleware';
@@ -20,6 +21,7 @@ export class OperatorSettingsController extends BaseController {
 	public constructor(
 		@inject(TYPES.OperatorsServer) private readonly operatorsServer: OperatorsServer,
 		@inject(TYPES.AvatarsServer) private readonly avatarsServer: AvatarsServer,
+		@inject(TYPES.ClassRepository) private readonly classRepository: ClassRepository,
 	) {
 		super();
 
@@ -94,6 +96,7 @@ export class OperatorSettingsController extends BaseController {
 		 *                       field: { type: string }
 		 *                       message: { type: string }
 		 *       401: { $ref: '#/components/responses/Unauthorized' }
+		 *       409: { description: 'timezone cannot be changed once the operator has any class' }
 		 *       404: { description: Not found }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
@@ -147,12 +150,14 @@ export class OperatorSettingsController extends BaseController {
 	}
 
 	private async updateSettings(
-		req: Request<{ id: string }, UpdateOperatorSettingsResponse | UpdateOperatorSettingsValidationErrorResponse, UpdateOperatorSettingsBody>,
-		res: Response<UpdateOperatorSettingsResponse | UpdateOperatorSettingsValidationErrorResponse>,
+		req: Request<{ id: string }, UpdateOperatorSettingsResponse | UpdateOperatorSettingsValidationErrorResponse | { error: string }, UpdateOperatorSettingsBody>,
+		res: Response<UpdateOperatorSettingsResponse | UpdateOperatorSettingsValidationErrorResponse | { error: string }>,
 	): Promise<void> {
 		const { name, email, phone, countryCode, timezone } = req.body;
 		try {
-			const operator = await this.operatorsServer.update(Number(req.params.id), { name, email, phone, countryCode, timezone });
+			const operator = await this.operatorsServer.update(Number(req.params.id), { name, email, phone, countryCode, timezone }, (operatorId: number) =>
+				this.classRepository.existsAnyForOperator(operatorId),
+			);
 			if (!operator) {
 				res.status(404).end();
 				return;
@@ -161,6 +166,10 @@ export class OperatorSettingsController extends BaseController {
 		} catch (error) {
 			if (error instanceof ValidationError) {
 				res.status(400).json({ error: 'Validation failed', details: error.details });
+				return;
+			}
+			if (error instanceof OperatorTimezoneLockedError) {
+				res.status(409).json({ error: error.message });
 				return;
 			}
 			throw error;

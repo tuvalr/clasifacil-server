@@ -24,6 +24,13 @@ export class OperatorHasActiveClassesError extends Error {
 	}
 }
 
+export class OperatorTimezoneLockedError extends Error {
+	public constructor() {
+		super('Cannot change timezone once the operator has any class — contact an admin for manual correction');
+		this.name = 'OperatorTimezoneLockedError';
+	}
+}
+
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const VALID_COUNTRY_CODES: ReadonlySet<string> = new Set(getCountries());
 const VALID_TIMEZONES: ReadonlySet<string> = new Set(Intl.supportedValuesOf('timeZone'));
@@ -181,10 +188,21 @@ export class OperatorsServer {
 
 	// findById first — same reasoning as pause()/resume(): update() has no is_deleted guard, so without this check a
 	// soft-deleted operator would still match and get silently updated instead of 404ing like every other endpoint.
-	public async update(id: number, data: { name?: string; email?: string; phone?: string; countryCode?: string; timezone?: string }): Promise<Operator | null> {
+	// hasAnyClass is injected as a callback (rather than this server depending on ClassRepository directly) to avoid
+	// a circular dependency between operators.server.ts and classes.server.ts — same pattern as changeType's
+	// hasActiveClasses callback.
+	public async update(
+		id: number,
+		data: { name?: string; email?: string; phone?: string; countryCode?: string; timezone?: string },
+		hasAnyClass: (operatorId: number) => Promise<boolean>,
+	): Promise<Operator | null> {
 		const operator = await this.operators.findById(id);
 		if (!operator) {
 			return null;
+		}
+
+		if (data.timezone !== undefined && data.timezone !== operator.timezone && (await hasAnyClass(id))) {
+			throw new OperatorTimezoneLockedError();
 		}
 
 		const details = await this.validateUpdate(id, data);
