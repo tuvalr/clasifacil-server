@@ -33,7 +33,7 @@ module.exports = tseslint.config(
 				},
 			],
 			'linebreak-style': 'off',
-			'@typescript-eslint/no-unused-vars': ['error'],
+			'@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
 			'@typescript-eslint/explicit-function-return-type': ['error'],
 			'@typescript-eslint/explicit-module-boundary-types': ['off'],
 			'@typescript-eslint/no-empty-function': ['off'],
