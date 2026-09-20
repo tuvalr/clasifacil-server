@@ -1,4 +1,3 @@
-import { Request, Response } from 'express';
 import { inject, injectable } from 'inversify';
 import { TYPES } from '../../../container/types';
 import { HouseholdsServer } from '../../../servers/households.server';
@@ -8,12 +7,13 @@ import { Student } from '../../../entities/student.entity';
 import { EnrollmentAndCredit } from '../../../entities/enrollment-and-credit.entity';
 import { RouteHandlers } from '../../shared/route-handlers';
 import { BaseController } from '../../shared/base.controller';
+import { Results } from '../../shared/results';
+import { Result } from '../../shared/types/result.type';
 import { ListHouseholdsResponse } from './types/list-households-response.type';
 import { GetHouseholdResponse } from './types/get-household-response.type';
 import { GetHouseholdDetailsResponse } from './types/get-household-details-response.type';
 import { CreateHouseholdBody } from './types/create-household-body.type';
 import { CreateHouseholdResponse } from './types/create-household-response.type';
-import { CreateHouseholdValidationErrorResponse } from './types/create-household-validation-error-response.type';
 import { PauseHouseholdBody } from './types/pause-household-body.type';
 import { toPublic } from '../../../utils/to-public';
 
@@ -38,7 +38,7 @@ export class AdminHouseholdsController extends BaseController {
 		 *       401: { $ref: '#/components/responses/Unauthorized' }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.get('/', RouteHandlers.wrap(this.listHouseholds.bind(this)));
+		this.internalRouter.get('/', RouteHandlers.wrapResult([], this.listHouseholds.bind(this)));
 
 		/**
 		 * @openapi
@@ -62,7 +62,7 @@ export class AdminHouseholdsController extends BaseController {
 		 *       404: { description: Not found }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.get('/:id', RouteHandlers.wrap(this.getHouseholdById.bind(this)));
+		this.internalRouter.get('/:id', RouteHandlers.wrapResult(['id'], this.getHouseholdById.bind(this)));
 
 		/**
 		 * @openapi
@@ -111,7 +111,7 @@ export class AdminHouseholdsController extends BaseController {
 		 *       401: { $ref: '#/components/responses/Unauthorized' }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.post('/', RouteHandlers.wrap(this.createHousehold.bind(this)));
+		this.internalRouter.post('/', RouteHandlers.wrapResult([], this.createHousehold.bind(this)));
 
 		/**
 		 * @openapi
@@ -136,7 +136,7 @@ export class AdminHouseholdsController extends BaseController {
 		 *       409: { description: 'Household has an active booking with an operator' }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.delete('/:id', RouteHandlers.wrap(this.deleteHousehold.bind(this)));
+		this.internalRouter.delete('/:id', RouteHandlers.wrapResult(['id'], this.deleteHousehold.bind(this)));
 
 		/**
 		 * @openapi
@@ -171,7 +171,7 @@ export class AdminHouseholdsController extends BaseController {
 		 *       404: { description: Not found }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.post('/:id/pause', RouteHandlers.wrap(this.pauseHousehold.bind(this)));
+		this.internalRouter.post('/:id/pause', RouteHandlers.wrapResult(['id'], this.pauseHousehold.bind(this)));
 
 		/**
 		 * @openapi
@@ -195,21 +195,20 @@ export class AdminHouseholdsController extends BaseController {
 		 *       404: { description: Not found }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.post('/:id/resume', RouteHandlers.wrap(this.resumeHousehold.bind(this)));
+		this.internalRouter.post('/:id/resume', RouteHandlers.wrapResult(['id'], this.resumeHousehold.bind(this)));
 	}
 
-	private async listHouseholds(_req: Request, res: Response<ListHouseholdsResponse>): Promise<void> {
+	private async listHouseholds(_body: unknown, _query: unknown): Promise<Result<ListHouseholdsResponse>> {
 		const households = await this.householdsServer.listAll();
-		res.json(households.map(toPublic));
+		return Results.ok(households.map(toPublic));
 	}
 
-	private async getHouseholdById(req: Request<{ id: string }>, res: Response<GetHouseholdDetailsResponse>): Promise<void> {
-		const details = await this.householdsServer.getByIdWithDetails(Number(req.params.id));
+	private async getHouseholdById(id: string, _body: unknown, _query: unknown): Promise<Result<GetHouseholdDetailsResponse>> {
+		const details = await this.householdsServer.getByIdWithDetails(Number(id));
 		if (!details) {
-			res.status(404).end();
-			return;
+			return Results.notFound();
 		}
-		res.json({
+		return Results.ok({
 			...toPublic(details.household),
 			students: details.students.map((student: Student & { enrollments: EnrollmentAndCredit[] }) => ({
 				...toPublic(student),
@@ -218,53 +217,48 @@ export class AdminHouseholdsController extends BaseController {
 		});
 	}
 
-	private async createHousehold(req: Request<unknown, CreateHouseholdResponse | CreateHouseholdValidationErrorResponse, CreateHouseholdBody>, res: Response<CreateHouseholdResponse | CreateHouseholdValidationErrorResponse>): Promise<void> {
-		const { name, email } = req.body;
+	private async createHousehold(body: CreateHouseholdBody, _query: unknown): Promise<Result<CreateHouseholdResponse>> {
+		const { name, email } = body;
 		try {
 			const result = await this.householdsServer.create({ name, email });
-			res.status(201).json({ household: toPublic(result.household), user: toPublic(result.user) });
+			return Results.created({ household: toPublic(result.household), user: toPublic(result.user) });
 		} catch (error) {
 			if (error instanceof ValidationError) {
-				res.status(400).json({ error: 'Validation failed', details: error.details });
-				return;
+				return Results.validationError(error.details);
 			}
 			throw error;
 		}
 	}
 
-	private async deleteHousehold(req: Request<{ id: string }>, res: Response): Promise<void> {
+	private async deleteHousehold(id: string, _body: unknown, _query: unknown): Promise<Result<never>> {
 		try {
-			const household = await this.householdsServer.delete(Number(req.params.id));
+			const household = await this.householdsServer.delete(Number(id));
 			if (!household) {
-				res.status(404).end();
-				return;
+				return Results.notFound();
 			}
-			res.status(204).end();
+			return Results.noContent();
 		} catch (error) {
 			if (error instanceof HouseholdHasActiveBookingError) {
-				res.status(409).json({ error: error.message });
-				return;
+				return Results.conflict(error.message);
 			}
 			throw error;
 		}
 	}
 
-	private async pauseHousehold(req: Request<{ id: string }, GetHouseholdResponse, PauseHouseholdBody>, res: Response<GetHouseholdResponse>): Promise<void> {
-		const pausedUntil = req.body?.pausedUntil ? new Date(req.body.pausedUntil) : null;
-		const household = await this.householdsServer.pause(Number(req.params.id), pausedUntil);
+	private async pauseHousehold(id: string, body: PauseHouseholdBody, _query: unknown): Promise<Result<GetHouseholdResponse>> {
+		const pausedUntil = body?.pausedUntil ? new Date(body.pausedUntil) : null;
+		const household = await this.householdsServer.pause(Number(id), pausedUntil);
 		if (!household) {
-			res.status(404).end();
-			return;
+			return Results.notFound();
 		}
-		res.json(toPublic(household));
+		return Results.ok(toPublic(household));
 	}
 
-	private async resumeHousehold(req: Request<{ id: string }>, res: Response<GetHouseholdResponse>): Promise<void> {
-		const household = await this.householdsServer.resume(Number(req.params.id));
+	private async resumeHousehold(id: string, _body: unknown, _query: unknown): Promise<Result<GetHouseholdResponse>> {
+		const household = await this.householdsServer.resume(Number(id));
 		if (!household) {
-			res.status(404).end();
-			return;
+			return Results.notFound();
 		}
-		res.json(toPublic(household));
+		return Results.ok(toPublic(household));
 	}
 }
