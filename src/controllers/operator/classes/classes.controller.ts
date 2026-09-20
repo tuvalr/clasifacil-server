@@ -90,8 +90,8 @@ export class ClassesController extends BaseController {
 		 *             properties:
 		 *               operatorId: { type: integer }
 		 *               title: { type: string }
-		 *               dayOfWeek: { type: integer, minimum: 0, maximum: 6 }
-		 *               startTime: { type: string, description: 'HH:MM:SS' }
+		 *               dayOfWeek: { type: integer, minimum: 0, maximum: 6, description: "0 (Sunday) through 6 (Saturday), in the operator's timezone" }
+		 *               startTime: { type: string, description: "HH:MM:SS, local wall-clock time in the operator's timezone (see Operator.timezone) — never UTC" }
 		 *               durationMinutes: { type: integer }
 		 *               minSize: { type: integer, nullable: true }
 		 *               maxSize: { type: integer }
@@ -147,8 +147,8 @@ export class ClassesController extends BaseController {
 		 *             type: object
 		 *             properties:
 		 *               title: { type: string }
-		 *               dayOfWeek: { type: integer, minimum: 0, maximum: 6 }
-		 *               startTime: { type: string, description: 'HH:MM:SS' }
+		 *               dayOfWeek: { type: integer, minimum: 0, maximum: 6, description: "0 (Sunday) through 6 (Saturday), in the operator's timezone" }
+		 *               startTime: { type: string, description: "HH:MM:SS, local wall-clock time in the operator's timezone (see Operator.timezone) — never UTC" }
 		 *               durationMinutes: { type: integer }
 		 *               minSize: { type: integer, nullable: true }
 		 *               maxSize: { type: integer }

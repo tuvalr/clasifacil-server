@@ -48,7 +48,11 @@ export const swaggerSpec = swaggerJsdoc({
 						pausedUntil: { type: 'string', format: 'date-time', nullable: true },
 						avatarUrl: { type: 'string', nullable: true },
 						type: { type: 'string', enum: ['schedule', 'assigned'] },
-						timezone: { type: 'string', description: 'IANA timezone name, e.g. America/New_York' },
+						timezone: {
+							type: 'string',
+							description:
+								"IANA timezone name, e.g. America/New_York. Governs how this operator's classes' dayOfWeek/startTime are converted to real UTC occurrence instants. Immutable once this operator has ever had any class — see PUT /api/operator/settings/{id} and PUT /api/admin/operators/{id}.",
+						},
 					},
 				},
 				OperatorDetails: {
@@ -65,7 +69,11 @@ export const swaggerSpec = swaggerJsdoc({
 						pausedUntil: { type: 'string', format: 'date-time', nullable: true },
 						avatarUrl: { type: 'string', nullable: true },
 						type: { type: 'string', enum: ['schedule', 'assigned'] },
-						timezone: { type: 'string', description: 'IANA timezone name, e.g. America/New_York' },
+						timezone: {
+							type: 'string',
+							description:
+								"IANA timezone name, e.g. America/New_York. Governs how this operator's classes' dayOfWeek/startTime are converted to real UTC occurrence instants. Immutable once this operator has ever had any class — see PUT /api/operator/settings/{id} and PUT /api/admin/operators/{id}.",
+						},
 						sessions: {
 							type: 'array',
 							items: {
@@ -207,8 +215,15 @@ export const swaggerSpec = swaggerJsdoc({
 						...swaggerBaseFields,
 						operatorId: { type: 'integer' },
 						title: { type: 'string' },
-						dayOfWeek: { type: 'integer' },
-						startTime: { type: 'string' },
+						dayOfWeek: {
+							type: 'integer',
+							description: "0 (Sunday) through 6 (Saturday), in the class's operator's timezone (Operator.timezone) — never UTC, never converted on read.",
+						},
+						startTime: {
+							type: 'string',
+							description:
+								"24-hour local wall-clock time (HH:MM:SS), in the class's operator's timezone (Operator.timezone) — never UTC, never converted on read. Occurrence generation is the only place this value is converted to a UTC instant, using the specific occurrence date's correct DST-aware offset.",
+						},
 						durationMinutes: { type: 'integer' },
 						minSize: { type: 'integer', nullable: true },
 						maxSize: { type: 'integer' },
