@@ -1,9 +1,10 @@
-import { Request, Response } from 'express';
 import { inject, injectable } from 'inversify';
 import { TYPES } from '../../../container/types';
 import { SessionAttendanceServer } from '../../../servers/session-attendance.server';
 import { RouteHandlers } from '../../shared/route-handlers';
 import { BaseController } from '../../shared/base.controller';
+import { Results } from '../../shared/results';
+import { Result } from '../../shared/types/result.type';
 import { ArchiveAttendanceResponse } from './types/archive-attendance-response.type';
 
 @injectable()
@@ -30,11 +31,11 @@ export class AdminSessionAttendanceController extends BaseController {
 		 *       401: { $ref: '#/components/responses/Unauthorized' }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.post('/archive', RouteHandlers.wrap(this.archive.bind(this)));
+		this.internalRouter.post('/archive', RouteHandlers.wrapResult([], this.archive.bind(this)));
 	}
 
-	private async archive(_req: Request, res: Response<ArchiveAttendanceResponse>): Promise<void> {
+	private async archive(_body: unknown, _query: unknown): Promise<Result<ArchiveAttendanceResponse>> {
 		const archivedCount = await this.sessionAttendanceServer.archive();
-		res.json({ archivedCount });
+		return Results.ok({ archivedCount });
 	}
 }
