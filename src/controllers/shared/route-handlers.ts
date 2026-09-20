@@ -3,40 +3,10 @@ import { Logger } from '../../logger/logger';
 import './types/express-request.type';
 import { Result } from './types/result.type';
 
-// Shared by every wrap<N>Param(s)* variant below - translates a Result into the actual res.status()/json()/end()
-// call. Not exported: only the wrap<N>Param(s)* functions call it.
-function sendResult<ResBody>(result: Result<ResBody>, res: Response<ResBody>): void {
-	switch (result.status) {
-		case 204:
-		case 404:
-			res.status(result.status).end();
-			return;
-		case 200:
-		case 201:
-			res.status(result.status).json(result.body);
-			return;
-		case 400:
-			if (result.error === undefined) {
-				res.status(400).end();
-				return;
-			}
-			res.status(400).json((result.details ? { error: result.error, details: result.details } : { error: result.error }) as ResBody);
-			return;
-		case 409: {
-			// Copy-then-delete (not destructuring) - a `const { status: _status, ...body } = result`
-			// compiles fine but trips this project's no-unused-vars on the unused `_status` binding.
-			const body: Record<string, unknown> = { ...result };
-			delete body.status;
-			res.status(409).json(body as ResBody);
-			return;
-		}
-	}
-}
-
 export class RouteHandlers {
-	// wrap<N>Param(s)* family: adapts a Result-returning handler into an Express RequestHandler. Each path param is
-	// its own named positional argument, and a route needs at most one of body/query/file (never more than one,
-	// checked across every route in this codebase), so each variant name encodes exactly what its handler needs:
+	// wrap<N>Param(s)* family: adapts a Result-returning handler into an Express RequestHandler.
+	// Each path param is its own named positional argument, and a route needs at most one of body/query/file (never more than one, checked across every route in this codebase),
+	// so each variant name encodes exactly what its handler needs:
 	// how many path params (No/One/Two) plus an optional Body/Query/File suffix. A handler simply omits the
 	// parameter(s) it doesn't need.
 	//
@@ -50,7 +20,7 @@ export class RouteHandlers {
 	public static wrapNoParams<ResBody>(handler: () => Promise<Result<ResBody>>): RequestHandler<ParamsDictionary, ResBody> {
 		return (_req: Request<ParamsDictionary, ResBody>, res: Response<ResBody>, next: NextFunction): void => {
 			handler()
-				.then((result: Result<ResBody>): void => sendResult(result, res))
+				.then((result: Result<ResBody>): void => this.sendResult(result, res))
 				.catch(next);
 		};
 	}
@@ -58,7 +28,7 @@ export class RouteHandlers {
 	public static wrapNoParamsBody<ResBody, ReqBody>(handler: (body: ReqBody) => Promise<Result<ResBody>>): RequestHandler<ParamsDictionary, ResBody, ReqBody> {
 		return (req: Request<ParamsDictionary, ResBody, ReqBody>, res: Response<ResBody>, next: NextFunction): void => {
 			handler(req.body)
-				.then((result: Result<ResBody>): void => sendResult(result, res))
+				.then((result: Result<ResBody>): void => this.sendResult(result, res))
 				.catch(next);
 		};
 	}
@@ -66,7 +36,7 @@ export class RouteHandlers {
 	public static wrapNoParamsQuery<ResBody, ReqQuery>(handler: (query: ReqQuery) => Promise<Result<ResBody>>): RequestHandler<ParamsDictionary, ResBody, unknown, ReqQuery> {
 		return (req: Request<ParamsDictionary, ResBody, unknown, ReqQuery>, res: Response<ResBody>, next: NextFunction): void => {
 			handler(req.query)
-				.then((result: Result<ResBody>): void => sendResult(result, res))
+				.then((result: Result<ResBody>): void => this.sendResult(result, res))
 				.catch(next);
 		};
 	}
@@ -74,7 +44,7 @@ export class RouteHandlers {
 	public static wrapOneParam<ResBody>(paramKey: string, handler: (id: string) => Promise<Result<ResBody>>): RequestHandler<ParamsDictionary, ResBody> {
 		return (req: Request<ParamsDictionary, ResBody>, res: Response<ResBody>, next: NextFunction): void => {
 			handler(req.params[paramKey] as string)
-				.then((result: Result<ResBody>): void => sendResult(result, res))
+				.then((result: Result<ResBody>): void => this.sendResult(result, res))
 				.catch(next);
 		};
 	}
@@ -82,7 +52,7 @@ export class RouteHandlers {
 	public static wrapOneParamBody<ResBody, ReqBody>(paramKey: string, handler: (id: string, body: ReqBody) => Promise<Result<ResBody>>): RequestHandler<ParamsDictionary, ResBody, ReqBody> {
 		return (req: Request<ParamsDictionary, ResBody, ReqBody>, res: Response<ResBody>, next: NextFunction): void => {
 			handler(req.params[paramKey] as string, req.body)
-				.then((result: Result<ResBody>): void => sendResult(result, res))
+				.then((result: Result<ResBody>): void => this.sendResult(result, res))
 				.catch(next);
 		};
 	}
@@ -90,7 +60,7 @@ export class RouteHandlers {
 	public static wrapOneParamQuery<ResBody, ReqQuery>(paramKey: string, handler: (id: string, query: ReqQuery) => Promise<Result<ResBody>>): RequestHandler<ParamsDictionary, ResBody, unknown, ReqQuery> {
 		return (req: Request<ParamsDictionary, ResBody, unknown, ReqQuery>, res: Response<ResBody>, next: NextFunction): void => {
 			handler(req.params[paramKey] as string, req.query)
-				.then((result: Result<ResBody>): void => sendResult(result, res))
+				.then((result: Result<ResBody>): void => this.sendResult(result, res))
 				.catch(next);
 		};
 	}
@@ -101,7 +71,7 @@ export class RouteHandlers {
 	public static wrapOneParamFile<ResBody>(paramKey: string, handler: (id: string, file: Express.Multer.File | undefined) => Promise<Result<ResBody>>): RequestHandler<ParamsDictionary, ResBody> {
 		return (req: Request<ParamsDictionary, ResBody> & { file?: Express.Multer.File }, res: Response<ResBody>, next: NextFunction): void => {
 			handler(req.params[paramKey] as string, req.file)
-				.then((result: Result<ResBody>): void => sendResult(result, res))
+				.then((result: Result<ResBody>): void => this.sendResult(result, res))
 				.catch(next);
 		};
 	}
@@ -109,7 +79,7 @@ export class RouteHandlers {
 	public static wrapTwoParams<ResBody>(paramKeys: readonly [string, string], handler: (a: string, b: string) => Promise<Result<ResBody>>): RequestHandler<ParamsDictionary, ResBody> {
 		return (req: Request<ParamsDictionary, ResBody>, res: Response<ResBody>, next: NextFunction): void => {
 			handler(req.params[paramKeys[0]] as string, req.params[paramKeys[1]] as string)
-				.then((result: Result<ResBody>): void => sendResult(result, res))
+				.then((result: Result<ResBody>): void => this.sendResult(result, res))
 				.catch(next);
 		};
 	}
@@ -117,7 +87,7 @@ export class RouteHandlers {
 	public static wrapTwoParamsBody<ResBody, ReqBody>(paramKeys: readonly [string, string], handler: (a: string, b: string, body: ReqBody) => Promise<Result<ResBody>>): RequestHandler<ParamsDictionary, ResBody, ReqBody> {
 		return (req: Request<ParamsDictionary, ResBody, ReqBody>, res: Response<ResBody>, next: NextFunction): void => {
 			handler(req.params[paramKeys[0]] as string, req.params[paramKeys[1]] as string, req.body)
-				.then((result: Result<ResBody>): void => sendResult(result, res))
+				.then((result: Result<ResBody>): void => this.sendResult(result, res))
 				.catch(next);
 		};
 	}
@@ -142,5 +112,33 @@ export class RouteHandlers {
 			});
 			res.status(500).json({ error: 'Internal Server Error', correlationId });
 		};
+	}
+
+	// Shared by every wrap<N>Param(s)* variant below - translates a Result into the actual res.status()/json()/end() call.
+	private static sendResult<ResBody>(result: Result<ResBody>, res: Response<ResBody>): void {
+		switch (result.status) {
+			case 204:
+			case 404:
+				res.status(result.status).end();
+				return;
+			case 200:
+			case 201:
+				res.status(result.status).json(result.body);
+				return;
+			case 400:
+				if (result.error === undefined) {
+					res.status(400).end();
+					return;
+				}
+				res.status(400).json((result.details ? { error: result.error, details: result.details } : { error: result.error }) as ResBody);
+				return;
+			case 409: {
+				// Copy-then-delete (not destructuring) - a `const { status: _status, ...body } = result` compiles fine but trips this project's no-unused-vars on the unused `_status` binding.
+				const body: Record<string, unknown> = { ...result };
+				delete body.status;
+				res.status(409).json(body as ResBody);
+				return;
+			}
+		}
 	}
 }

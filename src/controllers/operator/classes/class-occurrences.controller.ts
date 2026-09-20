@@ -17,22 +17,6 @@ import { SessionAttendance } from '../../../entities/session-attendance.entity';
 import { toPublic } from '../../../utils/to-public';
 import { Results } from '../../shared/results';
 import { Result } from '../../shared/types/result.type';
-
-// Internal helper, not an exposed route.
-function toOccurrenceResponseItem(occurrence: Occurrence): OccurrenceResponseItem {
-	if (occurrence.isVirtual) {
-		return { isVirtual: true, classId: occurrence.classId, startTime: occurrence.startTime.toISOString(), title: occurrence.displayTitle, attendance: occurrence.attendance };
-	}
-	return {
-		isVirtual: false,
-		sessionId: occurrence.session.id,
-		startTime: occurrence.session.startTime.toISOString(),
-		isMakeupSession: occurrence.session.isMakeupSession,
-		title: occurrence.displayTitle,
-		attendance: occurrence.attendance,
-	};
-}
-
 @injectable()
 export class ClassOccurrencesController extends BaseController {
 	public constructor(
@@ -255,11 +239,6 @@ export class ClassOccurrencesController extends BaseController {
 		this.internalRouter.post('/:id/makeup-session', RouteHandlers.wrapOneParamBody('id', this.createMakeupSession.bind(this)));
 	}
 
-	// Internal helper, not an exposed route.
-	private isClassIdError(error: ValidationError): boolean {
-		return error.details.some((detail: ValidationErrorDetail): boolean => detail.field === 'classId');
-	}
-
 	// Lists a class's future occurrences (virtual and materialized) in a date range.
 	private async listFuture(id: string, query: ListOccurrencesQuery): Promise<Result<ListOccurrencesResponse>> {
 		try {
@@ -370,4 +349,31 @@ export class ClassOccurrencesController extends BaseController {
 			throw error;
 		}
 	}
+
+	// Internal helper, not an exposed route.
+	private isClassIdError(error: ValidationError): boolean {
+		return error.details.some((detail: ValidationErrorDetail): boolean => detail.field === 'classId');
+	}
+}
+
+// Internal helper, not an exposed route.
+function toOccurrenceResponseItem(occurrence: Occurrence): OccurrenceResponseItem {
+	if (occurrence.isVirtual) {
+		return {
+			isVirtual: true,
+			classId: occurrence.classId,
+			startTime: occurrence.startTime.toISOString(),
+			title: occurrence.displayTitle,
+			attendance: occurrence.attendance,
+		};
+	}
+
+	return {
+		isVirtual: false,
+		sessionId: occurrence.session.id,
+		startTime: occurrence.session.startTime.toISOString(),
+		isMakeupSession: occurrence.session.isMakeupSession,
+		title: occurrence.displayTitle,
+		attendance: occurrence.attendance,
+	};
 }

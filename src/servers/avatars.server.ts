@@ -5,8 +5,7 @@ import { OperatorsServer } from './operators.server';
 import { AvatarStorage } from './types/avatar-storage';
 import { MIME_EXTENSIONS } from './types/avatars.server.types';
 
-// Shared by both HouseholdSettingsController and OperatorSettingsController - the upload/validation/storage flow is
-// identical for a household's and an operator's avatar, only the entity being updated differs.
+// Shared by both HouseholdSettingsController and OperatorSettingsControllers
 @injectable()
 export class AvatarsServer {
 	public constructor(
