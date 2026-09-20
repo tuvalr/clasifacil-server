@@ -1,17 +1,16 @@
-import { Request, Response } from 'express';
 import { inject, injectable } from 'inversify';
 import { TYPES } from '../../../container/types';
 import { ClassesServer } from '../../../servers/classes.server';
 import { ClassHasActiveEnrollmentsError, AssignStudentResult } from '../../../servers/types/classes.server.types';
 import { ValidationError, ValidationErrorDetail } from '../../../servers/types/validation-error';
 import { RouteHandlers } from '../../shared/route-handlers';
+import { Results } from '../../shared/results';
+import { Result } from '../../shared/types/result.type';
 import { BaseController } from '../../shared/base.controller';
 import { ListClassesResponse } from './types/list-classes-response.type';
 import { GetClassResponse } from './types/get-class-response.type';
 import { ClassMutationResponse } from './types/class-mutation-response.type';
 import { CreateClassBody } from './types/create-class-body.type';
-import { ClassValidationErrorResponse } from './types/class-validation-error-response.type';
-import { CreateClassResult } from './types/create-class-result.type';
 import { UpdateClassBody } from './types/update-class-body.type';
 import { AssignStudentsBody } from './types/assign-students-body.type';
 import { AssignStudentsResponse, AssignStudentsResponseItem } from './types/assign-students-response.type';
@@ -44,7 +43,7 @@ export class ClassesController extends BaseController {
 		 *       404: { description: Operator not found }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.get('/', RouteHandlers.wrap(this.listClasses.bind(this)));
+		this.internalRouter.get('/', RouteHandlers.wrapResult([], this.listClasses.bind(this)));
 
 		/**
 		 * @openapi
@@ -68,7 +67,7 @@ export class ClassesController extends BaseController {
 		 *       404: { description: Not found }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.get('/:id', RouteHandlers.wrap(this.getClassById.bind(this)));
+		this.internalRouter.get('/:id', RouteHandlers.wrapResult(['id'], this.getClassById.bind(this)));
 
 		/**
 		 * @openapi
@@ -103,11 +102,7 @@ export class ClassesController extends BaseController {
 		 *         description: Created
 		 *         content:
 		 *           application/json:
-		 *             schema:
-		 *               type: object
-		 *               properties:
-		 *                 success: { type: boolean }
-		 *                 class: { $ref: '#/components/schemas/Class' }
+		 *             schema: { $ref: '#/components/schemas/Class' }
 		 *       400:
 		 *         description: Validation failed
 		 *         content:
@@ -115,7 +110,6 @@ export class ClassesController extends BaseController {
 		 *             schema:
 		 *               type: object
 		 *               properties:
-		 *                 success: { type: boolean }
 		 *                 error: { type: string }
 		 *                 details:
 		 *                   type: array
@@ -127,7 +121,7 @@ export class ClassesController extends BaseController {
 		 *       401: { $ref: '#/components/responses/Unauthorized' }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.post('/', RouteHandlers.wrap(this.createClass.bind(this)));
+		this.internalRouter.post('/', RouteHandlers.wrapResult([], this.createClass.bind(this)));
 
 		/**
 		 * @openapi
@@ -165,7 +159,7 @@ export class ClassesController extends BaseController {
 		 *       404: { description: Not found }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.put('/:id', RouteHandlers.wrap(this.updateClass.bind(this)));
+		this.internalRouter.put('/:id', RouteHandlers.wrapResult(['id'], this.updateClass.bind(this)));
 
 		/**
 		 * @openapi
@@ -187,7 +181,7 @@ export class ClassesController extends BaseController {
 		 *       409: { description: 'Class has active student enrollments' }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.delete('/:id', RouteHandlers.wrap(this.deleteClass.bind(this)));
+		this.internalRouter.delete('/:id', RouteHandlers.wrapResult(['id'], this.deleteClass.bind(this)));
 
 		/**
 		 * @openapi
@@ -214,7 +208,7 @@ export class ClassesController extends BaseController {
 		 *       404: { description: Not found }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.post('/:id/stop', RouteHandlers.wrap(this.stopClass.bind(this)));
+		this.internalRouter.post('/:id/stop', RouteHandlers.wrapResult(['id'], this.stopClass.bind(this)));
 
 		/**
 		 * @openapi
@@ -238,7 +232,7 @@ export class ClassesController extends BaseController {
 		 *       404: { description: Not found }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.post('/:id/unstop', RouteHandlers.wrap(this.unstopClass.bind(this)));
+		this.internalRouter.post('/:id/unstop', RouteHandlers.wrapResult(['id'], this.unstopClass.bind(this)));
 
 		/**
 		 * @openapi
@@ -271,7 +265,7 @@ export class ClassesController extends BaseController {
 		 *       404: { description: Class not found }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.post('/:id/assign-students', RouteHandlers.wrap(this.assignStudents.bind(this)));
+		this.internalRouter.post('/:id/assign-students', RouteHandlers.wrapResult(['id'], this.assignStudents.bind(this)));
 
 		/**
 		 * @openapi
@@ -299,145 +293,130 @@ export class ClassesController extends BaseController {
 		 *       401: { $ref: '#/components/responses/Unauthorized' }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.post('/:id/unassign-students', RouteHandlers.wrap(this.unassignStudents.bind(this)));
+		this.internalRouter.post('/:id/unassign-students', RouteHandlers.wrapResult(['id'], this.unassignStudents.bind(this)));
+	}
+
+	// Internal helper, not an exposed route. "Class not found" is the only ValidationError raised once a
+	// method's other inputs are well-formed, so a details field of "classId" means 404; anything else is a
+	// genuine 400.
+	private isClassIdError(error: ValidationError): boolean {
+		return error.details.some((detail: ValidationErrorDetail): boolean => detail.field === 'classId');
 	}
 
 	// Lists all classes belonging to the given operator.
-	private async listClasses(req: Request<unknown, ListClassesResponse, unknown, { operatorId?: string }>, res: Response<ListClassesResponse>): Promise<void> {
-		const operatorId = Number(req.query.operatorId);
-		if (!req.query.operatorId || Number.isNaN(operatorId)) {
-			res.status(400).end();
-			return;
+	private async listClasses(_body: unknown, query: { operatorId?: string }): Promise<Result<ListClassesResponse>> {
+		const operatorId = Number(query.operatorId);
+		if (!query.operatorId || Number.isNaN(operatorId)) {
+			return Results.badRequest('operatorId is required');
 		}
 		const classes = await this.classesServer.listByOperatorId(operatorId);
 		if (!classes) {
-			res.status(404).end();
-			return;
+			return Results.notFound();
 		}
-		res.json(classes.map(toPublic));
+		return Results.ok(classes.map(toPublic));
 	}
 
 	// Fetches a single class by id.
-	private async getClassById(req: Request<{ id: string }>, res: Response<GetClassResponse>): Promise<void> {
-		const foundClass = await this.classesServer.findById(Number(req.params.id));
+	private async getClassById(id: string, _body: unknown, _query: unknown): Promise<Result<GetClassResponse>> {
+		const foundClass = await this.classesServer.findById(Number(id));
 		if (!foundClass) {
-			res.status(404).end();
-			return;
+			return Results.notFound();
 		}
-		res.json(toPublic(foundClass));
+		return Results.ok(toPublic(foundClass));
 	}
 
 	// Creates a new recurring class definition, including atomic student assignment for assigned-type operators.
-	private async createClass(req: Request<unknown, CreateClassResult, CreateClassBody>, res: Response<CreateClassResult>): Promise<void> {
+	private async createClass(body: CreateClassBody, _query: unknown): Promise<Result<ClassMutationResponse>> {
 		try {
-			const created = await this.classesServer.create(req.body);
-			res.status(201).json({ success: true, class: toPublic(created) });
+			const created = await this.classesServer.create(body);
+			return Results.created(toPublic(created));
 		} catch (error) {
 			if (error instanceof ValidationError) {
-				res.status(400).json({ success: false, error: 'Validation failed', details: error.details });
-				return;
+				return Results.validationError(error.details);
 			}
-			// Any other thrown error (e.g. a raw Postgres error that slipped past application-level validation) is
-			// reported as a failed result with a generic message, rather than propagating into the generic 500 handler,
-			// so internal error details aren't leaked to the caller.
-			res.status(400).json({ success: false, error: error instanceof Error ? error.message : 'Unknown error' });
+			throw error;
 		}
 	}
 
 	// Updates a class's stored recurring pattern (title, day/time, capacity) - never touches existing sessions.
-	private async updateClass(req: Request<{ id: string }, ClassMutationResponse | ClassValidationErrorResponse, UpdateClassBody>, res: Response<ClassMutationResponse | ClassValidationErrorResponse>): Promise<void> {
+	private async updateClass(id: string, body: UpdateClassBody, _query: unknown): Promise<Result<ClassMutationResponse>> {
 		try {
-			const updated = await this.classesServer.update(Number(req.params.id), req.body);
+			const updated = await this.classesServer.update(Number(id), body);
 			if (!updated) {
-				res.status(404).end();
-				return;
+				return Results.notFound();
 			}
-			res.json(toPublic(updated));
+			return Results.ok(toPublic(updated));
 		} catch (error) {
 			if (error instanceof ValidationError) {
-				res.status(400).json({ error: 'Validation failed', details: error.details });
-				return;
+				return Results.validationError(error.details);
 			}
 			throw error;
 		}
 	}
 
 	// Soft-deletes a class; rejected with 409 if it still has active student enrollments.
-	private async deleteClass(req: Request<{ id: string }>, res: Response): Promise<void> {
+	private async deleteClass(id: string, _body: unknown, _query: unknown): Promise<Result<never>> {
 		try {
-			const deleted = await this.classesServer.delete(Number(req.params.id));
+			const deleted = await this.classesServer.delete(Number(id));
 			if (!deleted) {
-				res.status(404).end();
-				return;
+				return Results.notFound();
 			}
-			res.status(204).end();
+			return Results.noContent();
 		} catch (error) {
 			if (error instanceof ClassHasActiveEnrollmentsError) {
-				res.status(409).json({ error: error.message });
-				return;
+				return Results.conflict(error.message);
 			}
 			throw error;
 		}
 	}
 
 	// Stops a class, blocking new derived occurrences past this point; reversible via unstop.
-	private async stopClass(req: Request<{ id: string }>, res: Response<ClassMutationResponse>): Promise<void> {
-		const stopped = await this.classesServer.stop(Number(req.params.id));
+	private async stopClass(id: string, _body: unknown, _query: unknown): Promise<Result<ClassMutationResponse>> {
+		const stopped = await this.classesServer.stop(Number(id));
 		if (!stopped) {
-			res.status(404).end();
-			return;
+			return Results.notFound();
 		}
-		res.json(toPublic(stopped));
+		return Results.ok(toPublic(stopped));
 	}
 
 	// Reverses a previous stop, resuming derived occurrences.
-	private async unstopClass(req: Request<{ id: string }>, res: Response<ClassMutationResponse>): Promise<void> {
-		const unstopped = await this.classesServer.unstop(Number(req.params.id));
+	private async unstopClass(id: string, _body: unknown, _query: unknown): Promise<Result<ClassMutationResponse>> {
+		const unstopped = await this.classesServer.unstop(Number(id));
 		if (!unstopped) {
-			res.status(404).end();
-			return;
+			return Results.notFound();
 		}
-		res.json(toPublic(unstopped));
+		return Results.ok(toPublic(unstopped));
 	}
 
 	// Bulk-assigns students to a class's standing roster; each studentId succeeds or fails independently.
-	private async assignStudents(req: Request<{ id: string }, AssignStudentsResponse | ClassValidationErrorResponse, AssignStudentsBody>, res: Response<AssignStudentsResponse | ClassValidationErrorResponse>): Promise<void> {
+	private async assignStudents(id: string, body: AssignStudentsBody, _query: unknown): Promise<Result<AssignStudentsResponse>> {
 		try {
-			const results = await this.classesServer.assignStudents(Number(req.params.id), req.body.studentIds);
-			res.json(
+			const results = await this.classesServer.assignStudents(Number(id), body.studentIds);
+			return Results.ok(
 				results.map((result: AssignStudentResult): AssignStudentsResponseItem => (result.success ? { studentId: result.studentId, success: true, enrollment: result.enrollment } : { studentId: result.studentId, success: false, error: result.error })),
 			);
 		} catch (error) {
 			if (error instanceof ValidationError) {
-				// "Class not found" is the only ValidationError raised once studentIds itself is well-formed (checked
-				// first in ClassesServer.assignStudents), so a details field of "classId" means 404; anything else
-				// (e.g. "studentIds" for a malformed body) is a genuine 400.
-				if (error.details.some((detail: ValidationErrorDetail): boolean => detail.field === 'classId')) {
-					res.status(404).end();
-					return;
+				if (this.isClassIdError(error)) {
+					return Results.notFound();
 				}
-				res.status(400).json({ error: 'Validation failed', details: error.details });
-				return;
+				return Results.validationError(error.details);
 			}
 			throw error;
 		}
 	}
 
 	// Bulk-removes students from a class's standing roster.
-	private async unassignStudents(req: Request<{ id: string }, ClassValidationErrorResponse, AssignStudentsBody>, res: Response<ClassValidationErrorResponse>): Promise<void> {
+	private async unassignStudents(id: string, body: AssignStudentsBody, _query: unknown): Promise<Result<never>> {
 		try {
-			await this.classesServer.unassignStudents(Number(req.params.id), req.body.studentIds);
-			res.status(204).end();
+			await this.classesServer.unassignStudents(Number(id), body.studentIds);
+			return Results.noContent();
 		} catch (error) {
 			if (error instanceof ValidationError) {
-				// "Class not found" is indicated by a details field of "classId" (404); anything else
-				// (e.g. "studentIds" for a malformed body, or "operatorType" for wrong operator type) is a genuine 400.
-				if (error.details.some((detail: ValidationErrorDetail): boolean => detail.field === 'classId')) {
-					res.status(404).end();
-					return;
+				if (this.isClassIdError(error)) {
+					return Results.notFound();
 				}
-				res.status(400).json({ error: 'Validation failed', details: error.details });
-				return;
+				return Results.validationError(error.details);
 			}
 			throw error;
 		}
