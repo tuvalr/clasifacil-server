@@ -12,7 +12,7 @@ import { EnrollmentAndCredit } from '../entities/enrollment-and-credit.entity';
 import { ClassEnrollment } from '../entities/class-enrollment.entity';
 import { Class } from '../entities/class.entity';
 import { ValidationError } from './types/validation-error';
-import { BookingConflict, PlainSessionNotAllowedError } from './types/sessions.server.types';
+import { BookingConflictError, PlainSessionNotAllowedError } from './types/sessions.server.types';
 
 // UC2: Automated Session Booking & Capacity Hard Limits. Operator-side
 // session management (create/cancel/roster) and household-side booking
@@ -164,7 +164,7 @@ export class SessionsServer {
 	// insert below are NOT atomic and can race under real concurrent
 	// load. This is a correctness gap flagged here, not silently
 	// accepted.
-	public async book(sessionId: number, studentId: number, householdId: number): Promise<EnrollmentAndCredit | BookingConflict | null> {
+	public async book(sessionId: number, studentId: number, householdId: number): Promise<EnrollmentAndCredit | null> {
 		const session = await this.sessions.findById(sessionId);
 		if (!session) {
 			return null;
@@ -184,7 +184,7 @@ export class SessionsServer {
 			// PRD: route to waitlist instead of rejecting outright - not
 			// implemented (see waitlist TODOs), so this only reports the
 			// capacity conflict for now.
-			return { conflict: true, waitlisted: false };
+			throw new BookingConflictError();
 		}
 
 		const enrollment = await this.enrollments.create({ studentId, sessionId, householdId, status: 'booked' });
