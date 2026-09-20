@@ -5,6 +5,8 @@ import { SessionRepository } from '../repositories/session.repository';
 import { ClassOccurrencesServer } from '../servers/class-occurrences.server';
 import { Class } from '../entities/class.entity';
 import { Logger } from '../logger/logger';
+import { OperatorRepository } from '../repositories/operator.repository';
+import { walkLocalWeekday } from '../utils/timezone.util';
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
@@ -21,6 +23,7 @@ export class NightlyBackfillJob {
 		@inject(TYPES.SessionRepository) private readonly sessions: SessionRepository,
 		@inject(TYPES.ClassOccurrencesServer) private readonly classOccurrences: ClassOccurrencesServer,
 		@inject(TYPES.Logger) private readonly logger: Logger,
+		@inject(TYPES.OperatorRepository) private readonly operators: OperatorRepository,
 	) {}
 
 	public async run(): Promise<void> {
@@ -51,24 +54,26 @@ export class NightlyBackfillJob {
 			return;
 		}
 
-		const [hours, minutes, seconds]: number[] = foundClass.startTime.split(':').map(Number);
-		const cursor = new Date(startFrom);
-		cursor.setUTCHours(hours, minutes, seconds ?? 0, 0);
-		while (cursor.getUTCDay() !== foundClass.dayOfWeek) {
-			cursor.setUTCDate(cursor.getUTCDate() + 1);
+		const operator = await this.operators.findById(foundClass.operatorId);
+		if (!operator) {
+			this.logger.error('nightly backfill: class references a nonexistent operator, skipping', { classId: foundClass.id, operatorId: foundClass.operatorId });
+			return;
 		}
 
-		while (cursor.getTime() <= yesterday.getTime()) {
+		// Same local-calendar walk + DST-aware conversion as ClassOccurrencesServer.computeOccurrenceDates and
+		// materializeOccurrence — all three code paths must agree on the same UTC instant for a given class+date.
+		const localMidnights = walkLocalWeekday(startFrom, yesterday, operator.timezone, foundClass.dayOfWeek);
+		for (const localMidnight of localMidnights) {
 			try {
-				await this.classOccurrences.materializeOccurrence(foundClass.id, new Date(cursor));
+				// Sequential — backfilling one class's date range in order; this is a nightly job, not a request path.
+				await this.classOccurrences.materializeOccurrence(foundClass.id, localMidnight);
 			} catch (error) {
 				this.logger.error('nightly backfill: failed to materialize occurrence', {
 					classId: foundClass.id,
-					date: cursor.toISOString(),
+					date: localMidnight.toISOString(),
 					error: error instanceof Error ? error.message : error,
 				});
 			}
-			cursor.setUTCDate(cursor.getUTCDate() + 7);
 		}
 	}
 }
