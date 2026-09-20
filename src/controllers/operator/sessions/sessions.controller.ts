@@ -195,7 +195,7 @@ export class SessionsController extends BaseController {
 		 * /api/operator/sessions/{id}/attendance:
 		 *   get:
 		 *     summary: Get recorded attendance for a true one-off session
-		 *     description: Returns only recorded rows — a student with no session_attendance row simply doesn't appear (not synthesized as not_recorded here).
+		 *     description: Returns only recorded rows - a student with no session_attendance row simply doesn't appear (not synthesized as not_recorded here).
 		 *     tags: [Operator - Sessions]
 		 *     parameters:
 		 *       - in: path
@@ -232,7 +232,7 @@ export class SessionsController extends BaseController {
 		 *   put:
 		 *     summary: Record or correct attendance for a true one-off session
 		 *     description: >
-		 *       Upserts one row per given student — marking again updates the existing record, never duplicates it.
+		 *       Upserts one row per given student - marking again updates the existing record, never duplicates it.
 		 *       Rejected with 400 if the session's startTime is still in the future.
 		 *     tags: [Operator - Sessions]
 		 *     parameters:

@@ -88,10 +88,10 @@ export class BillingController extends BaseController {
 		 */
 		this.internalRouter.post('/:id/record-offline-payment', RouteHandlers.wrap(this.recordOfflinePayment.bind(this)));
 
-		// TODO: requires a class-pack balance table (PRD Model 3: "10-class pack for €130", decremented per booking) — no such table exists yet.
+		// TODO: requires a class-pack balance table (PRD Model 3: "10-class pack for €130", decremented per booking) - no such table exists yet.
 		this.internalRouter.get('/class-packs/:householdId', RouteHandlers.notImplemented);
 
-		// TODO: requires Stripe Connect integration (PRD Model 4: split payouts to the operator's connected account) — no Stripe SDK is
+		// TODO: requires Stripe Connect integration (PRD Model 4: split payouts to the operator's connected account) - no Stripe SDK is
 		// installed and operators.stripe_account_id, while present, isn't wired to any payment flow yet.
 		this.internalRouter.post('/stripe/connect', RouteHandlers.notImplemented);
 	}

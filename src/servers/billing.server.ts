@@ -32,7 +32,7 @@ export class BillingServer {
 	}
 
 	// Model 2: Cash / Offline Payment Recording. PRD requires logging WHO
-	// recorded the payment "to prevent unrecorded revenue" — the
+	// recorded the payment "to prevent unrecorded revenue" - the
 	// invoices_and_payments table has operator_id (who the invoice
 	// belongs to) but no separate recorded_by_user_id column, so this
 	// only marks the invoice paid; it can't yet record which staff member
@@ -42,10 +42,10 @@ export class BillingServer {
 	}
 
 	// TODO: requires a class-pack balance table (PRD Model 3: "10-class
-	// pack for €130", decremented per booking) — no such table exists yet.
+	// pack for €130", decremented per booking) - no such table exists yet.
 
 	// TODO: requires Stripe Connect integration (PRD Model 4: split
-	// payouts to the operator's connected account) — no Stripe SDK is
+	// payouts to the operator's connected account) - no Stripe SDK is
 	// installed and operators.stripe_account_id, while present, isn't
 	// wired to any payment flow yet.
 
@@ -59,8 +59,8 @@ export class BillingServer {
 		return this.invoices.findByHouseholdId(householdId);
 	}
 
-	// TODO: Model 1 Pay-Per-Class (Drop-in) card checkout — requires a
-	// payment-processor integration (Stripe) — no Stripe SDK is installed
+	// TODO: Model 1 Pay-Per-Class (Drop-in) card checkout - requires a
+	// payment-processor integration (Stripe) - no Stripe SDK is installed
 	// and invoices_and_payments.stripe_charge_id, while present, has no
 	// write path yet.
 }

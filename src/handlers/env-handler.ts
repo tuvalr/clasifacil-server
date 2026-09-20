@@ -16,7 +16,7 @@ export class EnvHandler {
 	//   2. Populate process.env with the fetched values, the same way
 	//      dotenv does, before loadConfig() reads them.
 	// This method must keep running before loadConfig() in
-	// inversify.config.ts — Config is built once from process.env at
+	// inversify.config.ts - Config is built once from process.env at
 	// container-construction time, so anything fetched after that point
 	// would never reach the already-built Config.
 	public async load(): Promise<void> {

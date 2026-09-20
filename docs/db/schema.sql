@@ -1,4 +1,4 @@
--- Clasifacil Server — full database DDL.
+-- Clasifacil Server - full database DDL.
 --
 -- This is a hand-maintained snapshot of the schema actually running against the local dev database
 -- (introspected via information_schema/pg_catalog, since this repo has no migration tooling and no
@@ -6,7 +6,7 @@
 -- environment (staging, prod, another dev machine).
 --
 -- IMPORTANT: whenever the schema changes (a new ALTER TABLE, a new table, a new index/constraint),
--- update this file in the same change — it is not auto-generated and will drift silently otherwise.
+-- update this file in the same change - it is not auto-generated and will drift silently otherwise.
 
 -- ==========================================================================
 -- operators
@@ -25,7 +25,7 @@ CREATE TABLE operators (
 	avatar_url         TEXT,
 	type               VARCHAR(20)              NOT NULL DEFAULT 'schedule',
 	timezone           VARCHAR(64)              NOT NULL DEFAULT 'UTC',  -- IANA timezone name, e.g. 'America/New_York'.
-	                                                                     -- DB default only backfills existing rows —
+	                                                                     -- DB default only backfills existing rows -
 	                                                                     -- the application layer requires it on create.
 	is_deleted         BOOLEAN                  NOT NULL DEFAULT FALSE,
 	deleted_at         TIMESTAMPTZ,
@@ -34,7 +34,7 @@ CREATE TABLE operators (
 	CONSTRAINT operators_status_check CHECK (status IN ('active', 'paused'))
 );
 
--- Case-insensitive-in-practice (app validates format), but uniqueness is scoped to active rows only —
+-- Case-insensitive-in-practice (app validates format), but uniqueness is scoped to active rows only -
 -- a soft-deleted operator's email is free to be reused by a new one.
 CREATE UNIQUE INDEX operators_email_active_key ON operators (email) WHERE (NOT is_deleted);
 
@@ -42,7 +42,7 @@ CREATE UNIQUE INDEX operators_email_active_key ON operators (email) WHERE (NOT i
 -- classes
 -- ==========================================================================
 -- Recurring weekly classes (schedule-type operators) and recurring 1:1 slots (assigned-type operators) share
--- this same table — see docs/superpowers/specs/2026-09-12-operator-scheduling-design.md. For type='assigned'
+-- this same table - see docs/superpowers/specs/2026-09-12-operator-scheduling-design.md. For type='assigned'
 -- recurring slots, max_size is always 1 and min_size is always NULL (enforced in the server layer, not here).
 CREATE TABLE classes (
     id                BIGSERIAL PRIMARY KEY,
@@ -70,7 +70,7 @@ CREATE TABLE classes (
 -- households
 -- ==========================================================================
 -- Unlike operators/users, email uniqueness here is a plain table-level UNIQUE constraint, not a partial
--- index scoped to active rows — a soft-deleted household's email is NOT freed up for reuse. Preserved
+-- index scoped to active rows - a soft-deleted household's email is NOT freed up for reuse. Preserved
 -- as-is to match what's actually running; consider aligning with the operators/users pattern
 -- (a partial unique index WHERE NOT is_deleted) if that was an oversight rather than intentional.
 CREATE TABLE households (
@@ -92,7 +92,7 @@ CREATE TABLE households (
 CREATE TABLE sessions (
 	id                     BIGSERIAL PRIMARY KEY,
 	operator_id            BIGINT        NOT NULL REFERENCES operators (id) ON DELETE CASCADE,
-	title                  VARCHAR(255),  -- NULL for any class-linked session (class_id IS NOT NULL) — display
+	title                  VARCHAR(255),  -- NULL for any class-linked session (class_id IS NOT NULL) - display
 	                                       -- always reads the parent class's current title live. Only populated
 	                                       -- for a true one-off session (class_id IS NULL).
 	start_time             TIMESTAMPTZ   NOT NULL,
@@ -101,7 +101,7 @@ CREATE TABLE sessions (
 	class_id               BIGINT        REFERENCES classes (id) ON DELETE CASCADE,
 	original_date          DATE,          -- the class pattern's derived date this row was first materialized for
 	                                       -- (UTC calendar day). Set once at materialization, never changed by a
-	                                       -- later reschedule — start_time can move, but this stays the occurrence's
+	                                       -- later reschedule - start_time can move, but this stays the occurrence's
 	                                       -- true identity, so a rescheduled-away slot never reappears as virtual.
 	                                       -- NULL for true one-off sessions and makeup sessions (no pattern date).
 	is_makeup_session      BOOLEAN       NOT NULL DEFAULT FALSE,
@@ -130,8 +130,8 @@ CREATE TABLE students (
 -- class_enrollments
 -- ==========================================================================
 -- The standing student<->class membership for schedule-type classes (assigned-type classes' single student is
--- intrinsic to the class row and does not use this table's guard the same way — see ClassesServer.delete).
--- No household_id column — a student's household is resolved via students.household_id whenever needed, never
+-- intrinsic to the class row and does not use this table's guard the same way - see ClassesServer.delete).
+-- No household_id column - a student's household is resolved via students.household_id whenever needed, never
 -- duplicated here. The unique constraint is a plain (class_id, student_id) pair, not partial on status, so
 -- unassigning then reassigning the same student re-activates the existing row instead of inserting a new one.
 CREATE TABLE class_enrollments (
@@ -148,9 +148,9 @@ CREATE TABLE class_enrollments (
 -- ==========================================================================
 -- session_attendance
 -- ==========================================================================
--- One row per (session_id, student_id) — marking again updates in place (bumps updated_at), never inserts a
+-- One row per (session_id, student_id) - marking again updates in place (bumps updated_at), never inserts a
 -- duplicate. Not an audit log. class_id is nullable: populated for a class-linked session, NULL for a true
--- one-off session's attendance. student_id has no required relationship to class_enrollments — a "trial"
+-- one-off session's attendance. student_id has no required relationship to class_enrollments - a "trial"
 -- student (never enrolled) can still get a row here for one specific session.
 CREATE TABLE session_attendance (
 	id           BIGSERIAL PRIMARY KEY,
@@ -168,7 +168,7 @@ CREATE TABLE session_attendance (
 -- session_attendance_history
 -- ==========================================================================
 -- Same shape as session_attendance plus archived_at. Populated by POST /api/admin/session-attendance/archive,
--- which moves matching rows here and deletes them from the live table (not wrapped in an explicit transaction —
+-- which moves matching rows here and deletes them from the live table (not wrapped in an explicit transaction -
 -- see SessionAttendanceServer.archive). FKs kept (not decoupled) so archived rows stay referentially valid.
 CREATE TABLE session_attendance_history (
 	id           BIGINT        PRIMARY KEY,
@@ -215,7 +215,7 @@ CREATE TABLE invoices_and_payments (
 );
 
 -- ==========================================================================
--- users (login accounts — role + associated_entity_id points at an operators.id or households.id row)
+-- users (login accounts - role + associated_entity_id points at an operators.id or households.id row)
 -- ==========================================================================
 CREATE TABLE users (
 	id                     BIGSERIAL PRIMARY KEY,
@@ -230,7 +230,7 @@ CREATE TABLE users (
 	CONSTRAINT users_auth_uid_key UNIQUE (auth_uid)
 );
 
--- Login email must be unique among active accounts only — a soft-deleted user's email is free to reuse.
+-- Login email must be unique among active accounts only - a soft-deleted user's email is free to reuse.
 CREATE UNIQUE INDEX users_email_active_key ON users (email) WHERE (NOT is_deleted);
 
 -- ==========================================================================

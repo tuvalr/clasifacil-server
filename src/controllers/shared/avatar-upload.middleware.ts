@@ -6,7 +6,7 @@ const MAX_AVATAR_SIZE_BYTES = 2 * 1024 * 1024;
 
 class UnsupportedAvatarTypeError extends Error {}
 
-// memoryStorage() (not diskStorage) since AvatarsServer/AvatarStorage own where the bytes actually end up — this
+// memoryStorage() (not diskStorage) since AvatarsServer/AvatarStorage own where the bytes actually end up - this
 // middleware only parses the multipart body and enforces size/type limits before the request reaches the controller.
 const parseAvatarUpload = multer({
 	storage: multer.memoryStorage(),

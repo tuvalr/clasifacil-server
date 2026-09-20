@@ -5,10 +5,10 @@ import './types/express-request.type';
 export class RequestLogger {
 	// Mounted after RequestContext.middleware (needs req.correlationId) and express.json() (needs req.body
 	// parsed). Logs are debug-level, so this is a no-op in prod (PinoLogger only raises the level to 'debug'
-	// in dev/local) — safe to mount unconditionally rather than gating on NODE_ENV here too.
+	// in dev/local) - safe to mount unconditionally rather than gating on NODE_ENV here too.
 	public static middleware(logger: Logger) {
 		return (req: Request, res: Response, next: NextFunction): void => {
-			// req.params isn't populated yet at this point — this middleware runs before Express has matched the
+			// req.params isn't populated yet at this point - this middleware runs before Express has matched the
 			// route inside the mounted sub-routers, so route params only exist once the request has actually
 			// reached its handler. Logged on the response line instead, once routing has definitely completed.
 			logger.debug('request', {

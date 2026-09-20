@@ -26,7 +26,7 @@ export class OperatorHasActiveClassesError extends Error {
 
 export class OperatorTimezoneLockedError extends Error {
 	public constructor() {
-		super('Cannot change timezone once the operator has any class — contact an admin for manual correction');
+		super('Cannot change timezone once the operator has any class - contact an admin for manual correction');
 		this.name = 'OperatorTimezoneLockedError';
 	}
 }
@@ -64,7 +64,7 @@ export class OperatorsServer {
 	}
 
 	// Detail view: the operator plus each of its (non-cancelled) sessions, each annotated with its own
-	// enrollments — and each enrollment annotated with the student and household that booked it — everything an
+	// enrollments - and each enrollment annotated with the student and household that booked it - everything an
 	// admin needs to see who is connected to this operator without further round trips. Students/households are
 	// fetched once per distinct id (not once per enrollment) since the same household commonly has multiple
 	// students/enrollments across an operator's sessions.
@@ -104,9 +104,9 @@ export class OperatorsServer {
 		};
 	}
 
-	// Creates the operators row and its login-capable users row (role: 'operator', associatedEntityId: the new operator's id) together —
+	// Creates the operators row and its login-capable users row (role: 'operator', associatedEntityId: the new operator's id) together -
 	// if either insert fails, both roll back, so an operator can never be left without a way to log in. auth_uid is generated here (not
-	// accepted from the client) since it's a uuid-typed, unique login identifier — the caller has no business choosing it.
+	// accepted from the client) since it's a uuid-typed, unique login identifier - the caller has no business choosing it.
 	public async create(data: {
 		name: string;
 		email: string;
@@ -132,7 +132,7 @@ export class OperatorsServer {
 		});
 	}
 
-	// Soft-deletes the operator and its login-capable users row together — same atomicity reasoning as create(): a deleted operator must
+	// Soft-deletes the operator and its login-capable users row together - same atomicity reasoning as create(): a deleted operator must
 	// immediately lose the ability to log in, so both rows go together or neither does.
 	public async delete(id: number): Promise<Operator | null> {
 		const operator = await this.operators.findById(id);
@@ -152,8 +152,8 @@ export class OperatorsServer {
 	}
 
 	// pausedUntil: null means an unlimited (indefinite) pause; a date means the operator is paused until that time.
-	// Resuming is always an explicit call (resume()) — pausedUntil is not auto-expired on read.
-	// findById first (rather than trusting pause()'s own UPDATE...RETURNING) because that UPDATE has no is_deleted guard — without this
+	// Resuming is always an explicit call (resume()) - pausedUntil is not auto-expired on read.
+	// findById first (rather than trusting pause()'s own UPDATE...RETURNING) because that UPDATE has no is_deleted guard - without this
 	// check, a soft-deleted operator would still match and get silently paused/resumed instead of 404ing like every other endpoint.
 	public async pause(id: number, pausedUntil: Date | null): Promise<Operator | null> {
 		const operator = await this.operators.findById(id);
@@ -171,10 +171,10 @@ export class OperatorsServer {
 		return this.operators.resume(id);
 	}
 
-	// Blocked while the operator has any active (non-deleted) classes, regardless of pause status — switching
+	// Blocked while the operator has any active (non-deleted) classes, regardless of pause status - switching
 	// scheduling model out from under a live recurring class would orphan its occurrences/roster semantics.
 	// hasActiveClasses is injected as a callback (rather than this server depending on ClassesServer directly) to
-	// avoid a circular dependency between operators.server.ts and classes.server.ts — Task 2 wires the real check.
+	// avoid a circular dependency between operators.server.ts and classes.server.ts - Task 2 wires the real check.
 	public async changeType(id: number, type: 'schedule' | 'assigned', hasActiveClasses: (operatorId: number) => Promise<boolean>): Promise<Operator | null> {
 		const operator = await this.operators.findById(id);
 		if (!operator) {
@@ -186,10 +186,10 @@ export class OperatorsServer {
 		return this.operators.updateType(id, type);
 	}
 
-	// findById first — same reasoning as pause()/resume(): update() has no is_deleted guard, so without this check a
+	// findById first - same reasoning as pause()/resume(): update() has no is_deleted guard, so without this check a
 	// soft-deleted operator would still match and get silently updated instead of 404ing like every other endpoint.
 	// hasAnyClass is injected as a callback (rather than this server depending on ClassRepository directly) to avoid
-	// a circular dependency between operators.server.ts and classes.server.ts — same pattern as changeType's
+	// a circular dependency between operators.server.ts and classes.server.ts - same pattern as changeType's
 	// hasActiveClasses callback.
 	public async update(
 		id: number,
@@ -247,7 +247,7 @@ export class OperatorsServer {
 		return details;
 	}
 
-	// Only the fields actually present in `data` are checked — an update() caller that isn't touching name/email/phone
+	// Only the fields actually present in `data` are checked - an update() caller that isn't touching name/email/phone
 	// shouldn't be blocked by, say, another operator already having this operator's own unchanged email.
 	private async validateUpdate(id: number, data: { name?: string; email?: string; phone?: string; countryCode?: string; timezone?: string }): Promise<ValidationErrorDetail[]> {
 		const details: ValidationErrorDetail[] = [];
@@ -269,7 +269,7 @@ export class OperatorsServer {
 	}
 
 	// Checked against the runtime's actual IANA timezone database (Intl.supportedValuesOf('timeZone')) rather than
-	// a hand-maintained list, so it stays correct as the underlying tzdata updates — same "validate at the
+	// a hand-maintained list, so it stays correct as the underlying tzdata updates - same "validate at the
 	// application layer, not a raw DB error" reasoning as validatePhone's countryCode check.
 	private validateTimezone(timezone: unknown): ValidationErrorDetail[] {
 		if (typeof timezone !== 'string' || !VALID_TIMEZONES.has(timezone)) {
@@ -279,11 +279,11 @@ export class OperatorsServer {
 	}
 
 	// excludeId: a re-fetched match is the operator's own current row (the field is unchanged) rather than a genuine
-	// collision — pass the operator's own id on update so it doesn't flag against itself; null on create, where no
+	// collision - pass the operator's own id on update so it doesn't flag against itself; null on create, where no
 	// such row can exist yet. Shared by validateCreate/validateUpdate so both stay consistent automatically.
 	//
 	// Both operators_email_active_key and users_email_active_key are partial unique indexes scoped to active
-	// (NOT is_deleted) rows, so a soft-deleted operator's email is free to reuse — findByEmail/existsByEmail already
+	// (NOT is_deleted) rows, so a soft-deleted operator's email is free to reuse - findByEmail/existsByEmail already
 	// only see active rows, matching that scope exactly, with no separate ignoring-deleted lookup needed.
 	private async validateEmail(email: string, excludeId: number | null): Promise<ValidationErrorDetail[]> {
 		const details: ValidationErrorDetail[] = [];
@@ -299,10 +299,10 @@ export class OperatorsServer {
 			return details;
 		}
 
-		// users_email_active_key is a separate index (not scoped to operators) — checked independently so a taken
+		// users_email_active_key is a separate index (not scoped to operators) - checked independently so a taken
 		// login email 400s here instead of reaching that constraint raw. Only checked when the operators check above
 		// didn't already flag it, to avoid reporting the same email as invalid twice. Excluded by the *user's*
-		// associatedEntityId (not the operator match above, which already returned) — on an unchanged-email update,
+		// associatedEntityId (not the operator match above, which already returned) - on an unchanged-email update,
 		// the operator's own login account legitimately owns this email already.
 		const existingUser = await this.users.findByEmail(email);
 		if (existingUser && !(existingUser.role === 'operator' && existingUser.associatedEntityId === excludeId)) {
@@ -320,7 +320,7 @@ export class OperatorsServer {
 		return [];
 	}
 
-	// countryCode is required on create (format is only checkable together with it) but optional on update — a
+	// countryCode is required on create (format is only checkable together with it) but optional on update - a
 	// phone-only update's uniqueness check doesn't also need to re-validate format against a countryCode the caller
 	// isn't changing.
 	private async validatePhone(phone: string, excludeId: number | null, countryCode?: string): Promise<ValidationErrorDetail[]> {

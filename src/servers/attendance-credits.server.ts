@@ -30,7 +30,7 @@ export class AttendanceCreditsServer {
 	}
 
 	// TODO: requires a cancellation-policy-window column (PRD: "e.g. >24
-	// hours before session start") on operators or sessions — no such
+	// hours before session start") on operators or sessions - no such
 	// column exists yet.
 
 	// TODO: the daily token-expiration cron job (PRD UC3 edge case) has no
@@ -52,7 +52,7 @@ export class AttendanceCreditsServer {
 	// expiry); otherwise -> State C (forfeited, no credit). The 24-hour
 	// threshold below is hardcoded because there's no per-operator
 	// cancellation-policy-window column yet (see listBySession's policy
-	// TODO above) — once that column exists, this needs to read it
+	// TODO above) - once that column exists, this needs to read it
 	// instead of a fixed constant.
 	public async cancel(enrollmentId: number): Promise<EnrollmentAndCredit | null> {
 		const enrollment = await this.enrollments.findById(enrollmentId);

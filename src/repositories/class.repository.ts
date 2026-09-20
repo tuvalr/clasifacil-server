@@ -12,7 +12,7 @@ export class ClassRepository {
 	}
 
 	// Every non-stopped class across all operators, regardless of operator.type (schedule or recurring
-	// assigned) — used by the nightly backfill job, which applies uniformly per the spec (maxSize only affects
+	// assigned) - used by the nightly backfill job, which applies uniformly per the spec (maxSize only affects
 	// roster capacity, never derivation).
 	public async findAllActive(): Promise<Class[]> {
 		return this.db.queryActive(ClassEntity, "status = 'active'");
@@ -54,7 +54,7 @@ export class ClassRepository {
 		return rows.length > 0;
 	}
 
-	// Unlike every other query in this repository, deliberately ignores is_deleted — used only to decide whether an
+	// Unlike every other query in this repository, deliberately ignores is_deleted - used only to decide whether an
 	// operator's timezone may still be changed. Once any class has ever existed for this operator (even one since
 	// soft-deleted), its historical sessions/occurrences were already computed under the operator's timezone at the
 	// time, so the timezone must not change afterward (see OperatorsServer.update's timezone-lock guard).

@@ -120,7 +120,7 @@ export class AdminHouseholdsController extends BaseController {
 		 *     description: >
 		 *       Soft-deletes the household and its associated users row together, so it immediately loses login
 		 *       access. Refused if the household currently has an active (booked) enrollment in an operator's
-		 *       session — cancel or complete that booking first.
+		 *       session - cancel or complete that booking first.
 		 *     tags: [Admin]
 		 *     parameters:
 		 *       - in: path
@@ -144,7 +144,7 @@ export class AdminHouseholdsController extends BaseController {
 		 *     summary: Pause a household
 		 *     description: >
 		 *       Omit pausedUntil (or send null) for an unlimited pause. Resuming
-		 *       is always explicit via /resume — a pausedUntil timestamp in the
+		 *       is always explicit via /resume - a pausedUntil timestamp in the
 		 *       past does not auto-reactivate the household.
 		 *     tags: [Admin]
 		 *     parameters:

@@ -75,9 +75,9 @@ export class ClassesController extends BaseController {
 		 *   post:
 		 *     summary: Create a recurring class
 		 *     description: >
-		 *       Creates the class definition only — occurrence generation and makeup sessions are separate endpoints.
+		 *       Creates the class definition only - occurrence generation and makeup sessions are separate endpoints.
 		 *       For assigned-type operators (padel instructors, personal trainers), studentId is required and
-		 *       maxSize must be exactly 1 — the single student is assigned atomically at creation. For schedule-type
+		 *       maxSize must be exactly 1 - the single student is assigned atomically at creation. For schedule-type
 		 *       operators, studentId is forbidden; use assign-students instead.
 		 *     tags: [Operator - Classes]
 		 *     requestBody:
@@ -91,7 +91,7 @@ export class ClassesController extends BaseController {
 		 *               operatorId: { type: integer }
 		 *               title: { type: string }
 		 *               dayOfWeek: { type: integer, minimum: 0, maximum: 6, description: "0 (Sunday) through 6 (Saturday), in the operator's timezone" }
-		 *               startTime: { type: string, description: "HH:MM:SS, local wall-clock time in the operator's timezone (see Operator.timezone) — never UTC" }
+		 *               startTime: { type: string, description: "HH:MM:SS, local wall-clock time in the operator's timezone (see Operator.timezone) - never UTC" }
 		 *               durationMinutes: { type: integer }
 		 *               minSize: { type: integer, nullable: true }
 		 *               maxSize: { type: integer }
@@ -133,7 +133,7 @@ export class ClassesController extends BaseController {
 		 * /api/operator/classes/{id}:
 		 *   put:
 		 *     summary: Update a class's recurring pattern
-		 *     description: Never touches already-materialized sessions or virtual future occurrences (which always read the class's current fields live) — only affects the stored pattern (title, day/time, capacity) going forward.
+		 *     description: Never touches already-materialized sessions or virtual future occurrences (which always read the class's current fields live) - only affects the stored pattern (title, day/time, capacity) going forward.
 		 *     tags: [Operator - Classes]
 		 *     parameters:
 		 *       - in: path
@@ -148,7 +148,7 @@ export class ClassesController extends BaseController {
 		 *             properties:
 		 *               title: { type: string }
 		 *               dayOfWeek: { type: integer, minimum: 0, maximum: 6, description: "0 (Sunday) through 6 (Saturday), in the operator's timezone" }
-		 *               startTime: { type: string, description: "HH:MM:SS, local wall-clock time in the operator's timezone (see Operator.timezone) — never UTC" }
+		 *               startTime: { type: string, description: "HH:MM:SS, local wall-clock time in the operator's timezone (see Operator.timezone) - never UTC" }
 		 *               durationMinutes: { type: integer }
 		 *               minSize: { type: integer, nullable: true }
 		 *               maxSize: { type: integer }
@@ -245,7 +245,7 @@ export class ClassesController extends BaseController {
 		 *   post:
 		 *     summary: Bulk-assign students to a class's standing roster
 		 *     description: >
-		 *       Each studentId is evaluated independently — partial success is possible. Not available for
+		 *       Each studentId is evaluated independently - partial success is possible. Not available for
 		 *       assigned-type classes (their single student is set at creation).
 		 *     tags: [Operator - Classes]
 		 *     parameters:
@@ -264,7 +264,7 @@ export class ClassesController extends BaseController {
 		 *               studentIds: { type: array, items: { type: integer } }
 		 *     responses:
 		 *       200:
-		 *         description: Per-studentId results (200 even if some items failed — check each item's success field)
+		 *         description: Per-studentId results (200 even if some items failed - check each item's success field)
 		 *       400: { $ref: '#/components/responses/BadRequest' }
 		 *       401: { $ref: '#/components/responses/Unauthorized' }
 		 *       404: { description: Class not found }
@@ -343,7 +343,7 @@ export class ClassesController extends BaseController {
 		}
 	}
 
-	// Updates a class's stored recurring pattern (title, day/time, capacity) — never touches existing sessions.
+	// Updates a class's stored recurring pattern (title, day/time, capacity) - never touches existing sessions.
 	private async updateClass(
 		req: Request<{ id: string }, ClassMutationResponse | ClassValidationErrorResponse, UpdateClassBody>,
 		res: Response<ClassMutationResponse | ClassValidationErrorResponse>,

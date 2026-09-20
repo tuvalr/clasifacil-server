@@ -11,15 +11,15 @@ export { TransactionHandle } from './helpers/transaction-handle.factory';
 
 // pg returns BIGINT/NUMERIC as strings by default, since values beyond Number.
 // MAX_SAFE_INTEGER (2^53) would silently lose precision as JS numbers.
-// BaseEntity.id is typed as `number` for simpler call sites, so BIGINT (OID 20) is parsed as a JS number here instead —
+// BaseEntity.id is typed as `number` for simpler call sites, so BIGINT (OID 20) is parsed as a JS number here instead -
 // this is only safe as long as no id (or other bigint column) actually exceeds 2^53.
 types.setTypeParser(20, (value: string) => Number(value));
 
-// pg's default DATE (OID 1082) parser constructs a JS Date at LOCAL midnight, not UTC midnight — in any timezone
+// pg's default DATE (OID 1082) parser constructs a JS Date at LOCAL midnight, not UTC midnight - in any timezone
 // ahead of UTC, re-serializing that Date via toISOString() shifts the calendar day back by one (confirmed: this
 // deployment's DB session timezone is Europe/Paris). Every DATE column in this schema (e.g. sessions.original_date)
 // represents a plain calendar day with no time-of-day meaning, so keep it as the raw 'YYYY-MM-DD' string pg parses
-// it from instead of letting the driver construct a Date at all — sidesteps the round-trip bug entirely, for this
+// it from instead of letting the driver construct a Date at all - sidesteps the round-trip bug entirely, for this
 // and every future DATE column.
 types.setTypeParser(1082, (value: string) => value);
 
@@ -86,7 +86,7 @@ export class PostgresHandler {
 	}
 
 	// Checks out a single client, runs BEGIN, hands the callback a TransactionHandle bound to that client, then COMMITs on success or ROLLBACKs (and rethrows) on failure.
-	// Use this whenever multiple writes must succeed or fail together — see AdminOperatorsController for an example (operator + its user account).
+	// Use this whenever multiple writes must succeed or fail together - see AdminOperatorsController for an example (operator + its user account).
 	public async transaction<T>(callback: (tx: TransactionHandle) => Promise<T>): Promise<T> {
 		const client = await this.pool.connect();
 		try {

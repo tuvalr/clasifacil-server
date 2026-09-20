@@ -11,10 +11,10 @@ export class PinoLogger implements Logger {
 
 		this.pino = pino({
 			// pino's default base bindings add { pid, hostname } to every
-			// log line — dropped so only the explicit "server listening"
+			// log line - dropped so only the explicit "server listening"
 			// call (which passes pid itself) shows a process ID.
 			base: null,
-			// Default level is 'info', which silently drops .debug() calls — raised to 'debug' in
+			// Default level is 'info', which silently drops .debug() calls - raised to 'debug' in
 			// dev/local so RequestLogger's per-request input/output logs actually emit there, while
 			// prod stays at 'info' so those same calls are structurally never emitted, not just filtered
 			// by some other guard.

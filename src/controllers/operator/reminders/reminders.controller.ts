@@ -3,7 +3,7 @@ import { RouteHandlers } from '../../shared/route-handlers';
 import { BaseController } from '../../shared/base.controller';
 
 // UC5: Automated Payment Reminders & Consolidated Invoicing
-// TODO: entirely unsupported by the current schema — see RemindersServer.
+// TODO: entirely unsupported by the current schema - see RemindersServer.
 @injectable()
 export class RemindersController extends BaseController {
 	public constructor() {

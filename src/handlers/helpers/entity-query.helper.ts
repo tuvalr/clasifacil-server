@@ -4,7 +4,7 @@ import { snakeToCamel, camelToSnake } from '../../utils/case-mapper';
 
 const IDENTIFIER_PATTERN = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
 
-// Satisfied by both Pool and PoolClient — lets every method below run against either a fresh pool connection (normal calls) or a single checked-out client
+// Satisfied by both Pool and PoolClient - lets every method below run against either a fresh pool connection (normal calls) or a single checked-out client
 // held across a transaction (see TransactionHandleFactory / PostgresHandler.transaction()), with identical behavior either way.
 export interface Queryable {
 	query<T extends QueryResultRow>(sql: string, params?: unknown[]): Promise<{ rows: T[] }>;
@@ -42,7 +42,7 @@ export class EntityQueryHelper {
 		return rows[0] ?? null;
 	}
 
-	// Unlike findById, this ignores is_deleted — for callers (like a restore operation) that need to confirm a row exists at all,
+	// Unlike findById, this ignores is_deleted - for callers (like a restore operation) that need to confirm a row exists at all,
 	// including soft-deleted ones.
 	public async findByIdIgnoringDeleted<T extends BaseEntity>(db: Queryable, entity: EntityDescriptor<T>, id: string | number): Promise<T | null> {
 		this.assertValidIdentifier(entity.tableName);
@@ -50,7 +50,7 @@ export class EntityQueryHelper {
 		return result.rows[0] ? snakeToCamel<T>(result.rows[0]) : null;
 	}
 
-	// `data` uses camelCase keys matching T's TypeScript properties (e.g. { isDeleted: false }), converted to snake_case columns here —
+	// `data` uses camelCase keys matching T's TypeScript properties (e.g. { isDeleted: false }), converted to snake_case columns here -
 	// callers never need to know or write the underlying column names.
 	public async insert<T extends BaseEntity>(db: Queryable, entity: EntityDescriptor<T>, data: Record<string, unknown>): Promise<T> {
 		this.assertValidIdentifier(entity.tableName);
@@ -72,7 +72,7 @@ export class EntityQueryHelper {
 		columnNames.forEach((name: string) => this.assertValidIdentifier(name));
 		const values = columnNames.map((columnName: string) => columns[columnName]);
 
-		// No fields to change (e.g. a PUT with an empty/all-optional body) — still touch updated_at rather than
+		// No fields to change (e.g. a PUT with an empty/all-optional body) - still touch updated_at rather than
 		// building a SET clause with nothing before it, which would be a SQL syntax error.
 		const setClause =
 			columnNames.length > 0 ? columnNames.map((name: string, index: number) => `"${name}" = $${index + 2}`).join(', ') + ', updated_at = NOW()' : 'updated_at = NOW()';

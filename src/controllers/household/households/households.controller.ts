@@ -171,7 +171,7 @@ export class HouseholdHouseholdsController extends BaseController {
 		 */
 		this.internalRouter.put('/:id/students/:studentId', RouteHandlers.wrap(this.updateStudent.bind(this)));
 
-		// PRD UC1 edge case: "Archiving a Student Profile" — retain historical attendance/invoice logs, remove from active roster
+		// PRD UC1 edge case: "Archiving a Student Profile" - retain historical attendance/invoice logs, remove from active roster
 		// selectors. This is exactly PostgresHandler's soft-delete, so it IS implemented.
 		/**
 		 * @openapi
@@ -198,7 +198,7 @@ export class HouseholdHouseholdsController extends BaseController {
 		this.internalRouter.post('/:id/students/:studentId/archive', RouteHandlers.wrap(this.archiveStudent.bind(this)));
 
 		// TODO: requires a co-household-owner/secondary-adult table (PRD: "grant secondary view/booking access to a co-household-owner or
-		// caregiver via email invite") — no such table exists yet.
+		// caregiver via email invite") - no such table exists yet.
 		this.internalRouter.get('/:id/co-household-owners', RouteHandlers.notImplemented);
 
 		this.internalRouter.post('/:id/co-household-owners/invite', RouteHandlers.notImplemented);

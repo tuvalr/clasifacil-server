@@ -13,7 +13,7 @@ export class SessionAttendanceRepository {
 		return rows.map((row: Record<string, unknown>) => snakeToCamel<SessionAttendance>(row));
 	}
 
-	// One row per (session_id, student_id) — inserts on first mark, updates status/updated_at in place on every
+	// One row per (session_id, student_id) - inserts on first mark, updates status/updated_at in place on every
 	// subsequent mark for the same pair. Never creates a second row for the same pair (see the DB's
 	// session_attendance_unique constraint, which this query relies on via ON CONFLICT).
 	public async upsert(sessionId: number, classId: number | null, studentId: number, status: 'present' | 'absent' | 'approved_absent'): Promise<SessionAttendance> {
@@ -29,7 +29,7 @@ export class SessionAttendanceRepository {
 	}
 
 	// Moves every row older than `cutoff` (by updated_at) into session_attendance_history and deletes it from the
-	// live table, in one transaction (both queries run against the same client via a single multi-statement call —
+	// live table, in one transaction (both queries run against the same client via a single multi-statement call -
 	// PostgresHandler.query uses the pool directly, so this uses two sequential queries wrapped by the caller's
 	// transaction instead; see SessionAttendanceServer.archive for the transaction wrapping).
 	public async moveToHistory(cutoff: Date): Promise<number> {

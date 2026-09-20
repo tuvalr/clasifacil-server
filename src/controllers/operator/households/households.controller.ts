@@ -121,7 +121,7 @@ export class HouseholdsController extends BaseController {
 		 */
 		this.internalRouter.post('/:id/restore', RouteHandlers.wrap(this.restoreHousehold.bind(this)));
 		// TODO: requires a co-household-owner/secondary-adult table (PRD UC1: "grant
-		// secondary view/booking access to a co-household-owner via email invite") —
+		// secondary view/booking access to a co-household-owner via email invite") -
 		// no such table exists yet.
 		this.internalRouter.post('/:id/invite-co-household-owner', RouteHandlers.notImplemented);
 	}

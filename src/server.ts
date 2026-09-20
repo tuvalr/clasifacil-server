@@ -25,7 +25,7 @@ export class Server {
 		});
 
 		// Runs once daily at 02:00 server time. node-cron's schedule callback isn't awaited by the library itself,
-		// so a slow run doesn't block anything else — errors inside the job are caught and logged by the job
+		// so a slow run doesn't block anything else - errors inside the job are caught and logged by the job
 		// itself (see NightlyBackfillJob.backfillClass), never crashing the process.
 		cron.schedule('0 2 * * *', () => {
 			this.nightlyBackfillJob.run().catch((error: unknown) => {

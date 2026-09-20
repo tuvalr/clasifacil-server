@@ -1,7 +1,7 @@
 import swaggerJsdoc from 'swagger-jsdoc';
 
 // Shared response schemas referenced from @openapi comments across
-// controllers via $ref: '#/components/schemas/<Name>' — matches each
+// controllers via $ref: '#/components/schemas/<Name>' - matches each
 // entity's PUBLIC (PublicEntity<T>, see src/entities/base.entity.ts) shape,
 // not the raw DB entity: deletedAt/createdAt/updatedAt are DB-managed
 // bookkeeping that every controller strips via toPublic() before responding
@@ -51,7 +51,7 @@ export const swaggerSpec = swaggerJsdoc({
 						timezone: {
 							type: 'string',
 							description:
-								"IANA timezone name, e.g. America/New_York. Governs how this operator's classes' dayOfWeek/startTime are converted to real UTC occurrence instants. Immutable once this operator has ever had any class — see PUT /api/operator/settings/{id} and PUT /api/admin/operators/{id}.",
+								"IANA timezone name, e.g. America/New_York. Governs how this operator's classes' dayOfWeek/startTime are converted to real UTC occurrence instants. Immutable once this operator has ever had any class - see PUT /api/operator/settings/{id} and PUT /api/admin/operators/{id}.",
 						},
 					},
 				},
@@ -72,7 +72,7 @@ export const swaggerSpec = swaggerJsdoc({
 						timezone: {
 							type: 'string',
 							description:
-								"IANA timezone name, e.g. America/New_York. Governs how this operator's classes' dayOfWeek/startTime are converted to real UTC occurrence instants. Immutable once this operator has ever had any class — see PUT /api/operator/settings/{id} and PUT /api/admin/operators/{id}.",
+								"IANA timezone name, e.g. America/New_York. Governs how this operator's classes' dayOfWeek/startTime are converted to real UTC occurrence instants. Immutable once this operator has ever had any class - see PUT /api/operator/settings/{id} and PUT /api/admin/operators/{id}.",
 						},
 						sessions: {
 							type: 'array',
@@ -177,7 +177,7 @@ export const swaggerSpec = swaggerJsdoc({
 				},
 				// A class occurrence is either virtual (derived on-the-fly from the class's recurring pattern, never
 				// persisted) or materialized (a real row in `sessions`, once rescheduled/cancelled/attendance-recorded
-				// or explicitly backfilled) — isVirtual discriminates which fields are populated: classId only on
+				// or explicitly backfilled) - isVirtual discriminates which fields are populated: classId only on
 				// virtual entries, sessionId/isMakeupSession only on materialized ones.
 				Occurrence: {
 					type: 'object',
@@ -191,7 +191,7 @@ export const swaggerSpec = swaggerJsdoc({
 						attendance: {
 							type: 'array',
 							nullable: true,
-							description: 'Present only on GET .../occurrences/past — one entry per roster student, present per session, or not_recorded if unmarked',
+							description: 'Present only on GET .../occurrences/past - one entry per roster student, present per session, or not_recorded if unmarked',
 							items: {
 								type: 'object',
 								properties: {
@@ -217,12 +217,12 @@ export const swaggerSpec = swaggerJsdoc({
 						title: { type: 'string' },
 						dayOfWeek: {
 							type: 'integer',
-							description: "0 (Sunday) through 6 (Saturday), in the class's operator's timezone (Operator.timezone) — never UTC, never converted on read.",
+							description: "0 (Sunday) through 6 (Saturday), in the class's operator's timezone (Operator.timezone) - never UTC, never converted on read.",
 						},
 						startTime: {
 							type: 'string',
 							description:
-								"24-hour local wall-clock time (HH:MM:SS), in the class's operator's timezone (Operator.timezone) — never UTC, never converted on read. Occurrence generation is the only place this value is converted to a UTC instant, using the specific occurrence date's correct DST-aware offset.",
+								"24-hour local wall-clock time (HH:MM:SS), in the class's operator's timezone (Operator.timezone) - never UTC, never converted on read. Occurrence generation is the only place this value is converted to a UTC instant, using the specific occurrence date's correct DST-aware offset.",
 						},
 						durationMinutes: { type: 'integer' },
 						minSize: { type: 'integer', nullable: true },
@@ -266,7 +266,7 @@ export const swaggerSpec = swaggerJsdoc({
 			// auth middleware exists in this codebase yet (a bad body
 			// currently throws -> 500; every route is unauthenticated).
 			// InternalError matches RouteHandlers.errorHandler's actual
-			// response shape — every route can genuinely return this.
+			// response shape - every route can genuinely return this.
 			responses: {
 				BadRequest: {
 					description: 'Invalid request body or parameters',
@@ -292,7 +292,7 @@ export const swaggerSpec = swaggerJsdoc({
 		},
 	},
 	// Resolved relative to process.cwd() (the project root when run via
-	// npm scripts), not this file's own location — must stay as-is if
+	// npm scripts), not this file's own location - must stay as-is if
 	// this file ever moves. Recursive (**) since each controller now
 	// lives in its own subfolder (src/controllers/admin/admin.controller.ts
 	// etc.) rather than flat under src/controllers/.

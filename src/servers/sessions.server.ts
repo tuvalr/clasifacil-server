@@ -20,7 +20,7 @@ export interface BookingConflict {
 
 export class PlainSessionNotAllowedError extends Error {
 	public constructor() {
-		super('Schedule-type operators cannot create plain one-off sessions — use a class instead');
+		super('Schedule-type operators cannot create plain one-off sessions - use a class instead');
 		this.name = 'PlainSessionNotAllowedError';
 	}
 }
@@ -41,14 +41,14 @@ export class SessionsServer {
 		@inject(TYPES.ClassRepository) private readonly classes: ClassRepository,
 	) {}
 
-	// Class-linked sessions never store their own title (see ClassOccurrencesServer.materializeOccurrence) — this
+	// Class-linked sessions never store their own title (see ClassOccurrencesServer.materializeOccurrence) - this
 	// resolves each one's display title live from its parent class, batching by distinct classId so a list of many
 	// sessions from the same class costs one extra query, not N.
 	private async resolveDisplayTitles(sessions: Session[]): Promise<Session[]> {
 		const classIds = [...new Set(sessions.filter((session: Session): boolean => session.classId !== null).map((session: Session): number => session.classId as number))];
 		const classById = new Map<number, Class>();
 		for (const classId of classIds) {
-			// Small, bounded set of distinct classes across one operator's session list — sequential, matching this
+			// Small, bounded set of distinct classes across one operator's session list - sequential, matching this
 			// codebase's existing style for similarly-bounded per-item lookups.
 			const foundClass = await this.classes.findById(classId);
 			if (foundClass) {
@@ -63,7 +63,7 @@ export class SessionsServer {
 			if (!foundClass) {
 				return session;
 			}
-			return { ...session, title: session.isMakeupSession ? `${foundClass.title} — Makeup` : foundClass.title };
+			return { ...session, title: session.isMakeupSession ? `${foundClass.title} - Makeup` : foundClass.title };
 		});
 	}
 
@@ -88,7 +88,7 @@ export class SessionsServer {
 	}
 
 	// A class-generated occurrence's roster includes the class's standing members (class_enrollments) in addition
-	// to whoever's individually booked via enrollments_and_credits — except for makeup sessions, which are ad hoc
+	// to whoever's individually booked via enrollments_and_credits - except for makeup sessions, which are ad hoc
 	// and only ever show the students explicitly booked into them, never the whole class's standing roster.
 	public async getRoster(sessionId: number): Promise<{ enrollments: EnrollmentAndCredit[]; classMemberStudentIds: number[] } | null> {
 		const session = await this.sessions.findById(sessionId);
@@ -114,7 +114,7 @@ export class SessionsServer {
 		return this.sessions.create(data);
 	}
 
-	// PRD UC3 edge case: "Operator Cancels the Class" — must issue a
+	// PRD UC3 edge case: "Operator Cancels the Class" - must issue a
 	// make-up token to ALL enrolled households regardless of the standard
 	// cancellation policy window, and log an audit trail. The roster
 	// lookup and session cancel are wired; token issuance is not, since
@@ -129,12 +129,12 @@ export class SessionsServer {
 		await this.sessions.cancel(sessionId);
 		// TODO: issue make-up tokens to all enrolled households (roster =
 		// this.enrollments.findBySessionId(sessionId)) and write an
-		// audit_logs entry — requires the credit-issuance logic from UC3
+		// audit_logs entry - requires the credit-issuance logic from UC3
 		// and a defined audit-log write path, neither implemented yet.
 		return session;
 	}
 
-	// Single-occurrence override — leaves the class definition and every sibling occurrence untouched. Works on
+	// Single-occurrence override - leaves the class definition and every sibling occurrence untouched. Works on
 	// any session (class-generated or plain), same as cancel() already does.
 	//
 	// Runtime presence/shape check: startTime arrives as untyped JSON, so a missing/malformed value would otherwise
@@ -171,7 +171,7 @@ export class SessionsServer {
 	// to check current_roster_count against capacity_limit and insert the
 	// enrollment atomically, so two simultaneous requests for the last
 	// slot can't both succeed. PostgresHandler has transaction() support
-	// now, but this method hasn't been wired to use it — the check and
+	// now, but this method hasn't been wired to use it - the check and
 	// insert below are NOT atomic and can race under real concurrent
 	// load. This is a correctness gap flagged here, not silently
 	// accepted.
@@ -192,7 +192,7 @@ export class SessionsServer {
 		}
 
 		if ((session.currentRosterCount ?? 0) >= session.capacityLimit) {
-			// PRD: route to waitlist instead of rejecting outright — not
+			// PRD: route to waitlist instead of rejecting outright - not
 			// implemented (see waitlist TODOs), so this only reports the
 			// capacity conflict for now.
 			return { conflict: true, waitlisted: false };
@@ -205,7 +205,7 @@ export class SessionsServer {
 
 	// TODO: requires a real waitlist (PRD: "queue-based waitlist ordered
 	// strictly by timestamp", automated promotion with a time-sensitive
-	// claim window on cancellation) — status is a free-text column with
+	// claim window on cancellation) - status is a free-text column with
 	// no queue-position or claim-deadline tracking.
 
 	// TODO: browse-by-availability listing (household session search), not

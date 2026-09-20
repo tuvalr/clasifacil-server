@@ -181,7 +181,7 @@ export class ClassOccurrencesController extends BaseController {
 		 *   put:
 		 *     summary: Record or correct attendance for one occurrence, materializing it if needed
 		 *     description: >
-		 *       Accepts any studentId, not just current class members — this is how a trial student's attendance
+		 *       Accepts any studentId, not just current class members - this is how a trial student's attendance
 		 *       can be recorded without a standing class_enrollments row. Rejected with 400 if the occurrence's
 		 *       startTime is still in the future.
 		 *     tags: [Operator - Classes]

@@ -15,7 +15,7 @@ export class HouseholdRepository {
 		return this.db.findById(HouseholdEntity, id);
 	}
 
-	// Ignores is_deleted — used to check existence before restoring an archived household.
+	// Ignores is_deleted - used to check existence before restoring an archived household.
 	public async findByIdIgnoringDeleted(id: number): Promise<Household | null> {
 		return this.db.findByIdIgnoringDeleted(HouseholdEntity, id);
 	}
@@ -30,7 +30,7 @@ export class HouseholdRepository {
 		return rows[0] ?? null;
 	}
 
-	// Accepts an optional TransactionHandle — see UserRepository.create() for why (AdminController creates a
+	// Accepts an optional TransactionHandle - see UserRepository.create() for why (AdminController creates a
 	// household + its household user account atomically).
 	public async create(data: { name: string; email: string }, tx?: TransactionHandle): Promise<Household> {
 		const db = tx ?? this.db;

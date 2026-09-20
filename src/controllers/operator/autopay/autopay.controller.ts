@@ -3,7 +3,7 @@ import { RouteHandlers } from '../../shared/route-handlers';
 import { BaseController } from '../../shared/base.controller';
 
 // UC6: Household Autopay Opt-Out & Operator Notice Controls
-// TODO: entirely unsupported by the current schema — see AutopayServer.
+// TODO: entirely unsupported by the current schema - see AutopayServer.
 @injectable()
 export class AutopayController extends BaseController {
 	public constructor() {

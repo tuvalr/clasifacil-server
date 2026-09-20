@@ -85,7 +85,7 @@ export class BookingController extends BaseController {
 		this.internalRouter.get('/households/:householdId/enrollments', RouteHandlers.wrap(this.listEnrollments.bind(this)));
 
 		// TODO: requires a real wait-list (PRD: "queue-based wait-list ordered strictly by timestamp", automated promotion with a
-		// time-sensitive claim window on cancellation) — status is a free-text column with no queue-position or claim-deadline tracking.
+		// time-sensitive claim window on cancellation) - status is a free-text column with no queue-position or claim-deadline tracking.
 		this.internalRouter.get('/sessions/:sessionId/waitlist', RouteHandlers.notImplemented);
 
 		this.internalRouter.post('/waitlist/:enrollmentId/claim', RouteHandlers.notImplemented);

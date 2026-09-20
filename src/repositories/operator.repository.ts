@@ -30,7 +30,7 @@ export class OperatorRepository {
 		return rows[0] ?? null;
 	}
 
-	// Accepts an optional TransactionHandle — see UserRepository.create() for why (AdminOperatorsController creates an operator + its user account atomically).
+	// Accepts an optional TransactionHandle - see UserRepository.create() for why (AdminOperatorsController creates an operator + its user account atomically).
 	public async create(
 		data: { name: string; email: string; phone: string; countryCode: string; type: 'schedule' | 'assigned'; timezone: string },
 		tx?: TransactionHandle,

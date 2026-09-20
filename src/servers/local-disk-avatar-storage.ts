@@ -5,7 +5,7 @@ import { injectable } from 'inversify';
 import { AvatarStorage } from './types/avatar-storage';
 
 // Stand-in for a cloud object store (e.g. S3) until one is actually provisioned. Saves under <repo>/uploads/avatars and
-// returns a URL served by express.static (see App.middleware) — swap this class for a cloud-backed AvatarStorage
+// returns a URL served by express.static (see App.middleware) - swap this class for a cloud-backed AvatarStorage
 // implementation later; AvatarsServer and every controller stay unchanged.
 const UPLOADS_ROOT = path.resolve(process.cwd(), 'uploads');
 const AVATARS_DIR = path.join(UPLOADS_ROOT, 'avatars');

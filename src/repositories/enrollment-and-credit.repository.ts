@@ -11,7 +11,7 @@ export class EnrollmentAndCreditRepository {
 		return this.db.queryActive(EnrollmentAndCreditEntity, 'household_id = $1', [householdId]);
 	}
 
-	// 'booked' is the only status that means the household is currently connected to an operator via a session —
+	// 'booked' is the only status that means the household is currently connected to an operator via a session -
 	// cancelled_with_credit/forfeited enrollments no longer hold a live booking.
 	public async existsActiveBookingForHousehold(householdId: number): Promise<boolean> {
 		const rows = await this.db.queryActive(EnrollmentAndCreditEntity, "household_id = $1 AND status = 'booked'", [householdId]);

@@ -9,9 +9,9 @@ type AsyncRequestHandler<P = ParamsDictionary, ResBody = unknown, ReqBody = unkn
 ) => Promise<void>;
 
 export class RouteHandlers {
-	// Express doesn't await async route handlers itself — a rejected promise from one is silently swallowed rather than forwarded to
+	// Express doesn't await async route handlers itself - a rejected promise from one is silently swallowed rather than forwarded to
 	// error-handling middleware. Wrapping a handler with this forwards any thrown/rejected error to next(err) instead, so errorHandler
-	// below always sees it. Generic over Express's own RequestHandler type parameters (P/ResBody/ReqBody/ReqQuery) — matching
+	// below always sees it. Generic over Express's own RequestHandler type parameters (P/ResBody/ReqBody/ReqQuery) - matching
 	// RequestHandler's shape exactly (not a custom Request/Response pairing) is what lets router.get/post/etc. unify route-specific
 	// types (see src/controllers/types/) through wrap() instead of widening back to the untyped defaults.
 	public static wrap<P = ParamsDictionary, ResBody = unknown, ReqBody = unknown, ReqQuery = unknown>(
@@ -28,7 +28,7 @@ export class RouteHandlers {
 		res.status(501).end();
 	}
 
-	// Express identifies error-handling middleware solely by arity (4-params) — an unused `next` is required here even though it's never
+	// Express identifies error-handling middleware solely by arity (4-params) - an unused `next` is required here even though it's never
 	// called, otherwise Express treats this as a normal (3-param) handler and never invokes it for a forwarded error.
 	public static errorHandler(logger: Logger) {
 		// eslint-disable-next-line @typescript-eslint/no-unused-vars -- Express identifies error middleware by 4-param arity; next must be declared even though it's never called

@@ -15,7 +15,7 @@ import { ValidationError, ValidationErrorDetail } from './types/validation-error
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 // Household is "connected to an operator" once any of its students holds a live ('booked') enrollment in one of
-// that operator's sessions — deleting the household out from under an active booking would orphan it.
+// that operator's sessions - deleting the household out from under an active booking would orphan it.
 export class HouseholdHasActiveBookingError extends Error {
 	public constructor() {
 		super('Cannot delete a household with an active booking');
@@ -64,7 +64,7 @@ export class HouseholdsServer {
 	// Admin-side
 
 	// Detail view: the household plus each of its (non-archived) students, each annotated with their own
-	// enrollments — everything an admin needs to see a household's standing (including its connections to
+	// enrollments - everything an admin needs to see a household's standing (including its connections to
 	// operators via booked sessions) without further round trips. Fetches all of the household's enrollments once
 	// and groups them by studentId rather than querying per student.
 	public async getByIdWithDetails(id: number): Promise<{ household: Household; students: (Student & { enrollments: EnrollmentAndCredit[] })[] } | null> {
@@ -89,7 +89,7 @@ export class HouseholdsServer {
 	}
 
 	// Creates the households row and its login-capable users row (role: 'household', associatedEntityId: the new
-	// household's id) together — same atomicity reasoning as OperatorsServer.create(): if either insert fails, both
+	// household's id) together - same atomicity reasoning as OperatorsServer.create(): if either insert fails, both
 	// roll back, so a household can never be left without a way to log in.
 	public async create(data: { name: string; email: string }): Promise<{ household: Household; user: User }> {
 		const details = await this.validateCreate(data);
@@ -106,7 +106,7 @@ export class HouseholdsServer {
 		});
 	}
 
-	// Soft-deletes the household and its login-capable users row together — refuses if the household currently has
+	// Soft-deletes the household and its login-capable users row together - refuses if the household currently has
 	// any active ('booked') enrollment in an operator's session, so a live booking can never be orphaned by deletion.
 	public async delete(id: number): Promise<Household | null> {
 		const household = await this.households.findById(id);
@@ -130,7 +130,7 @@ export class HouseholdsServer {
 	}
 
 	// findById first (rather than trusting pause()'s own UPDATE...RETURNING) because that UPDATE has no is_deleted
-	// guard — without this check, a soft-deleted household would still match and get silently paused/resumed
+	// guard - without this check, a soft-deleted household would still match and get silently paused/resumed
 	// instead of 404ing like every other endpoint.
 	public async pause(id: number, pausedUntil: Date | null): Promise<Household | null> {
 		const household = await this.households.findById(id);
@@ -174,7 +174,7 @@ export class HouseholdsServer {
 	}
 
 	// TODO: requires a co-household-owner/secondary-adult table (PRD UC1: "grant
-	// secondary view/booking access to a co-household-owner via email invite") —
+	// secondary view/booking access to a co-household-owner via email invite") -
 	// no such table exists yet.
 
 	// Household-side
@@ -211,7 +211,7 @@ export class HouseholdsServer {
 		return this.students.update(studentId, data);
 	}
 
-	// PRD UC1 edge case: "Archiving a Student Profile" — retain historical
+	// PRD UC1 edge case: "Archiving a Student Profile" - retain historical
 	// attendance/invoice logs, remove from active roster selectors. This
 	// is exactly PostgresHandler's soft-delete, so it IS implemented.
 	public async archiveStudent(studentId: number): Promise<Student | null> {

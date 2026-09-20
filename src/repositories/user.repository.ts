@@ -22,7 +22,7 @@ export class UserRepository {
 	}
 
 	// users_email_active_key is a partial UNIQUE(email) index scoped to active rows (WHERE NOT is_deleted), so a
-	// soft-deleted user's email is free to reuse — this check matches that scope exactly.
+	// soft-deleted user's email is free to reuse - this check matches that scope exactly.
 	public async findByEmail(email: string): Promise<User | null> {
 		const rows = await this.db.queryActive(UserEntity, 'email = $1', [email]);
 		return rows[0] ?? null;

@@ -9,7 +9,7 @@ const MIME_EXTENSIONS: Record<string, string> = {
 	'image/png': 'png',
 };
 
-// Shared by both HouseholdSettingsController and OperatorSettingsController — the upload/validation/storage flow is
+// Shared by both HouseholdSettingsController and OperatorSettingsController - the upload/validation/storage flow is
 // identical for a household's and an operator's avatar, only the entity being updated differs.
 @injectable()
 export class AvatarsServer {

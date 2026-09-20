@@ -37,12 +37,12 @@ export class AttendanceCreditsController extends BaseController {
 		 */
 		this.internalRouter.get('/session/:sessionId', RouteHandlers.wrap(this.listCreditsBySession.bind(this)));
 
-		// TODO: requires a cancellation-policy-window column (PRD: "e.g. >24 hours before session start") on operators or sessions —
+		// TODO: requires a cancellation-policy-window column (PRD: "e.g. >24 hours before session start") on operators or sessions -
 		// no such column exists yet.
 		this.internalRouter.put('/policy', RouteHandlers.notImplemented);
 
 		// TODO: the daily token-expiration cron job (PRD UC3 edge case) has no scheduling infrastructure in this project yet (no
-		// cron/job-runner dependency installed) — this route would trigger it manually/for testing once that exists.
+		// cron/job-runner dependency installed) - this route would trigger it manually/for testing once that exists.
 		this.internalRouter.post('/expire-tokens', RouteHandlers.notImplemented);
 	}
 

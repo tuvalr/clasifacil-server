@@ -41,11 +41,11 @@ export class App {
 		this.internalExpress.use(helmet());
 		this.internalExpress.use(
 			cors({
-				// Reflects the request's Origin back (instead of a fixed value) when it's in the allowlist — this is
+				// Reflects the request's Origin back (instead of a fixed value) when it's in the allowlist - this is
 				// what lets multiple distinct frontend origins (local dev, staging, prod) share one server/config,
 				// since Access-Control-Allow-Origin can only ever name one origin per response, never a list.
 				// A disallowed origin resolves with allow=false (not an error) so cors just omits the
-				// Access-Control-Allow-Origin header — the browser blocks the response client-side, same as any other
+				// Access-Control-Allow-Origin header - the browser blocks the response client-side, same as any other
 				// unlisted origin, instead of the request 500ing server-side.
 				origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void): void => {
 					callback(null, !origin || this.config.corsAllowedOrigins.includes(origin));
@@ -55,13 +55,13 @@ export class App {
 			}),
 		);
 		this.internalExpress.use(express.json());
-		// Debug-level only (see PinoLogger) — a structural no-op in prod, not a conditionally-mounted one, so
+		// Debug-level only (see PinoLogger) - a structural no-op in prod, not a conditionally-mounted one, so
 		// there's no risk of it silently staying on if NODE_ENV is ever misconfigured.
 		this.internalExpress.use(RequestLogger.middleware(this.logger));
-		// Serves avatar files written by LocalDiskAvatarStorage — remove this once avatar storage moves to a cloud
+		// Serves avatar files written by LocalDiskAvatarStorage - remove this once avatar storage moves to a cloud
 		// bucket (URLs would then point at the bucket directly instead of this server).
 		// helmet()'s default Cross-Origin-Resource-Policy: same-origin blocks the frontend (a different origin) from
-		// embedding these as <img> subresources even though CORS already allows it — COEP/CORP is a separate browser
+		// embedding these as <img> subresources even though CORS already allows it - COEP/CORP is a separate browser
 		// mechanism CORS headers don't override. Relaxed to cross-origin only here, not app-wide, since this is the
 		// one route meant to be loaded cross-origin.
 		this.internalExpress.use(
@@ -75,7 +75,7 @@ export class App {
 	}
 
 	private routes(): void {
-		// Swagger UI exposes route/schema structure — not something to
+		// Swagger UI exposes route/schema structure - not something to
 		// hand out in prod, so it's only mounted for dev/local.
 		if (this.config.nodeEnv === 'dev' || this.config.nodeEnv === 'local') {
 			this.internalExpress.use(
@@ -86,7 +86,7 @@ export class App {
 					// DELETE instead of swagger-ui-express's default (by path).
 					// This function is serialized to a string and evaluated client-side
 					// by Swagger UI, so `a`/`b` are its internal Immutable.js operation
-					// objects, not plain TS values — hence the untyped signature.
+					// objects, not plain TS values - hence the untyped signature.
 					swaggerOptions: {
 						operationsSorter: (a: { get: (key: string) => string }, b: { get: (key: string) => string }): number => {
 							const methodOrder = ['get', 'post', 'put', 'patch', 'delete'];
@@ -102,7 +102,7 @@ export class App {
 		this.internalExpress.use('/api/household', this.householdController.router);
 	}
 
-	// Must be mounted after every route —
+	// Must be mounted after every route -
 	// Express only invokes 4-param (error-handling) middleware for errors forwarded by something registered before it.
 	private errorHandling(): void {
 		this.internalExpress.use(RouteHandlers.errorHandler(this.logger));

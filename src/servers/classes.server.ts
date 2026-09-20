@@ -12,7 +12,7 @@ const MAX_DAY_OF_WEEK = 6;
 
 // Matches Postgres TIME's accepted 24-hour formats reasonably strictly (HH:MM or HH:MM:SS), rejecting inputs like
 // "banana" or "25:00:00" at the application layer instead of letting Postgres reject them raw (a raw 500 instead
-// of a clean 400) — see ClassesServer.validateRequired/validate's startTime checks below.
+// of a clean 400) - see ClassesServer.validateRequired/validate's startTime checks below.
 const START_TIME_FORMAT = /^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/;
 
 export class ClassHasActiveEnrollmentsError extends Error {
@@ -44,14 +44,14 @@ export interface ClassWithEnrolledCount extends Class {
 // the `number[]` signature on ClassesServer's methods only guards call sites within this codebase, not an actual
 // HTTP request. Without this check, a missing/malformed studentIds (undefined, a single number, a string, etc.)
 // would reach a `for...of` loop and throw a raw TypeError, forwarded by RouteHandlers.wrap to the generic error
-// handler as a 500 instead of a clean 400 — the same gotcha OperatorsServer.validateCreate and
+// handler as a 500 instead of a clean 400 - the same gotcha OperatorsServer.validateCreate and
 // ClassesServer.validateRequired work around elsewhere.
 function isNumberArray(value: unknown): value is number[] {
 	return Array.isArray(value) && value.every((item: unknown): boolean => typeof item === 'number');
 }
 
 // UC-Scheduling: recurring weekly classes (schedule-type operators) and recurring 1:1 slots (assigned-type
-// operators) share this same table — see docs/superpowers/specs/2026-09-12-operator-scheduling-design.md.
+// operators) share this same table - see docs/superpowers/specs/2026-09-12-operator-scheduling-design.md.
 @injectable()
 export class ClassesServer {
 	public constructor(
@@ -79,7 +79,7 @@ export class ClassesServer {
 		return withCounts[0];
 	}
 
-	// Counts active class_enrollments per class — applies uniformly to schedule-type (many students) and
+	// Counts active class_enrollments per class - applies uniformly to schedule-type (many students) and
 	// assigned-type (single student, also enrolled via class_enrollments at creation) classes alike. Sequential,
 	// matching this file's existing style for similarly-bounded per-item operations (one operator's class list).
 	private async withEnrolledCounts(found: Class[]): Promise<ClassWithEnrolledCount[]> {
@@ -107,13 +107,13 @@ export class ClassesServer {
 			throw new ValidationError(requiredDetails);
 		}
 		// studentId is optional at the type level (only required for assigned-type operators, checked below), but if
-		// it's present it must actually be a number — same "don't let untyped JSON garbage sail through" reasoning as
+		// it's present it must actually be a number - same "don't let untyped JSON garbage sail through" reasoning as
 		// validateRequired's other fields; a non-number studentId would otherwise reach classEnrollments.create and
 		// fail as a raw 500 instead of a clean 400.
 		if (data.studentId !== undefined && typeof data.studentId !== 'number') {
 			throw new ValidationError([{ field: 'studentId', message: 'studentId must be a number' }]);
 		}
-		// color is optional and unenforced in format — but if present it must be a string or null, same reasoning as
+		// color is optional and unenforced in format - but if present it must be a string or null, same reasoning as
 		// studentId above.
 		if (data.color !== undefined && data.color !== null && typeof data.color !== 'string') {
 			throw new ValidationError([{ field: 'color', message: 'color must be a string or null' }]);
@@ -154,7 +154,7 @@ export class ClassesServer {
 				throw new ValidationError([{ field: 'studentId', message: 'Student not found' }]);
 			}
 		} else if (narrowed.studentId != null) {
-			throw new ValidationError([{ field: 'studentId', message: 'studentId is only accepted for assigned-type operators — use assign-students instead' }]);
+			throw new ValidationError([{ field: 'studentId', message: 'studentId is only accepted for assigned-type operators - use assign-students instead' }]);
 		}
 
 		const details = this.validate(narrowed);
@@ -224,7 +224,7 @@ export class ClassesServer {
 		return this.classes.update(id, narrowed);
 	}
 
-	// findById first — same reasoning as OperatorsServer.pause(): the repository's UPDATE has no is_deleted guard,
+	// findById first - same reasoning as OperatorsServer.pause(): the repository's UPDATE has no is_deleted guard,
 	// so without this check a soft-deleted class would still match and get silently stopped/unstopped instead of
 	// 404ing like every other endpoint. Reversible: unstop fully restores an active class, matching the spec's
 	// explicit "allow reverting stoppedAt in case of mistake."
@@ -250,7 +250,7 @@ export class ClassesServer {
 			return null;
 		}
 		const operator = await this.operators.findById(existing.operatorId);
-		// assigned-type: the single class_enrollments row is intrinsic to the slot, not a separate precondition —
+		// assigned-type: the single class_enrollments row is intrinsic to the slot, not a separate precondition -
 		// deletes directly. schedule-type: refuse while any active enrollments exist (the guard this method exists for).
 		if (operator?.type === 'schedule' && (await this.classEnrollments.countActiveByClassId(id)) > 0) {
 			throw new ClassHasActiveEnrollmentsError();
@@ -259,7 +259,7 @@ export class ClassesServer {
 		return existing;
 	}
 
-	// Each studentId is evaluated independently and in array order — partial success across the batch, matching
+	// Each studentId is evaluated independently and in array order - partial success across the batch, matching
 	// the spec's bulk semantics (one bad item doesn't roll back the others). max_size is checked against the
 	// current active count as of each item's turn, so submitting more students than remaining capacity fills the
 	// slots in submission order and 409s the rest.
@@ -336,10 +336,10 @@ export class ClassesServer {
 	}
 
 	// Runtime-required check for create(): TypeScript's required fields on the create() signature only guard
-	// call sites within this codebase — a request body is untyped JSON, so a caller omitting e.g. dayOfWeek
+	// call sites within this codebase - a request body is untyped JSON, so a caller omitting e.g. dayOfWeek
 	// arrives here as `undefined`. Without this check, `undefined` sails through validate()'s numeric bounds
 	// (`undefined < 0` and `undefined > 6` are both false) and camelToSnake silently drops undefined keys before
-	// the INSERT, producing a raw NOT NULL constraint violation (500) instead of a clean 400 — the same gotcha
+	// the INSERT, producing a raw NOT NULL constraint violation (500) instead of a clean 400 - the same gotcha
 	// OperatorsServer.validateCreate works around for `type`.
 	private validateRequired(data: {
 		operatorId?: unknown;
@@ -374,10 +374,10 @@ export class ClassesServer {
 	}
 
 	// Runtime type-guard for update()'s partial-update fields: unlike create(), update() merges each present field
-	// into `merged` and only bounds-checks the result via validate() — a wrong-TYPE value (e.g. maxSize: "abc")
+	// into `merged` and only bounds-checks the result via validate() - a wrong-TYPE value (e.g. maxSize: "abc")
 	// passes those bounds checks (`"abc" < 1` is false in JS) and would otherwise reach the database update,
 	// likely as a raw 500 instead of a clean 400. Only fields that are actually present (not undefined) are
-	// checked — omitted fields fall back to the existing class's value in update()'s `merged` object.
+	// checked - omitted fields fall back to the existing class's value in update()'s `merged` object.
 	private validateUpdateTypes(data: {
 		title?: unknown;
 		dayOfWeek?: unknown;

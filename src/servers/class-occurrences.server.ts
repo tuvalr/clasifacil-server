@@ -78,15 +78,15 @@ export class ClassOccurrencesServer {
 	) {}
 
 	// Walks every date in [from, to] matching the class's dayOfWeek IN THE OPERATOR'S LOCAL TIMEZONE, clipped to
-	// stoppedAt (in local-day terms) if the class is stopped. Pure computation — never reads or writes sessions.
+	// stoppedAt (in local-day terms) if the class is stopped. Pure computation - never reads or writes sessions.
 	// Class.dayOfWeek/startTime are always the operator's local wall-clock values (see
-	// docs/superpowers/specs/2026-09-20-operator-timezone-occurrence-generation-design.md) — this is the one place
+	// docs/superpowers/specs/2026-09-20-operator-timezone-occurrence-generation-design.md) - this is the one place
 	// (along with materializeOccurrence and NightlyBackfillJob.backfillClass) that converts them to real UTC
 	// instants, using that specific occurrence date's correct DST-aware offset.
 	private computeOccurrenceDates(foundClass: Class, timezone: string, from: Date, to: Date): Date[] {
 		let effectiveTo = to;
 		if (foundClass.status === 'stopped' && foundClass.stoppedAt) {
-			// Clip to the start of the OPERATOR'S LOCAL day the class was stopped on — not the exact stop instant,
+			// Clip to the start of the OPERATOR'S LOCAL day the class was stopped on - not the exact stop instant,
 			// and not the UTC day. A stop registered near midnight UTC could otherwise clip the wrong local day.
 			const stoppedDayStartLocal = startOfLocalDay(foundClass.stoppedAt, timezone);
 			const dayBeforeStop = new Date(stoppedDayStartLocal.getTime() - MS_PER_DAY);
@@ -116,7 +116,7 @@ export class ClassOccurrencesServer {
 		const virtualDates = this.computeOccurrenceDates(foundClass, operator.timezone, from, to);
 		const materialized = await this.sessions.findByClassIdInRange(classId, from, to);
 
-		// Every pattern date this class has EVER materialized a session for in range — keyed by original_date (the
+		// Every pattern date this class has EVER materialized a session for in range - keyed by original_date (the
 		// date the session was first derived for), not its current start_time. This single set correctly excludes
 		// a virtual re-derivation for all three ways a pattern date can already have a real row: cancelled in
 		// place, materialized in place (already covered by `materialized` above, but harmless to also list here),
@@ -125,11 +125,11 @@ export class ClassOccurrencesServer {
 		// findByClassIdInRange's start_time-based range filter).
 		const originalDateKeys = new Set(await this.sessions.findOriginalDatesByClassIdInRange(classId, from, to));
 
-		// Class-linked sessions never store their own title (see materializeOccurrence's title: null) — display
+		// Class-linked sessions never store their own title (see materializeOccurrence's title: null) - display
 		// title is always resolved live from the parent class's current title, computed once per call here since
 		// foundClass is already loaded for the whole list.
 		const regularDisplayTitle = foundClass.title;
-		const makeupDisplayTitle = `${foundClass.title} — Makeup`;
+		const makeupDisplayTitle = `${foundClass.title} - Makeup`;
 
 		const occurrences: Occurrence[] = materialized.map((session: Session) => ({
 			session,
@@ -179,10 +179,10 @@ export class ClassOccurrencesServer {
 	}
 
 	// For each materialized occurrence, synthesizes 'not_recorded' for any roster/class-member student who has no
-	// session_attendance row yet — never stored, computed only at read time (see the spec's not_recorded
+	// session_attendance row yet - never stored, computed only at read time (see the spec's not_recorded
 	// semantics). Virtual (never-materialized) past dates get the same treatment: every roster student reported
 	// not_recorded, since no session_attendance rows can exist for a date with no sessions row at all. Only called
-	// from listPast — listFuture must not pay for these extra attendance queries.
+	// from listPast - listFuture must not pay for these extra attendance queries.
 	private async attachAttendance(result: OccurrenceListResult): Promise<OccurrenceListResult> {
 		const occurrencesWithAttendance: Occurrence[] = [];
 		for (const occurrence of result.occurrences) {
@@ -193,7 +193,7 @@ export class ClassOccurrencesServer {
 				});
 				continue;
 			}
-			// One query per materialized session in range — bounded by the 90-day range cap, same order of
+			// One query per materialized session in range - bounded by the 90-day range cap, same order of
 			// magnitude as buildOccurrenceList's own per-call queries.
 			const recorded = await this.sessionAttendance.findBySessionId(occurrence.session.id);
 			const recordedByStudentId = new Map(recorded.map((row: SessionAttendance): [number, SessionAttendance] => [row.studentId, row]));
@@ -202,7 +202,7 @@ export class ClassOccurrencesServer {
 				return { studentId, status: row ? row.status : 'not_recorded' };
 			});
 			// Include any recorded row for a student NOT in the current standing roster too (a trial student, or
-			// someone since unassigned) — the spec's trial-student attendance must still be visible in the past
+			// someone since unassigned) - the spec's trial-student attendance must still be visible in the past
 			// view.
 			for (const row of recorded) {
 				if (!result.classMemberStudentIds.includes(row.studentId)) {
@@ -216,15 +216,15 @@ export class ClassOccurrencesServer {
 
 	// Idempotent: returns the existing materialized row for this class+date if one already exists, otherwise
 	// creates one with the pattern's default startTime and title: null (display always reads the class's current
-	// title live — see docs/superpowers/specs/2026-09-13-derived-class-sessions-design.md). originalDate is set to
-	// this same `date` at creation and never changes afterward — it's the occurrence's permanent identity, so a
+	// title live - see docs/superpowers/specs/2026-09-13-derived-class-sessions-design.md). originalDate is set to
+	// this same `date` at creation and never changes afterward - it's the occurrence's permanent identity, so a
 	// later reschedule (which moves startTime elsewhere) never causes this original slot to be re-derived as a
 	// fresh virtual occurrence, and never causes a second sessions row to be created for it.
 	//
 	// Looks up by originalDate INCLUDING soft-deleted rows (findByClassIdAndOriginalDateIncludingDeleted), not just
 	// live ones and not by current startTime: if this date was already cancelled OR already rescheduled to some
 	// other date/time, that existing row (wherever its startTime now points, or however it's marked deleted) is the
-	// correct "existing" answer — returned as-is, never un-deleted, never duplicated. Callers that need "not found"
+	// correct "existing" answer - returned as-is, never un-deleted, never duplicated. Callers that need "not found"
 	// semantics for an already-cancelled date (reschedule, attendance) check the returned session's isDeleted
 	// themselves; cancelOccurrence treats re-cancelling as an idempotent no-op instead.
 	public async materializeOccurrence(classId: number, date: Date): Promise<Session> {
@@ -241,7 +241,7 @@ export class ClassOccurrencesServer {
 			throw new ValidationError([{ field: 'classId', message: 'Class not found' }]);
 		}
 		// `date` is a UTC instant representing the calendar day's identity (originalDate), not itself a real
-		// wall-clock moment — localWallClockToUtc composes the class's local startTime on top of that day, in the
+		// wall-clock moment - localWallClockToUtc composes the class's local startTime on top of that day, in the
 		// operator's timezone, producing the true DST-aware UTC instant for this specific occurrence.
 		const startTime = localWallClockToUtc(date, foundClass.startTime, operator.timezone);
 		return this.sessions.create({
@@ -274,7 +274,7 @@ export class ClassOccurrencesServer {
 		// which (built on queryActive) already returns null for a soft-deleted session, so rescheduling an
 		// already-cancelled one-off session 404s today. Silently updating startTime on the cancelled row instead
 		// would return 200 while changing nothing visible (the row stays invisible to every listing), which is
-		// worse than a clear 404 — an operator who wants a cancelled date back should un-cancel it explicitly
+		// worse than a clear 404 - an operator who wants a cancelled date back should un-cancel it explicitly
 		// (no such endpoint exists yet; out of this task's scope), not have a reschedule call resurrect it.
 		if (session.isDeleted) {
 			return null;
@@ -283,10 +283,10 @@ export class ClassOccurrencesServer {
 		if (!updated) {
 			return null;
 		}
-		// The DB row's title stays null (see materializeOccurrence) — this patches only the in-memory object
+		// The DB row's title stays null (see materializeOccurrence) - this patches only the in-memory object
 		// returned to the caller so the response shows the class-linked display title, same resolution as
 		// buildOccurrenceList uses for the occurrence-list endpoints.
-		return { ...updated, title: updated.isMakeupSession ? `${foundClass.title} — Makeup` : foundClass.title };
+		return { ...updated, title: updated.isMakeupSession ? `${foundClass.title} - Makeup` : foundClass.title };
 	}
 
 	public async cancelOccurrence(classId: number, date: unknown): Promise<Session | null> {
@@ -297,7 +297,7 @@ export class ClassOccurrencesServer {
 		const parsedDate = parseDateOnly(date, 'date');
 		const session = await this.materializeOccurrence(classId, parsedDate);
 		// Cancelling an already-cancelled date is treated as an idempotent no-op success (matching how
-		// PostgresHandler.delete/EntityQueryHelper.delete is itself idempotent — re-running the same UPDATE ...
+		// PostgresHandler.delete/EntityQueryHelper.delete is itself idempotent - re-running the same UPDATE ...
 		// SET is_deleted = TRUE has no further effect) rather than an error: the caller's desired end state
 		// ("this date is cancelled") already holds, so there's nothing to reject.
 		if (!session.isDeleted) {
@@ -306,7 +306,7 @@ export class ClassOccurrencesServer {
 		return session;
 	}
 
-	// Makeup sessions accept the class's current standing roster only (no per-makeup studentId list — see the
+	// Makeup sessions accept the class's current standing roster only (no per-makeup studentId list - see the
 	// spec's confirmed reversal of the original 2026-09-12 design). Always materialized immediately (never
 	// virtual) since it's an explicit exception, not part of the weekly derivation.
 	public async createMakeupSession(classId: number, startTime: unknown): Promise<Session> {
@@ -333,7 +333,7 @@ export class ClassOccurrencesServer {
 
 		const classMembers = await this.classEnrollments.findActiveByClassId(classId);
 		for (const member of classMembers) {
-			// Small, bounded roster (a single class's standing members) — sequential, matching this codebase's
+			// Small, bounded roster (a single class's standing members) - sequential, matching this codebase's
 			// existing style for similarly-bounded per-item operations.
 			const student = await this.students.findById(member.studentId);
 			if (!student) {
@@ -343,8 +343,8 @@ export class ClassOccurrencesServer {
 			await this.sessions.incrementRosterCount(session.id);
 		}
 
-		// The DB row's title stays null (see materializeOccurrence) — this patches only the in-memory object
+		// The DB row's title stays null (see materializeOccurrence) - this patches only the in-memory object
 		// returned to the caller so the response shows the class-linked display title.
-		return { ...session, title: `${foundClass.title} — Makeup` };
+		return { ...session, title: `${foundClass.title} - Makeup` };
 	}
 }

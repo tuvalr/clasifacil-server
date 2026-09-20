@@ -132,7 +132,7 @@ export class AdminOperatorsController extends BaseController {
 		 *   put:
 		 *     summary: Update an operator
 		 *     description: >
-		 *       All fields optional — only provided fields are changed. name, email, and phone must each stay unique
+		 *       All fields optional - only provided fields are changed. name, email, and phone must each stay unique
 		 *       across operators (and, for email, across all login accounts); phone is also validated against
 		 *       countryCode when both are provided.
 		 *     tags: [Admin]
@@ -208,7 +208,7 @@ export class AdminOperatorsController extends BaseController {
 		 *     summary: Pause an operator
 		 *     description: >
 		 *       Omit pausedUntil (or send null) for an unlimited pause. Resuming
-		 *       is always explicit via /resume — a pausedUntil timestamp in the
+		 *       is always explicit via /resume - a pausedUntil timestamp in the
 		 *       past does not auto-reactivate the operator.
 		 *     tags: [Admin]
 		 *     parameters:
@@ -266,7 +266,7 @@ export class AdminOperatorsController extends BaseController {
 		 *   post:
 		 *     summary: Change an operator's scheduling type
 		 *     description: >
-		 *       Refused (409) while the operator has any active (non-deleted) classes, regardless of pause status —
+		 *       Refused (409) while the operator has any active (non-deleted) classes, regardless of pause status -
 		 *       clear all classes first.
 		 *     tags: [Admin]
 		 *     parameters:
