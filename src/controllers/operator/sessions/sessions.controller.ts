@@ -1,4 +1,3 @@
-import { Request, Response } from 'express';
 import { inject, injectable } from 'inversify';
 import { TYPES } from '../../../container/types';
 import { SessionsServer } from '../../../servers/sessions.server';
@@ -8,6 +7,8 @@ import { SessionAttendance } from '../../../entities/session-attendance.entity';
 import { ValidationError } from '../../../servers/types/validation-error';
 import { RouteHandlers } from '../../shared/route-handlers';
 import { BaseController } from '../../shared/base.controller';
+import { Results } from '../../shared/results';
+import { Result } from '../../shared/types/result.type';
 import { ListSessionsQuery } from './types/list-sessions-query.type';
 import { ListSessionsResponse } from './types/list-sessions-response.type';
 import { GetSessionResponse } from './types/get-session-response.type';
@@ -15,8 +16,6 @@ import { GetSessionRosterResponse } from './types/get-session-roster-response.ty
 import { CreateSessionBody } from './types/create-session-body.type';
 import { CreateSessionResponse } from './types/create-session-response.type';
 import { RescheduleSessionBody } from './types/reschedule-session-body.type';
-import { PlainSessionErrorResponse } from './types/plain-session-error-response.type';
-import { SessionValidationErrorResponse } from './types/session-validation-error-response.type';
 import { SessionAttendanceBody } from './types/session-attendance-body.type';
 import { SessionAttendanceResponse, SessionAttendanceResponseItem } from './types/session-attendance-response.type';
 import { toPublic } from '../../../utils/to-public';
@@ -52,7 +51,7 @@ export class SessionsController extends BaseController {
 		 *       404: { description: Operator not found }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.get('/', RouteHandlers.wrap(this.listSessions.bind(this)));
+		this.internalRouter.get('/', RouteHandlers.wrapResult([], this.listSessions.bind(this)));
 
 		/**
 		 * @openapi
@@ -76,7 +75,7 @@ export class SessionsController extends BaseController {
 		 *       404: { description: Not found }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.get('/:id', RouteHandlers.wrap(this.getSessionById.bind(this)));
+		this.internalRouter.get('/:id', RouteHandlers.wrapResult(['id'], this.getSessionById.bind(this)));
 
 		/**
 		 * @openapi
@@ -104,7 +103,7 @@ export class SessionsController extends BaseController {
 		 *       404: { description: Not found }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.get('/:id/roster', RouteHandlers.wrap(this.getRoster.bind(this)));
+		this.internalRouter.get('/:id/roster', RouteHandlers.wrapResult(['id'], this.getRoster.bind(this)));
 
 		/**
 		 * @openapi
@@ -135,7 +134,7 @@ export class SessionsController extends BaseController {
 		 *       404: { description: Operator not found }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.post('/', RouteHandlers.wrap(this.createSession.bind(this)));
+		this.internalRouter.post('/', RouteHandlers.wrapResult([], this.createSession.bind(this)));
 
 		/**
 		 * @openapi
@@ -155,7 +154,7 @@ export class SessionsController extends BaseController {
 		 *       404: { description: Not found }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.post('/:id/cancel', RouteHandlers.wrap(this.cancelSession.bind(this)));
+		this.internalRouter.post('/:id/cancel', RouteHandlers.wrapResult(['id'], this.cancelSession.bind(this)));
 
 		/**
 		 * @openapi
@@ -189,7 +188,7 @@ export class SessionsController extends BaseController {
 		 *       404: { description: Not found }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.patch('/:id/reschedule', RouteHandlers.wrap(this.rescheduleSession.bind(this)));
+		this.internalRouter.patch('/:id/reschedule', RouteHandlers.wrapResult(['id'], this.rescheduleSession.bind(this)));
 
 		/**
 		 * @openapi
@@ -225,7 +224,7 @@ export class SessionsController extends BaseController {
 		 *       404: { description: Not found }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.get('/:id/attendance', RouteHandlers.wrap(this.getAttendance.bind(this)));
+		this.internalRouter.get('/:id/attendance', RouteHandlers.wrapResult(['id'], this.getAttendance.bind(this)));
 
 		/**
 		 * @openapi
@@ -278,110 +277,98 @@ export class SessionsController extends BaseController {
 		 *       404: { description: Not found }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.put('/:id/attendance', RouteHandlers.wrap(this.recordAttendance.bind(this)));
+		this.internalRouter.put('/:id/attendance', RouteHandlers.wrapResult(['id'], this.recordAttendance.bind(this)));
 	}
 
-	private async listSessions(req: Request<unknown, ListSessionsResponse, unknown, ListSessionsQuery>, res: Response<ListSessionsResponse>): Promise<void> {
-		const operatorId = Number(req.query.operatorId);
-		if (!req.query.operatorId || Number.isNaN(operatorId)) {
-			res.status(400).end();
-			return;
+	private async listSessions(_body: unknown, query: ListSessionsQuery): Promise<Result<ListSessionsResponse>> {
+		const operatorId = Number(query.operatorId);
+		if (!query.operatorId || Number.isNaN(operatorId)) {
+			return Results.badRequest('operatorId is required');
 		}
 
 		const sessions = await this.sessionsServer.findByOperatorId(operatorId);
 		if (!sessions) {
-			res.status(404).end();
-			return;
+			return Results.notFound();
 		}
-		res.json(sessions.map(toPublic));
+		return Results.ok(sessions.map(toPublic));
 	}
 
-	private async getSessionById(req: Request<{ id: string }>, res: Response<GetSessionResponse>): Promise<void> {
-		const session = await this.sessionsServer.findById(Number(req.params.id));
+	private async getSessionById(id: string, _body: unknown, _query: unknown): Promise<Result<GetSessionResponse>> {
+		const session = await this.sessionsServer.findById(Number(id));
 		if (!session) {
-			res.status(404).end();
-			return;
+			return Results.notFound();
 		}
-		res.json(toPublic(session));
+		return Results.ok(toPublic(session));
 	}
 
-	private async getRoster(req: Request<{ id: string }>, res: Response<GetSessionRosterResponse>): Promise<void> {
-		const roster = await this.sessionsServer.getRoster(Number(req.params.id));
+	private async getRoster(id: string, _body: unknown, _query: unknown): Promise<Result<GetSessionRosterResponse>> {
+		const roster = await this.sessionsServer.getRoster(Number(id));
 		if (!roster) {
-			res.status(404).end();
-			return;
+			return Results.notFound();
 		}
-		res.json({ enrollments: roster.enrollments.map(toPublic), classMemberStudentIds: roster.classMemberStudentIds });
+		return Results.ok({ enrollments: roster.enrollments.map(toPublic), classMemberStudentIds: roster.classMemberStudentIds });
 	}
 
-	private async createSession(req: Request<unknown, CreateSessionResponse | PlainSessionErrorResponse, CreateSessionBody>, res: Response<CreateSessionResponse | PlainSessionErrorResponse>): Promise<void> {
-		const { operatorId, title, startTime, capacityLimit } = req.body;
+	private async createSession(body: CreateSessionBody, _query: unknown): Promise<Result<CreateSessionResponse>> {
+		const { operatorId, title, startTime, capacityLimit } = body;
 		try {
 			const session = await this.sessionsServer.create({ operatorId, title, startTime: new Date(startTime), capacityLimit });
 			if (!session) {
-				res.status(404).end();
-				return;
+				return Results.notFound();
 			}
-			res.status(201).json(toPublic(session));
+			return Results.created(toPublic(session));
 		} catch (error) {
 			if (error instanceof PlainSessionNotAllowedError) {
-				res.status(400).json({ error: error.message });
-				return;
+				return Results.badRequest(error.message);
 			}
 			throw error;
 		}
 	}
 
-	private async cancelSession(req: Request<{ id: string }>, res: Response): Promise<void> {
-		const session = await this.sessionsServer.cancel(Number(req.params.id));
+	private async cancelSession(id: string, _body: unknown, _query: unknown): Promise<Result<never>> {
+		const session = await this.sessionsServer.cancel(Number(id));
 		if (!session) {
-			res.status(404).end();
-			return;
+			return Results.notFound();
 		}
-		res.status(204).end();
+		return Results.noContent();
 	}
 
-	private async rescheduleSession(req: Request<{ id: string }, GetSessionResponse | SessionValidationErrorResponse, RescheduleSessionBody>, res: Response<GetSessionResponse | SessionValidationErrorResponse>): Promise<void> {
+	private async rescheduleSession(id: string, body: RescheduleSessionBody, _query: unknown): Promise<Result<GetSessionResponse>> {
 		try {
-			const rescheduled = await this.sessionsServer.reschedule(Number(req.params.id), req.body.startTime);
+			const rescheduled = await this.sessionsServer.reschedule(Number(id), body.startTime);
 			if (!rescheduled) {
-				res.status(404).end();
-				return;
+				return Results.notFound();
 			}
-			res.json(toPublic(rescheduled));
+			return Results.ok(toPublic(rescheduled));
 		} catch (error) {
 			if (error instanceof ValidationError) {
-				res.status(400).json({ error: 'Validation failed', details: error.details });
-				return;
+				return Results.validationError(error.details);
 			}
 			throw error;
 		}
 	}
 
 	// Returns recorded attendance for a true one-off session; 404 if the session itself doesn't exist.
-	private async getAttendance(req: Request<{ id: string }>, res: Response<SessionAttendanceResponse>): Promise<void> {
-		const sessionId = Number(req.params.id);
+	private async getAttendance(id: string, _body: unknown, _query: unknown): Promise<Result<SessionAttendanceResponse>> {
+		const sessionId = Number(id);
 		const session = await this.sessionsServer.findById(sessionId);
 		if (!session) {
-			res.status(404).end();
-			return;
+			return Results.notFound();
 		}
 		const rows = await this.sessionAttendanceServer.findBySessionId(sessionId);
-		res.json(rows.map((row: SessionAttendance): SessionAttendanceResponseItem => ({ studentId: row.studentId, status: row.status })));
+		return Results.ok(rows.map((row: SessionAttendance): SessionAttendanceResponseItem => ({ studentId: row.studentId, status: row.status })));
 	}
 
-	private async recordAttendance(req: Request<{ id: string }, SessionAttendanceResponse | SessionValidationErrorResponse, SessionAttendanceBody>, res: Response<SessionAttendanceResponse | SessionValidationErrorResponse>): Promise<void> {
+	private async recordAttendance(id: string, body: SessionAttendanceBody, _query: unknown): Promise<Result<SessionAttendanceResponse>> {
 		try {
-			const result = await this.sessionAttendanceServer.recordForSessionId(Number(req.params.id), null, req.body?.attendance);
+			const result = await this.sessionAttendanceServer.recordForSessionId(Number(id), null, body?.attendance);
 			if (!result) {
-				res.status(404).end();
-				return;
+				return Results.notFound();
 			}
-			res.json(result.map((row: SessionAttendance): SessionAttendanceResponseItem => ({ studentId: row.studentId, status: row.status })));
+			return Results.ok(result.map((row: SessionAttendance): SessionAttendanceResponseItem => ({ studentId: row.studentId, status: row.status })));
 		} catch (error) {
 			if (error instanceof ValidationError) {
-				res.status(400).json({ error: 'Validation failed', details: error.details });
-				return;
+				return Results.validationError(error.details);
 			}
 			throw error;
 		}
