@@ -7,6 +7,8 @@ import { RouteHandlers } from '../../shared/route-handlers';
 import { BaseController } from '../../shared/base.controller';
 import { avatarUpload } from '../../shared/avatar-upload.middleware';
 import { toPublic } from '../../../utils/to-public';
+import { Results } from '../../shared/results';
+import { Result } from '../../shared/types/result.type';
 import { GetHouseholdSettingsResponse } from './types/get-household-settings-response.type';
 import { UpdateHouseholdSettingsBody } from './types/update-household-settings-body.type';
 import { UpdateHouseholdSettingsResponse } from './types/update-household-settings-response.type';
@@ -43,7 +45,7 @@ export class HouseholdSettingsController extends BaseController {
 		 *       404: { description: Not found }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.get('/:id', RouteHandlers.wrap(this.getSettings.bind(this)));
+		this.internalRouter.get('/:id', RouteHandlers.wrapResult(['id'], this.getSettings.bind(this)));
 
 		/**
 		 * @openapi
@@ -75,7 +77,7 @@ export class HouseholdSettingsController extends BaseController {
 		 *       404: { description: Not found }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.put('/:id', RouteHandlers.wrap(this.updateSettings.bind(this)));
+		this.internalRouter.put('/:id', RouteHandlers.wrapResult(['id'], this.updateSettings.bind(this)));
 
 		/**
 		 * @openapi
@@ -115,23 +117,21 @@ export class HouseholdSettingsController extends BaseController {
 		this.internalRouter.put('/:id/avatar', avatarUpload, RouteHandlers.wrap(this.updateAvatar.bind(this)));
 	}
 
-	private async getSettings(req: Request<{ id: string }>, res: Response<GetHouseholdSettingsResponse>): Promise<void> {
-		const household = await this.householdsServer.getById(Number(req.params.id));
+	private async getSettings(id: string, _body: unknown, _query: unknown): Promise<Result<GetHouseholdSettingsResponse>> {
+		const household = await this.householdsServer.getById(Number(id));
 		if (!household) {
-			res.status(404).end();
-			return;
+			return Results.notFound();
 		}
-		res.json(toPublic(household));
+		return Results.ok(toPublic(household));
 	}
 
-	private async updateSettings(req: Request<{ id: string }, UpdateHouseholdSettingsResponse, UpdateHouseholdSettingsBody>, res: Response<UpdateHouseholdSettingsResponse>): Promise<void> {
-		const { name, email } = req.body;
-		const household = await this.householdsServer.update(Number(req.params.id), { name, email });
+	private async updateSettings(id: string, body: UpdateHouseholdSettingsBody, _query: unknown): Promise<Result<UpdateHouseholdSettingsResponse>> {
+		const { name, email } = body;
+		const household = await this.householdsServer.update(Number(id), { name, email });
 		if (!household) {
-			res.status(404).end();
-			return;
+			return Results.notFound();
 		}
-		res.json(toPublic(household));
+		return Results.ok(toPublic(household));
 	}
 
 	private async updateAvatar(req: Request<{ id: string }>, res: Response<UpdateHouseholdAvatarResponse | AvatarErrorResponse>): Promise<void> {
