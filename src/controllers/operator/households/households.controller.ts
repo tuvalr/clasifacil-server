@@ -1,4 +1,3 @@
-import { Request, Response } from 'express';
 import { inject, injectable } from 'inversify';
 import { TYPES } from '../../../container/types';
 import { HouseholdsServer } from '../../../servers/households.server';
@@ -8,6 +7,8 @@ import { ListHouseholdsResponse } from './types/list-households-response.type';
 import { GetHouseholdResponse } from './types/get-household-response.type';
 import { ListHouseholdStudentsResponse } from './types/list-household-students-response.type';
 import { toPublic } from '../../../utils/to-public';
+import { Results } from '../../shared/results';
+import { Result } from '../../shared/types/result.type';
 
 // UC1: Household & Multi-Student Account Management
 @injectable()
@@ -31,7 +32,7 @@ export class HouseholdsController extends BaseController {
 		 *       401: { $ref: '#/components/responses/Unauthorized' }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.get('/', RouteHandlers.wrap(this.listHouseholds.bind(this)));
+		this.internalRouter.get('/', RouteHandlers.wrapResult([], this.listHouseholds.bind(this)));
 
 		/**
 		 * @openapi
@@ -55,7 +56,7 @@ export class HouseholdsController extends BaseController {
 		 *       404: { description: Not found }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.get('/:id', RouteHandlers.wrap(this.getHouseholdById.bind(this)));
+		this.internalRouter.get('/:id', RouteHandlers.wrapResult(['id'], this.getHouseholdById.bind(this)));
 
 		/**
 		 * @openapi
@@ -79,7 +80,7 @@ export class HouseholdsController extends BaseController {
 		 *       404: { description: Not found }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.get('/:id/students', RouteHandlers.wrap(this.listStudents.bind(this)));
+		this.internalRouter.get('/:id/students', RouteHandlers.wrapResult(['id'], this.listStudents.bind(this)));
 
 		/**
 		 * @openapi
@@ -99,7 +100,7 @@ export class HouseholdsController extends BaseController {
 		 *       404: { description: Not found }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.post('/:id/archive', RouteHandlers.wrap(this.archiveHousehold.bind(this)));
+		this.internalRouter.post('/:id/archive', RouteHandlers.wrapResult(['id'], this.archiveHousehold.bind(this)));
 
 		/**
 		 * @openapi
@@ -119,51 +120,47 @@ export class HouseholdsController extends BaseController {
 		 *       404: { description: Not found }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.post('/:id/restore', RouteHandlers.wrap(this.restoreHousehold.bind(this)));
+		this.internalRouter.post('/:id/restore', RouteHandlers.wrapResult(['id'], this.restoreHousehold.bind(this)));
 		// TODO: requires a co-household-owner/secondary-adult table (PRD UC1: "grant
 		// secondary view/booking access to a co-household-owner via email invite") -
 		// no such table exists yet.
 		this.internalRouter.post('/:id/invite-co-household-owner', RouteHandlers.notImplemented);
 	}
 
-	private async listHouseholds(_req: Request, res: Response<ListHouseholdsResponse>): Promise<void> {
+	private async listHouseholds(_body: unknown, _query: unknown): Promise<Result<ListHouseholdsResponse>> {
 		const households = await this.householdsServer.listAll();
-		res.json(households.map(toPublic));
+		return Results.ok(households.map(toPublic));
 	}
 
-	private async getHouseholdById(req: Request<{ id: string }>, res: Response<GetHouseholdResponse>): Promise<void> {
-		const household = await this.householdsServer.getById(Number(req.params.id));
+	private async getHouseholdById(id: string, _body: unknown, _query: unknown): Promise<Result<GetHouseholdResponse>> {
+		const household = await this.householdsServer.getById(Number(id));
 		if (!household) {
-			res.status(404).end();
-			return;
+			return Results.notFound();
 		}
-		res.json(toPublic(household));
+		return Results.ok(toPublic(household));
 	}
 
-	private async listStudents(req: Request<{ id: string }>, res: Response<ListHouseholdStudentsResponse>): Promise<void> {
-		const students = await this.householdsServer.listStudents(Number(req.params.id));
+	private async listStudents(id: string, _body: unknown, _query: unknown): Promise<Result<ListHouseholdStudentsResponse>> {
+		const students = await this.householdsServer.listStudents(Number(id));
 		if (!students) {
-			res.status(404).end();
-			return;
+			return Results.notFound();
 		}
-		res.json(students.map(toPublic));
+		return Results.ok(students.map(toPublic));
 	}
 
-	private async archiveHousehold(req: Request<{ id: string }>, res: Response): Promise<void> {
-		const household = await this.householdsServer.archive(Number(req.params.id));
+	private async archiveHousehold(id: string, _body: unknown, _query: unknown): Promise<Result<never>> {
+		const household = await this.householdsServer.archive(Number(id));
 		if (!household) {
-			res.status(404).end();
-			return;
+			return Results.notFound();
 		}
-		res.status(204).end();
+		return Results.noContent();
 	}
 
-	private async restoreHousehold(req: Request<{ id: string }>, res: Response): Promise<void> {
-		const household = await this.householdsServer.restore(Number(req.params.id));
+	private async restoreHousehold(id: string, _body: unknown, _query: unknown): Promise<Result<never>> {
+		const household = await this.householdsServer.restore(Number(id));
 		if (!household) {
-			res.status(404).end();
-			return;
+			return Results.notFound();
 		}
-		res.status(204).end();
+		return Results.noContent();
 	}
 }
