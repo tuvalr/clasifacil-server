@@ -4,17 +4,12 @@ import { OperatorsServer } from '../../../servers/operators.server';
 import { OperatorHasActiveClassesError, OperatorTimezoneLockedError } from '../../../servers/types/operators.server.types';
 import { ValidationError } from '../../../servers/types/validation-error';
 import { ClassRepository } from '../../../repositories/class.repository';
-import { Student } from '../../../entities/student.entity';
-import { EnrollmentAndCredit } from '../../../entities/enrollment-and-credit.entity';
-import { Session } from '../../../entities/session.entity';
-import { Household } from '../../../entities/household.entity';
 import { RouteHandlers } from '../../shared/route-handlers';
 import { BaseController } from '../../shared/base.controller';
 import { Results } from '../../shared/results';
 import { Result } from '../../shared/types/result.type';
 import { ListOperatorsResponse } from './types/list-operators-response.type';
 import { GetOperatorResponse } from './types/get-operator-response.type';
-import { GetOperatorDetailsResponse } from './types/get-operator-details-response.type';
 import { CreateOperatorBody } from './types/create-operator-body.type';
 import { CreateOperatorResponse } from './types/create-operator-response.type';
 import { ChangeOperatorTypeBody } from './types/change-operator-type-body.type';
@@ -47,30 +42,6 @@ export class AdminOperatorsController extends BaseController {
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
 		this.internalRouter.get('/', RouteHandlers.wrapNoParams(this.listOperators.bind(this)));
-
-		/**
-		 * @openapi
-		 * /api/admin/operators/{id}:
-		 *   get:
-		 *     summary: Get operator by ID, with its sessions, their enrollments, and each enrollment's student/household
-		 *     tags: [Admin]
-		 *     parameters:
-		 *       - in: path
-		 *         name: id
-		 *         required: true
-		 *         schema: { type: integer }
-		 *     responses:
-		 *       200:
-		 *         description: OK
-		 *         content:
-		 *           application/json:
-		 *             schema: { $ref: '#/components/schemas/OperatorDetails' }
-		 *       400: { $ref: '#/components/responses/BadRequest' }
-		 *       401: { $ref: '#/components/responses/Unauthorized' }
-		 *       404: { description: Not found }
-		 *       500: { $ref: '#/components/responses/InternalError' }
-		 */
-		this.internalRouter.get('/:id', RouteHandlers.wrapOneParam('id', this.getOperatorById.bind(this)));
 
 		/**
 		 * @openapi
@@ -302,24 +273,6 @@ export class AdminOperatorsController extends BaseController {
 	private async listOperators(): Promise<Result<ListOperatorsResponse>> {
 		const operators = await this.operatorsServer.listAll();
 		return Results.ok(operators.map(toPublic));
-	}
-
-	private async getOperatorById(id: string): Promise<Result<GetOperatorDetailsResponse>> {
-		const details = await this.operatorsServer.getByIdWithDetails(Number(id));
-		if (!details) {
-			return Results.notFound();
-		}
-		return Results.ok({
-			...toPublic(details.operator),
-			sessions: details.sessions.map((session: Session & { enrollments: (EnrollmentAndCredit & { student: Student | null; household: Household | null })[] }) => ({
-				...toPublic(session),
-				enrollments: session.enrollments.map((enrollment: EnrollmentAndCredit & { student: Student | null; household: Household | null }) => ({
-					...toPublic(enrollment),
-					student: enrollment.student ? toPublic(enrollment.student) : null,
-					household: enrollment.household ? toPublic(enrollment.household) : null,
-				})),
-			})),
-		});
 	}
 
 	private async createOperator(body: CreateOperatorBody): Promise<Result<CreateOperatorResponse>> {
