@@ -59,3 +59,18 @@ export function startOfLocalDay(instant: Date, timezone: string): Date {
 	const zoned = toZonedTime(instant, timezone);
 	return fromZonedTime(`${formatZonedDateOnly(zoned)} 00:00:00`, timezone);
 }
+
+// Converts a local-midnight-in-`timezone` UTC instant (as produced by walkLocalWeekday) into UTC midnight of that
+// SAME calendar day — the canonical date identity ClassOccurrencesServer's parseDateOnly already uses for the
+// request path (a 'YYYY-MM-DD' string parsed as UTC midnight). materializeOccurrence's `date` parameter is used
+// both as the originalDate identity (a DATE column, always read back via `date.toISOString().slice(0, 10)`) and
+// as the anchor for composing the class's startTime — every caller must pass the SAME canonical form for the same
+// calendar day, or two different UTC instants that both "mean" the same local date will silently produce two
+// different originalDate values, breaking the row-dedup/reschedule/cancel identity this feature depends on. Only
+// the nightly job needs this conversion — the request path's parseDateOnly is already in this canonical form by
+// construction.
+export function toCanonicalOriginalDate(localMidnightUtc: Date, timezone: string): Date {
+	const zoned = toZonedTime(localMidnightUtc, timezone);
+	const dateOnly = formatZonedDateOnly(zoned);
+	return new Date(`${dateOnly}T00:00:00.000Z`);
+}

@@ -6,7 +6,7 @@ import { ClassOccurrencesServer } from '../servers/class-occurrences.server';
 import { Class } from '../entities/class.entity';
 import { Logger } from '../logger/logger';
 import { OperatorRepository } from '../repositories/operator.repository';
-import { walkLocalWeekday } from '../utils/timezone.util';
+import { localWallClockToUtc, toCanonicalOriginalDate, walkLocalWeekday } from '../utils/timezone.util';
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
@@ -64,13 +64,31 @@ export class NightlyBackfillJob {
 		// materializeOccurrence — all three code paths must agree on the same UTC instant for a given class+date.
 		const localMidnights = walkLocalWeekday(startFrom, yesterday, operator.timezone, foundClass.dayOfWeek);
 		for (const localMidnight of localMidnights) {
+			// walkLocalWeekday's loop bound has deliberate slack past `yesterday` (see its own comment) — the request
+			// path re-filters its composed occurrence times back down to [from, to] (computeOccurrenceDates) before
+			// using them; this job must do the same against `yesterday`, or it can materialize an occurrence whose
+			// real startTime lands past the job's own "through yesterday inclusive" contract. `localMidnight` (the
+			// raw walkLocalWeekday output, local-midnight-shaped) is the correct input to localWallClockToUtc here —
+			// NOT canonicalDate below, which is UTC-midnight-shaped and would compose the wrong wall-clock instant.
+			const composedStartTime = localWallClockToUtc(localMidnight, foundClass.startTime, operator.timezone);
+			if (composedStartTime.getTime() > yesterday.getTime()) {
+				continue;
+			}
+
+			// Normalizes this local-midnight instant to the same canonical UTC-midnight-of-that-calendar-day form
+			// ClassOccurrencesServer's parseDateOnly already produces for the request path — materializeOccurrence's
+			// `date` is used as the originalDate identity (a DATE column), so every caller must agree on the same
+			// canonical form for the same calendar day, or the request path and this job silently disagree on
+			// originalDate for what's supposed to be the same occurrence, producing duplicate sessions rows (see
+			// toCanonicalOriginalDate's own doc comment).
+			const canonicalDate = toCanonicalOriginalDate(localMidnight, operator.timezone);
 			try {
 				// Sequential — backfilling one class's date range in order; this is a nightly job, not a request path.
-				await this.classOccurrences.materializeOccurrence(foundClass.id, localMidnight);
+				await this.classOccurrences.materializeOccurrence(foundClass.id, canonicalDate);
 			} catch (error) {
 				this.logger.error('nightly backfill: failed to materialize occurrence', {
 					classId: foundClass.id,
-					date: localMidnight.toISOString(),
+					date: canonicalDate.toISOString(),
 					error: error instanceof Error ? error.message : error,
 				});
 			}
