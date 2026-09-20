@@ -26,6 +26,7 @@ export class OperatorHasActiveClassesError extends Error {
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const VALID_COUNTRY_CODES: ReadonlySet<string> = new Set(getCountries());
+const VALID_TIMEZONES: ReadonlySet<string> = new Set(Intl.supportedValuesOf('timeZone'));
 
 function isKnownCountryCode(value: string): value is CountryCode {
 	return VALID_COUNTRY_CODES.has(value);
@@ -99,7 +100,14 @@ export class OperatorsServer {
 	// Creates the operators row and its login-capable users row (role: 'operator', associatedEntityId: the new operator's id) together —
 	// if either insert fails, both roll back, so an operator can never be left without a way to log in. auth_uid is generated here (not
 	// accepted from the client) since it's a uuid-typed, unique login identifier — the caller has no business choosing it.
-	public async create(data: { name: string; email: string; phone: string; countryCode: string; type: 'schedule' | 'assigned' }): Promise<{ operator: Operator; user: User }> {
+	public async create(data: {
+		name: string;
+		email: string;
+		phone: string;
+		countryCode: string;
+		type: 'schedule' | 'assigned';
+		timezone: string;
+	}): Promise<{ operator: Operator; user: User }> {
 		const details = await this.validateCreate(data);
 		if (details.length > 0) {
 			throw new ValidationError(details);
@@ -108,7 +116,10 @@ export class OperatorsServer {
 		const authUid = randomUUID();
 
 		return this.db.transaction(async (transaction: TransactionHandle) => {
-			const operator = await this.operators.create({ name: data.name, email: data.email, phone: data.phone, countryCode: data.countryCode, type: data.type }, transaction);
+			const operator = await this.operators.create(
+				{ name: data.name, email: data.email, phone: data.phone, countryCode: data.countryCode, type: data.type, timezone: data.timezone },
+				transaction,
+			);
 			const user = await this.users.create({ authUid, email: data.email, role: 'operator', associatedEntityId: operator.id }, transaction);
 			return { operator, user };
 		});
@@ -170,7 +181,7 @@ export class OperatorsServer {
 
 	// findById first — same reasoning as pause()/resume(): update() has no is_deleted guard, so without this check a
 	// soft-deleted operator would still match and get silently updated instead of 404ing like every other endpoint.
-	public async update(id: number, data: { name?: string; email?: string; phone?: string; countryCode?: string }): Promise<Operator | null> {
+	public async update(id: number, data: { name?: string; email?: string; phone?: string; countryCode?: string; timezone?: string }): Promise<Operator | null> {
 		const operator = await this.operators.findById(id);
 		if (!operator) {
 			return null;
@@ -192,7 +203,7 @@ export class OperatorsServer {
 		return this.operators.update(id, { avatarUrl });
 	}
 
-	private async validateCreate(data: { name: string; email: string; phone: string; countryCode: string; type?: unknown }): Promise<ValidationErrorDetail[]> {
+	private async validateCreate(data: { name: string; email: string; phone: string; countryCode: string; type?: unknown; timezone?: unknown }): Promise<ValidationErrorDetail[]> {
 		const details: ValidationErrorDetail[] = [];
 
 		// Validate type is present and valid
@@ -205,6 +216,12 @@ export class OperatorsServer {
 			return details;
 		}
 
+		if (data.timezone === undefined) {
+			details.push({ field: 'timezone', message: 'timezone is required' });
+		} else {
+			details.push(...this.validateTimezone(data.timezone));
+		}
+
 		details.push(...(await this.validateEmail(data.email, null)));
 		details.push(...(await this.validateName(data.name, null)));
 		details.push(...(await this.validatePhone(data.phone, null, data.countryCode)));
@@ -214,7 +231,7 @@ export class OperatorsServer {
 
 	// Only the fields actually present in `data` are checked — an update() caller that isn't touching name/email/phone
 	// shouldn't be blocked by, say, another operator already having this operator's own unchanged email.
-	private async validateUpdate(id: number, data: { name?: string; email?: string; phone?: string; countryCode?: string }): Promise<ValidationErrorDetail[]> {
+	private async validateUpdate(id: number, data: { name?: string; email?: string; phone?: string; countryCode?: string; timezone?: string }): Promise<ValidationErrorDetail[]> {
 		const details: ValidationErrorDetail[] = [];
 
 		if (data.email !== undefined) {
@@ -226,8 +243,21 @@ export class OperatorsServer {
 		if (data.phone !== undefined) {
 			details.push(...(await this.validatePhone(data.phone, id, data.countryCode)));
 		}
+		if (data.timezone !== undefined) {
+			details.push(...this.validateTimezone(data.timezone));
+		}
 
 		return details;
+	}
+
+	// Checked against the runtime's actual IANA timezone database (Intl.supportedValuesOf('timeZone')) rather than
+	// a hand-maintained list, so it stays correct as the underlying tzdata updates — same "validate at the
+	// application layer, not a raw DB error" reasoning as validatePhone's countryCode check.
+	private validateTimezone(timezone: unknown): ValidationErrorDetail[] {
+		if (typeof timezone !== 'string' || !VALID_TIMEZONES.has(timezone)) {
+			return [{ field: 'timezone', message: 'Invalid or unrecognized IANA timezone name' }];
+		}
+		return [];
 	}
 
 	// excludeId: a re-fetched match is the operator's own current row (the field is unchanged) rather than a genuine

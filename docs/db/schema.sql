@@ -24,6 +24,9 @@ CREATE TABLE operators (
 	paused_until       TIMESTAMPTZ,
 	avatar_url         TEXT,
 	type               VARCHAR(20)              NOT NULL DEFAULT 'schedule',
+	timezone           VARCHAR(64)              NOT NULL DEFAULT 'UTC',  -- IANA timezone name, e.g. 'America/New_York'.
+	                                                                     -- DB default only backfills existing rows —
+	                                                                     -- the application layer requires it on create.
 	is_deleted         BOOLEAN                  NOT NULL DEFAULT FALSE,
 	deleted_at         TIMESTAMPTZ,
 	created_at         TIMESTAMPTZ              DEFAULT CURRENT_TIMESTAMP,

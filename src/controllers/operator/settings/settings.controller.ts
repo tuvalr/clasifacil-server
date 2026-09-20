@@ -71,6 +71,7 @@ export class OperatorSettingsController extends BaseController {
 		 *               email: { type: string }
 		 *               phone: { type: string }
 		 *               countryCode: { type: string }
+		 *               timezone: { type: string, description: 'IANA timezone name, e.g. America/New_York' }
 		 *     responses:
 		 *       200:
 		 *         description: OK
@@ -149,9 +150,9 @@ export class OperatorSettingsController extends BaseController {
 		req: Request<{ id: string }, UpdateOperatorSettingsResponse | UpdateOperatorSettingsValidationErrorResponse, UpdateOperatorSettingsBody>,
 		res: Response<UpdateOperatorSettingsResponse | UpdateOperatorSettingsValidationErrorResponse>,
 	): Promise<void> {
-		const { name, email, phone, countryCode } = req.body;
+		const { name, email, phone, countryCode, timezone } = req.body;
 		try {
-			const operator = await this.operatorsServer.update(Number(req.params.id), { name, email, phone, countryCode });
+			const operator = await this.operatorsServer.update(Number(req.params.id), { name, email, phone, countryCode, timezone });
 			if (!operator) {
 				res.status(404).end();
 				return;

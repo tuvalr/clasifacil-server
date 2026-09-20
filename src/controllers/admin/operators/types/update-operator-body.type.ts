@@ -3,4 +3,5 @@ export interface UpdateOperatorBody {
 	email?: string;
 	phone?: string;
 	countryCode?: string;
+	timezone?: string;
 }

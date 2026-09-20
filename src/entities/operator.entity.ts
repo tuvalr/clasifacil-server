@@ -11,6 +11,7 @@ export interface Operator extends BaseEntity {
 	pausedUntil: Date | null;
 	avatarUrl: string | null;
 	type: 'schedule' | 'assigned';
+	timezone: string;
 }
 
 export const OperatorEntity: EntityDescriptor<Operator> = {

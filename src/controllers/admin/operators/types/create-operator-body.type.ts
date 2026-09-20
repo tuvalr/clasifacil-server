@@ -4,4 +4,5 @@ export interface CreateOperatorBody {
 	phone: string;
 	countryCode: string;
 	type: 'schedule' | 'assigned';
+	timezone: string;
 }

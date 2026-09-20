@@ -31,14 +31,26 @@ export class OperatorRepository {
 	}
 
 	// Accepts an optional TransactionHandle — see UserRepository.create() for why (AdminOperatorsController creates an operator + its user account atomically).
-	public async create(data: { name: string; email: string; phone: string; countryCode: string; type: 'schedule' | 'assigned' }, tx?: TransactionHandle): Promise<Operator> {
+	public async create(
+		data: { name: string; email: string; phone: string; countryCode: string; type: 'schedule' | 'assigned'; timezone: string },
+		tx?: TransactionHandle,
+	): Promise<Operator> {
 		const db = tx ?? this.db;
 		return db.insert(OperatorEntity, { ...data, isDeleted: false });
 	}
 
 	public async update(
 		id: number,
-		data: Partial<{ name: string; email: string; phone: string; countryCode: string; stripeAccountId: string | null; onboardingStatus: string | null; avatarUrl: string | null }>,
+		data: Partial<{
+			name: string;
+			email: string;
+			phone: string;
+			countryCode: string;
+			stripeAccountId: string | null;
+			onboardingStatus: string | null;
+			avatarUrl: string | null;
+			timezone: string;
+		}>,
 	): Promise<Operator | null> {
 		return this.db.update(OperatorEntity, id, data);
 	}

@@ -48,6 +48,7 @@ export const swaggerSpec = swaggerJsdoc({
 						pausedUntil: { type: 'string', format: 'date-time', nullable: true },
 						avatarUrl: { type: 'string', nullable: true },
 						type: { type: 'string', enum: ['schedule', 'assigned'] },
+						timezone: { type: 'string', description: 'IANA timezone name, e.g. America/New_York' },
 					},
 				},
 				OperatorDetails: {
@@ -64,6 +65,7 @@ export const swaggerSpec = swaggerJsdoc({
 						pausedUntil: { type: 'string', format: 'date-time', nullable: true },
 						avatarUrl: { type: 'string', nullable: true },
 						type: { type: 'string', enum: ['schedule', 'assigned'] },
+						timezone: { type: 'string', description: 'IANA timezone name, e.g. America/New_York' },
 						sessions: {
 							type: 'array',
 							items: {

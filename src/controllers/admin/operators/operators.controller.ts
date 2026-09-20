@@ -79,7 +79,8 @@ export class AdminOperatorsController extends BaseController {
 		 *     description: >
 		 *       The login identifier (auth_uid) is generated server-side, not
 		 *       accepted from the client. name and email must each be unique;
-		 *       phone is validated against countryCode (ISO 3166-1 alpha-2).
+		 *       phone is validated against countryCode (ISO 3166-1 alpha-2);
+		 *       timezone must be a valid IANA timezone name.
 		 *     tags: [Admin]
 		 *     requestBody:
 		 *       required: true
@@ -87,13 +88,14 @@ export class AdminOperatorsController extends BaseController {
 		 *         application/json:
 		 *           schema:
 		 *             type: object
-		 *             required: [name, email, phone, countryCode, type]
+		 *             required: [name, email, phone, countryCode, type, timezone]
 		 *             properties:
 		 *               name: { type: string }
 		 *               email: { type: string }
 		 *               phone: { type: string, description: 'National-format phone number, validated against countryCode' }
 		 *               countryCode: { type: string, description: 'ISO 3166-1 alpha-2 country code, e.g. US' }
 		 *               type: { type: string, enum: [schedule, assigned] }
+		 *               timezone: { type: string, description: 'IANA timezone name, e.g. America/New_York' }
 		 *     responses:
 		 *       201:
 		 *         description: Created
@@ -149,6 +151,7 @@ export class AdminOperatorsController extends BaseController {
 		 *               email: { type: string }
 		 *               phone: { type: string, description: 'National-format phone number, validated against countryCode' }
 		 *               countryCode: { type: string, description: 'ISO 3166-1 alpha-2 country code, e.g. US' }
+		 *               timezone: { type: string, description: 'IANA timezone name, e.g. America/New_York' }
 		 *     responses:
 		 *       200:
 		 *         description: OK
@@ -322,9 +325,9 @@ export class AdminOperatorsController extends BaseController {
 		req: Request<unknown, CreateOperatorResponse | CreateOperatorValidationErrorResponse, CreateOperatorBody>,
 		res: Response<CreateOperatorResponse | CreateOperatorValidationErrorResponse>,
 	): Promise<void> {
-		const { name, email, phone, countryCode, type } = req.body;
+		const { name, email, phone, countryCode, type, timezone } = req.body;
 		try {
-			const result = await this.operatorsServer.create({ name, email, phone, countryCode, type });
+			const result = await this.operatorsServer.create({ name, email, phone, countryCode, type, timezone });
 			res.status(201).json({ operator: toPublic(result.operator), user: toPublic(result.user) });
 		} catch (error) {
 			if (error instanceof ValidationError) {
@@ -339,9 +342,9 @@ export class AdminOperatorsController extends BaseController {
 		req: Request<{ id: string }, GetOperatorResponse | CreateOperatorValidationErrorResponse, UpdateOperatorBody>,
 		res: Response<GetOperatorResponse | CreateOperatorValidationErrorResponse>,
 	): Promise<void> {
-		const { name, email, phone, countryCode } = req.body;
+		const { name, email, phone, countryCode, timezone } = req.body;
 		try {
-			const operator = await this.operatorsServer.update(Number(req.params.id), { name, email, phone, countryCode });
+			const operator = await this.operatorsServer.update(Number(req.params.id), { name, email, phone, countryCode, timezone });
 			if (!operator) {
 				res.status(404).end();
 				return;
