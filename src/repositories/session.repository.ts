@@ -25,10 +25,7 @@ export class SessionRepository {
 	// parenthesized boolean expression and be invalid SQL - matching this file's findByClassIdAndDateIncludingDeleted
 	// precedent for going straight to db.query when the shape doesn't fit queryActive's where-only contract.
 	public async findLatestRegularByClassIdBefore(classId: number, cutoff: Date): Promise<Session | null> {
-		const rows = await this.db.query<Record<string, unknown>>(
-			'SELECT * FROM "sessions" WHERE class_id = $1 AND is_deleted = FALSE AND is_makeup_session = FALSE AND start_time <= $2 ORDER BY start_time DESC LIMIT 1',
-			[classId, cutoff],
-		);
+		const rows = await this.db.query<Record<string, unknown>>('SELECT * FROM "sessions" WHERE class_id = $1 AND is_deleted = FALSE AND is_makeup_session = FALSE AND start_time <= $2 ORDER BY start_time DESC LIMIT 1', [classId, cutoff]);
 		return rows[0] ? snakeToCamel<Session>(rows[0]) : null;
 	}
 
@@ -40,10 +37,7 @@ export class SessionRepository {
 	// previously-cancelled OR previously-rescheduled-away date is recognized as already materialized (and left
 	// alone / not re-derived) instead of getting a second sessions row for the same original slot.
 	public async findByClassIdAndOriginalDateIncludingDeleted(classId: number, date: Date): Promise<Session | null> {
-		const rows = await this.db.query<Record<string, unknown>>('SELECT * FROM "sessions" WHERE class_id = $1 AND original_date = $2::date', [
-			classId,
-			date.toISOString().slice(0, 10),
-		]);
+		const rows = await this.db.query<Record<string, unknown>>('SELECT * FROM "sessions" WHERE class_id = $1 AND original_date = $2::date', [classId, date.toISOString().slice(0, 10)]);
 		return rows[0] ? snakeToCamel<Session>(rows[0]) : null;
 	}
 
@@ -59,10 +53,11 @@ export class SessionRepository {
 	// re-serializing that Date via toISOString().slice(0, 10) shifts the result back by one calendar day. Casting
 	// to text in SQL sidesteps the round-trip entirely and returns exactly what's stored.
 	public async findOriginalDatesByClassIdInRange(classId: number, from: Date, to: Date): Promise<string[]> {
-		const rows = await this.db.query<{ original_date: string }>(
-			'SELECT DISTINCT original_date::text AS original_date FROM "sessions" WHERE class_id = $1 AND original_date IS NOT NULL AND original_date >= $2::date AND original_date <= $3::date',
-			[classId, from.toISOString().slice(0, 10), to.toISOString().slice(0, 10)],
-		);
+		const rows = await this.db.query<{ original_date: string }>('SELECT DISTINCT original_date::text AS original_date FROM "sessions" WHERE class_id = $1 AND original_date IS NOT NULL AND original_date >= $2::date AND original_date <= $3::date', [
+			classId,
+			from.toISOString().slice(0, 10),
+			to.toISOString().slice(0, 10),
+		]);
 		return rows.map((row: { original_date: string }) => row.original_date);
 	}
 
@@ -70,15 +65,7 @@ export class SessionRepository {
 		return this.db.findById(SessionEntity, id);
 	}
 
-	public async create(data: {
-		operatorId: number;
-		title: string | null;
-		startTime: Date;
-		capacityLimit: number;
-		classId?: number | null;
-		originalDate?: Date | null;
-		isMakeupSession?: boolean;
-	}): Promise<Session> {
+	public async create(data: { operatorId: number; title: string | null; startTime: Date; capacityLimit: number; classId?: number | null; originalDate?: Date | null; isMakeupSession?: boolean }): Promise<Session> {
 		return this.db.insert(SessionEntity, {
 			...data,
 			classId: data.classId ?? null,

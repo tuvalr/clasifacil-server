@@ -24,10 +24,7 @@ export class ClassEnrollmentRepository {
 	}
 
 	public async create(classId: number, studentId: number): Promise<ClassEnrollment> {
-		const rows = await this.db.query<Record<string, unknown>>("INSERT INTO class_enrollments (class_id, student_id, status) VALUES ($1, $2, 'active') RETURNING *", [
-			classId,
-			studentId,
-		]);
+		const rows = await this.db.query<Record<string, unknown>>("INSERT INTO class_enrollments (class_id, student_id, status) VALUES ($1, $2, 'active') RETURNING *", [classId, studentId]);
 		return snakeToCamel<ClassEnrollment>(rows[0]);
 	}
 

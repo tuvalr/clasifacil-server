@@ -1,7 +1,8 @@
 import { Request, Response } from 'express';
 import { inject, injectable } from 'inversify';
 import { TYPES } from '../../../container/types';
-import { SessionsServer, PlainSessionNotAllowedError } from '../../../servers/sessions.server';
+import { SessionsServer } from '../../../servers/sessions.server';
+import { PlainSessionNotAllowedError } from '../../../servers/types/sessions.server.types';
 import { SessionAttendanceServer } from '../../../servers/session-attendance.server';
 import { SessionAttendance } from '../../../entities/session-attendance.entity';
 import { ValidationError } from '../../../servers/types/validation-error';
@@ -313,10 +314,7 @@ export class SessionsController extends BaseController {
 		res.json({ enrollments: roster.enrollments.map(toPublic), classMemberStudentIds: roster.classMemberStudentIds });
 	}
 
-	private async createSession(
-		req: Request<unknown, CreateSessionResponse | PlainSessionErrorResponse, CreateSessionBody>,
-		res: Response<CreateSessionResponse | PlainSessionErrorResponse>,
-	): Promise<void> {
+	private async createSession(req: Request<unknown, CreateSessionResponse | PlainSessionErrorResponse, CreateSessionBody>, res: Response<CreateSessionResponse | PlainSessionErrorResponse>): Promise<void> {
 		const { operatorId, title, startTime, capacityLimit } = req.body;
 		try {
 			const session = await this.sessionsServer.create({ operatorId, title, startTime: new Date(startTime), capacityLimit });
@@ -343,10 +341,7 @@ export class SessionsController extends BaseController {
 		res.status(204).end();
 	}
 
-	private async rescheduleSession(
-		req: Request<{ id: string }, GetSessionResponse | SessionValidationErrorResponse, RescheduleSessionBody>,
-		res: Response<GetSessionResponse | SessionValidationErrorResponse>,
-	): Promise<void> {
+	private async rescheduleSession(req: Request<{ id: string }, GetSessionResponse | SessionValidationErrorResponse, RescheduleSessionBody>, res: Response<GetSessionResponse | SessionValidationErrorResponse>): Promise<void> {
 		try {
 			const rescheduled = await this.sessionsServer.reschedule(Number(req.params.id), req.body.startTime);
 			if (!rescheduled) {
@@ -375,10 +370,7 @@ export class SessionsController extends BaseController {
 		res.json(rows.map((row: SessionAttendance): SessionAttendanceResponseItem => ({ studentId: row.studentId, status: row.status })));
 	}
 
-	private async recordAttendance(
-		req: Request<{ id: string }, SessionAttendanceResponse | SessionValidationErrorResponse, SessionAttendanceBody>,
-		res: Response<SessionAttendanceResponse | SessionValidationErrorResponse>,
-	): Promise<void> {
+	private async recordAttendance(req: Request<{ id: string }, SessionAttendanceResponse | SessionValidationErrorResponse, SessionAttendanceBody>, res: Response<SessionAttendanceResponse | SessionValidationErrorResponse>): Promise<void> {
 		try {
 			const result = await this.sessionAttendanceServer.recordForSessionId(Number(req.params.id), null, req.body?.attendance);
 			if (!result) {

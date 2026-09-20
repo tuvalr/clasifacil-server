@@ -124,10 +124,7 @@ export class HouseholdSettingsController extends BaseController {
 		res.json(toPublic(household));
 	}
 
-	private async updateSettings(
-		req: Request<{ id: string }, UpdateHouseholdSettingsResponse, UpdateHouseholdSettingsBody>,
-		res: Response<UpdateHouseholdSettingsResponse>,
-	): Promise<void> {
+	private async updateSettings(req: Request<{ id: string }, UpdateHouseholdSettingsResponse, UpdateHouseholdSettingsBody>, res: Response<UpdateHouseholdSettingsResponse>): Promise<void> {
 		const { name, email } = req.body;
 		const household = await this.householdsServer.update(Number(req.params.id), { name, email });
 		if (!household) {

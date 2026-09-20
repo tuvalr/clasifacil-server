@@ -1,7 +1,8 @@
 import { Request, Response } from 'express';
 import { inject, injectable } from 'inversify';
 import { TYPES } from '../../../container/types';
-import { OperatorsServer, OperatorHasActiveClassesError, OperatorTimezoneLockedError } from '../../../servers/operators.server';
+import { OperatorsServer } from '../../../servers/operators.server';
+import { OperatorHasActiveClassesError, OperatorTimezoneLockedError } from '../../../servers/types/operators.server.types';
 import { ValidationError } from '../../../servers/types/validation-error';
 import { ClassRepository } from '../../../repositories/class.repository';
 import { Student } from '../../../entities/student.entity';
@@ -322,10 +323,7 @@ export class AdminOperatorsController extends BaseController {
 		});
 	}
 
-	private async createOperator(
-		req: Request<unknown, CreateOperatorResponse | CreateOperatorValidationErrorResponse, CreateOperatorBody>,
-		res: Response<CreateOperatorResponse | CreateOperatorValidationErrorResponse>,
-	): Promise<void> {
+	private async createOperator(req: Request<unknown, CreateOperatorResponse | CreateOperatorValidationErrorResponse, CreateOperatorBody>, res: Response<CreateOperatorResponse | CreateOperatorValidationErrorResponse>): Promise<void> {
 		const { name, email, phone, countryCode, type, timezone } = req.body;
 		try {
 			const result = await this.operatorsServer.create({ name, email, phone, countryCode, type, timezone });
@@ -345,9 +343,7 @@ export class AdminOperatorsController extends BaseController {
 	): Promise<void> {
 		const { name, email, phone, countryCode, timezone } = req.body;
 		try {
-			const operator = await this.operatorsServer.update(Number(req.params.id), { name, email, phone, countryCode, timezone }, (operatorId: number) =>
-				this.classRepository.existsAnyForOperator(operatorId),
-			);
+			const operator = await this.operatorsServer.update(Number(req.params.id), { name, email, phone, countryCode, timezone }, (operatorId: number) => this.classRepository.existsAnyForOperator(operatorId));
 			if (!operator) {
 				res.status(404).end();
 				return;
@@ -394,14 +390,9 @@ export class AdminOperatorsController extends BaseController {
 		res.json(toPublic(operator));
 	}
 
-	private async changeOperatorType(
-		req: Request<{ id: string }, GetOperatorResponse | { error: string }, ChangeOperatorTypeBody>,
-		res: Response<GetOperatorResponse | { error: string }>,
-	): Promise<void> {
+	private async changeOperatorType(req: Request<{ id: string }, GetOperatorResponse | { error: string }, ChangeOperatorTypeBody>, res: Response<GetOperatorResponse | { error: string }>): Promise<void> {
 		try {
-			const operator = await this.operatorsServer.changeType(Number(req.params.id), req.body.type, (operatorId: number) =>
-				this.classRepository.existsActiveForOperator(operatorId),
-			);
+			const operator = await this.operatorsServer.changeType(Number(req.params.id), req.body.type, (operatorId: number) => this.classRepository.existsActiveForOperator(operatorId));
 			if (!operator) {
 				res.status(404).end();
 				return;

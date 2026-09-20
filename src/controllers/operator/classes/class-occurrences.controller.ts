@@ -1,7 +1,8 @@
 import { Request, Response } from 'express';
 import { inject, injectable } from 'inversify';
 import { TYPES } from '../../../container/types';
-import { ClassOccurrencesServer, Occurrence } from '../../../servers/class-occurrences.server';
+import { ClassOccurrencesServer } from '../../../servers/class-occurrences.server';
+import { Occurrence } from '../../../servers/types/class-occurrences.server.types';
 import { SessionAttendanceServer } from '../../../servers/session-attendance.server';
 import { ValidationError, ValidationErrorDetail } from '../../../servers/types/validation-error';
 import { RouteHandlers } from '../../shared/route-handlers';
@@ -260,10 +261,7 @@ export class ClassOccurrencesController extends BaseController {
 	}
 
 	// Lists a class's future occurrences (virtual and materialized) in a date range.
-	private async listFuture(
-		req: Request<{ id: string }, ListOccurrencesResponse | ClassValidationErrorResponse, unknown, ListOccurrencesQuery>,
-		res: Response<ListOccurrencesResponse | ClassValidationErrorResponse>,
-	): Promise<void> {
+	private async listFuture(req: Request<{ id: string }, ListOccurrencesResponse | ClassValidationErrorResponse, unknown, ListOccurrencesQuery>, res: Response<ListOccurrencesResponse | ClassValidationErrorResponse>): Promise<void> {
 		try {
 			const result = await this.classOccurrencesServer.listFuture(Number(req.params.id), req.query.from, req.query.to);
 			if (!result) {
@@ -281,10 +279,7 @@ export class ClassOccurrencesController extends BaseController {
 	}
 
 	// Lists a class's past occurrences in a date range, including synthesized not_recorded attendance.
-	private async listPast(
-		req: Request<{ id: string }, ListOccurrencesResponse | ClassValidationErrorResponse, unknown, ListOccurrencesQuery>,
-		res: Response<ListOccurrencesResponse | ClassValidationErrorResponse>,
-	): Promise<void> {
+	private async listPast(req: Request<{ id: string }, ListOccurrencesResponse | ClassValidationErrorResponse, unknown, ListOccurrencesQuery>, res: Response<ListOccurrencesResponse | ClassValidationErrorResponse>): Promise<void> {
 		try {
 			const result = await this.classOccurrencesServer.listPast(Number(req.params.id), req.query.from, req.query.to);
 			if (!result) {
@@ -302,10 +297,7 @@ export class ClassOccurrencesController extends BaseController {
 	}
 
 	// Reschedules one occurrence to a new startTime, materializing it first if it was still virtual.
-	private async rescheduleOccurrence(
-		req: Request<{ id: string; date: string }, GetSessionResponse | ClassValidationErrorResponse, RescheduleOccurrenceBody>,
-		res: Response<GetSessionResponse | ClassValidationErrorResponse>,
-	): Promise<void> {
+	private async rescheduleOccurrence(req: Request<{ id: string; date: string }, GetSessionResponse | ClassValidationErrorResponse, RescheduleOccurrenceBody>, res: Response<GetSessionResponse | ClassValidationErrorResponse>): Promise<void> {
 		try {
 			const rescheduled = await this.classOccurrencesServer.rescheduleOccurrence(Number(req.params.id), req.params.date, req.body?.startTime);
 			if (!rescheduled) {
@@ -380,10 +372,7 @@ export class ClassOccurrencesController extends BaseController {
 	}
 
 	// Creates a make-up session tied to this class, with roster auto-filled from its current standing members.
-	private async createMakeupSession(
-		req: Request<{ id: string }, GetSessionResponse | ClassValidationErrorResponse, MakeupSessionBody>,
-		res: Response<GetSessionResponse | ClassValidationErrorResponse>,
-	): Promise<void> {
+	private async createMakeupSession(req: Request<{ id: string }, GetSessionResponse | ClassValidationErrorResponse, MakeupSessionBody>, res: Response<GetSessionResponse | ClassValidationErrorResponse>): Promise<void> {
 		try {
 			const session = await this.classOccurrencesServer.createMakeupSession(Number(req.params.id), req.body?.startTime);
 			res.status(201).json(toPublic(session));

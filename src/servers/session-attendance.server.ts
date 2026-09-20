@@ -4,10 +4,7 @@ import { SessionAttendanceRepository } from '../repositories/session-attendance.
 import { SessionRepository } from '../repositories/session.repository';
 import { SessionAttendance } from '../entities/session-attendance.entity';
 import { ValidationError } from './types/validation-error';
-
-const ARCHIVE_RETENTION_MONTHS = 6;
-
-const VALID_STATUSES: ReadonlySet<string> = new Set(['present', 'absent', 'approved_absent']);
+import { ARCHIVE_RETENTION_MONTHS, VALID_STATUSES } from './types/session-attendance.server.types';
 
 @injectable()
 export class SessionAttendanceServer {

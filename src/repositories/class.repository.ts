@@ -22,18 +22,12 @@ export class ClassRepository {
 		return this.db.findById(ClassEntity, id);
 	}
 
-	public async create(
-		data: { operatorId: number; title: string; dayOfWeek: number; startTime: string; durationMinutes: number; minSize: number | null; maxSize: number; color: string | null },
-		tx?: TransactionHandle,
-	): Promise<Class> {
+	public async create(data: { operatorId: number; title: string; dayOfWeek: number; startTime: string; durationMinutes: number; minSize: number | null; maxSize: number; color: string | null }, tx?: TransactionHandle): Promise<Class> {
 		const db = tx ?? this.db;
 		return db.insert(ClassEntity, { ...data, isDeleted: false });
 	}
 
-	public async update(
-		id: number,
-		data: Partial<{ title: string; dayOfWeek: number; startTime: string; durationMinutes: number; minSize: number | null; maxSize: number; color: string | null }>,
-	): Promise<Class | null> {
+	public async update(id: number, data: Partial<{ title: string; dayOfWeek: number; startTime: string; durationMinutes: number; minSize: number | null; maxSize: number; color: string | null }>): Promise<Class | null> {
 		return this.db.update(ClassEntity, id, data);
 	}
 

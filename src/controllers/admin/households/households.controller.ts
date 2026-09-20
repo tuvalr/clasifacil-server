@@ -1,7 +1,8 @@
 import { Request, Response } from 'express';
 import { inject, injectable } from 'inversify';
 import { TYPES } from '../../../container/types';
-import { HouseholdsServer, HouseholdHasActiveBookingError } from '../../../servers/households.server';
+import { HouseholdsServer } from '../../../servers/households.server';
+import { HouseholdHasActiveBookingError } from '../../../servers/types/households.server.types';
 import { ValidationError } from '../../../servers/types/validation-error';
 import { Student } from '../../../entities/student.entity';
 import { EnrollmentAndCredit } from '../../../entities/enrollment-and-credit.entity';
@@ -217,10 +218,7 @@ export class AdminHouseholdsController extends BaseController {
 		});
 	}
 
-	private async createHousehold(
-		req: Request<unknown, CreateHouseholdResponse | CreateHouseholdValidationErrorResponse, CreateHouseholdBody>,
-		res: Response<CreateHouseholdResponse | CreateHouseholdValidationErrorResponse>,
-	): Promise<void> {
+	private async createHousehold(req: Request<unknown, CreateHouseholdResponse | CreateHouseholdValidationErrorResponse, CreateHouseholdBody>, res: Response<CreateHouseholdResponse | CreateHouseholdValidationErrorResponse>): Promise<void> {
 		const { name, email } = req.body;
 		try {
 			const result = await this.householdsServer.create({ name, email });

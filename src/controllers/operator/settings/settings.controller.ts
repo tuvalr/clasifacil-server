@@ -1,7 +1,8 @@
 import { Request, Response } from 'express';
 import { inject, injectable } from 'inversify';
 import { TYPES } from '../../../container/types';
-import { OperatorsServer, OperatorTimezoneLockedError } from '../../../servers/operators.server';
+import { OperatorsServer } from '../../../servers/operators.server';
+import { OperatorTimezoneLockedError } from '../../../servers/types/operators.server.types';
 import { AvatarsServer } from '../../../servers/avatars.server';
 import { ValidationError } from '../../../servers/types/validation-error';
 import { ClassRepository } from '../../../repositories/class.repository';
@@ -155,9 +156,7 @@ export class OperatorSettingsController extends BaseController {
 	): Promise<void> {
 		const { name, email, phone, countryCode, timezone } = req.body;
 		try {
-			const operator = await this.operatorsServer.update(Number(req.params.id), { name, email, phone, countryCode, timezone }, (operatorId: number) =>
-				this.classRepository.existsAnyForOperator(operatorId),
-			);
+			const operator = await this.operatorsServer.update(Number(req.params.id), { name, email, phone, countryCode, timezone }, (operatorId: number) => this.classRepository.existsAnyForOperator(operatorId));
 			if (!operator) {
 				res.status(404).end();
 				return;

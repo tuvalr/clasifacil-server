@@ -1,7 +1,8 @@
 import { Request, Response } from 'express';
 import { inject, injectable } from 'inversify';
 import { TYPES } from '../../../container/types';
-import { ClassesServer, ClassHasActiveEnrollmentsError, AssignStudentResult } from '../../../servers/classes.server';
+import { ClassesServer } from '../../../servers/classes.server';
+import { ClassHasActiveEnrollmentsError, AssignStudentResult } from '../../../servers/types/classes.server.types';
 import { ValidationError, ValidationErrorDetail } from '../../../servers/types/validation-error';
 import { RouteHandlers } from '../../shared/route-handlers';
 import { BaseController } from '../../shared/base.controller';
@@ -344,10 +345,7 @@ export class ClassesController extends BaseController {
 	}
 
 	// Updates a class's stored recurring pattern (title, day/time, capacity) - never touches existing sessions.
-	private async updateClass(
-		req: Request<{ id: string }, ClassMutationResponse | ClassValidationErrorResponse, UpdateClassBody>,
-		res: Response<ClassMutationResponse | ClassValidationErrorResponse>,
-	): Promise<void> {
+	private async updateClass(req: Request<{ id: string }, ClassMutationResponse | ClassValidationErrorResponse, UpdateClassBody>, res: Response<ClassMutationResponse | ClassValidationErrorResponse>): Promise<void> {
 		try {
 			const updated = await this.classesServer.update(Number(req.params.id), req.body);
 			if (!updated) {
@@ -403,16 +401,11 @@ export class ClassesController extends BaseController {
 	}
 
 	// Bulk-assigns students to a class's standing roster; each studentId succeeds or fails independently.
-	private async assignStudents(
-		req: Request<{ id: string }, AssignStudentsResponse | ClassValidationErrorResponse, AssignStudentsBody>,
-		res: Response<AssignStudentsResponse | ClassValidationErrorResponse>,
-	): Promise<void> {
+	private async assignStudents(req: Request<{ id: string }, AssignStudentsResponse | ClassValidationErrorResponse, AssignStudentsBody>, res: Response<AssignStudentsResponse | ClassValidationErrorResponse>): Promise<void> {
 		try {
 			const results = await this.classesServer.assignStudents(Number(req.params.id), req.body.studentIds);
 			res.json(
-				results.map((result: AssignStudentResult): AssignStudentsResponseItem =>
-					result.success ? { studentId: result.studentId, success: true, enrollment: result.enrollment } : { studentId: result.studentId, success: false, error: result.error },
-				),
+				results.map((result: AssignStudentResult): AssignStudentsResponseItem => (result.success ? { studentId: result.studentId, success: true, enrollment: result.enrollment } : { studentId: result.studentId, success: false, error: result.error })),
 			);
 		} catch (error) {
 			if (error instanceof ValidationError) {

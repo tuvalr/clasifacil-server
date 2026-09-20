@@ -12,18 +12,7 @@ import { EnrollmentAndCredit } from '../entities/enrollment-and-credit.entity';
 import { ClassEnrollment } from '../entities/class-enrollment.entity';
 import { Class } from '../entities/class.entity';
 import { ValidationError } from './types/validation-error';
-
-export interface BookingConflict {
-	conflict: true;
-	waitlisted: false;
-}
-
-export class PlainSessionNotAllowedError extends Error {
-	public constructor() {
-		super('Schedule-type operators cannot create plain one-off sessions - use a class instead');
-		this.name = 'PlainSessionNotAllowedError';
-	}
-}
+import { BookingConflict, PlainSessionNotAllowedError } from './types/sessions.server.types';
 
 // UC2: Automated Session Booking & Capacity Hard Limits. Operator-side
 // session management (create/cancel/roster) and household-side booking

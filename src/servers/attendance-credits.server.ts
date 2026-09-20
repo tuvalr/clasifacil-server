@@ -4,8 +4,7 @@ import { EnrollmentAndCreditRepository } from '../repositories/enrollment-and-cr
 import { SessionRepository } from '../repositories/session.repository';
 import { HouseholdRepository } from '../repositories/household.repository';
 import { EnrollmentAndCredit } from '../entities/enrollment-and-credit.entity';
-
-const CREDIT_EXPIRY_DAYS = 90;
+import { CREDIT_EXPIRY_DAYS } from './types/attendance-credits.server.types';
 
 // UC3: Attendance Tracking & Automated Make-Up Credit State Machine.
 // Operator-side (policy config, viewing state) and household-side

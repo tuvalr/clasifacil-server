@@ -3,11 +3,7 @@ import { TYPES } from '../container/types';
 import { HouseholdsServer } from './households.server';
 import { OperatorsServer } from './operators.server';
 import { AvatarStorage } from './types/avatar-storage';
-
-const MIME_EXTENSIONS: Record<string, string> = {
-	'image/jpeg': 'jpg',
-	'image/png': 'png',
-};
+import { MIME_EXTENSIONS } from './types/avatars.server.types';
 
 // Shared by both HouseholdSettingsController and OperatorSettingsController - the upload/validation/storage flow is
 // identical for a household's and an operator's avatar, only the entity being updated differs.

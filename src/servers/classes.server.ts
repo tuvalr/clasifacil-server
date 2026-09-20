@@ -5,50 +5,8 @@ import { OperatorRepository } from '../repositories/operator.repository';
 import { ClassEnrollmentRepository } from '../repositories/class-enrollment.repository';
 import { StudentRepository } from '../repositories/student.repository';
 import { Class } from '../entities/class.entity';
-import { ClassEnrollment } from '../entities/class-enrollment.entity';
 import { ValidationError, ValidationErrorDetail } from './types/validation-error';
-
-const MAX_DAY_OF_WEEK = 6;
-
-// Matches Postgres TIME's accepted 24-hour formats reasonably strictly (HH:MM or HH:MM:SS), rejecting inputs like
-// "banana" or "25:00:00" at the application layer instead of letting Postgres reject them raw (a raw 500 instead
-// of a clean 400) - see ClassesServer.validateRequired/validate's startTime checks below.
-const START_TIME_FORMAT = /^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/;
-
-export class ClassHasActiveEnrollmentsError extends Error {
-	public constructor() {
-		super('Cannot delete a class with active student enrollments');
-		this.name = 'ClassHasActiveEnrollmentsError';
-	}
-}
-
-export interface AssignStudentSuccess {
-	studentId: number;
-	success: true;
-	enrollment: ClassEnrollment;
-}
-
-export interface AssignStudentFailure {
-	studentId: number;
-	success: false;
-	error: string;
-}
-
-export type AssignStudentResult = AssignStudentSuccess | AssignStudentFailure;
-
-export interface ClassWithEnrolledCount extends Class {
-	enrolledCount: number;
-}
-
-// Runtime type guard for the assign/unassign-students request body's studentIds: it arrives as untyped JSON, so
-// the `number[]` signature on ClassesServer's methods only guards call sites within this codebase, not an actual
-// HTTP request. Without this check, a missing/malformed studentIds (undefined, a single number, a string, etc.)
-// would reach a `for...of` loop and throw a raw TypeError, forwarded by RouteHandlers.wrap to the generic error
-// handler as a 500 instead of a clean 400 - the same gotcha OperatorsServer.validateCreate and
-// ClassesServer.validateRequired work around elsewhere.
-function isNumberArray(value: unknown): value is number[] {
-	return Array.isArray(value) && value.every((item: unknown): boolean => typeof item === 'number');
-}
+import { ClassHasActiveEnrollmentsError, AssignStudentResult, ClassWithEnrolledCount, MAX_DAY_OF_WEEK, START_TIME_FORMAT, isNumberArray } from './types/classes.server.types';
 
 // UC-Scheduling: recurring weekly classes (schedule-type operators) and recurring 1:1 slots (assigned-type
 // operators) share this same table - see docs/superpowers/specs/2026-09-12-operator-scheduling-design.md.
@@ -91,17 +49,7 @@ export class ClassesServer {
 		return results;
 	}
 
-	public async create(data: {
-		operatorId?: unknown;
-		title?: unknown;
-		dayOfWeek?: unknown;
-		startTime?: unknown;
-		durationMinutes?: unknown;
-		minSize?: unknown;
-		maxSize?: unknown;
-		studentId?: unknown;
-		color?: unknown;
-	}): Promise<Class> {
+	public async create(data: { operatorId?: unknown; title?: unknown; dayOfWeek?: unknown; startTime?: unknown; durationMinutes?: unknown; minSize?: unknown; maxSize?: unknown; studentId?: unknown; color?: unknown }): Promise<Class> {
 		const requiredDetails = this.validateRequired(data);
 		if (requiredDetails.length > 0) {
 			throw new ValidationError(requiredDetails);
@@ -341,14 +289,7 @@ export class ClassesServer {
 	// (`undefined < 0` and `undefined > 6` are both false) and camelToSnake silently drops undefined keys before
 	// the INSERT, producing a raw NOT NULL constraint violation (500) instead of a clean 400 - the same gotcha
 	// OperatorsServer.validateCreate works around for `type`.
-	private validateRequired(data: {
-		operatorId?: unknown;
-		title?: unknown;
-		dayOfWeek?: unknown;
-		startTime?: unknown;
-		durationMinutes?: unknown;
-		maxSize?: unknown;
-	}): ValidationErrorDetail[] {
+	private validateRequired(data: { operatorId?: unknown; title?: unknown; dayOfWeek?: unknown; startTime?: unknown; durationMinutes?: unknown; maxSize?: unknown }): ValidationErrorDetail[] {
 		const details: ValidationErrorDetail[] = [];
 		if (typeof data.operatorId !== 'number') {
 			details.push({ field: 'operatorId', message: 'operatorId is required' });
@@ -378,15 +319,7 @@ export class ClassesServer {
 	// passes those bounds checks (`"abc" < 1` is false in JS) and would otherwise reach the database update,
 	// likely as a raw 500 instead of a clean 400. Only fields that are actually present (not undefined) are
 	// checked - omitted fields fall back to the existing class's value in update()'s `merged` object.
-	private validateUpdateTypes(data: {
-		title?: unknown;
-		dayOfWeek?: unknown;
-		startTime?: unknown;
-		durationMinutes?: unknown;
-		minSize?: unknown;
-		maxSize?: unknown;
-		color?: unknown;
-	}): ValidationErrorDetail[] {
+	private validateUpdateTypes(data: { title?: unknown; dayOfWeek?: unknown; startTime?: unknown; durationMinutes?: unknown; minSize?: unknown; maxSize?: unknown; color?: unknown }): ValidationErrorDetail[] {
 		const details: ValidationErrorDetail[] = [];
 		if (data.title !== undefined && typeof data.title !== 'string') {
 			details.push({ field: 'title', message: 'title must be a string' });

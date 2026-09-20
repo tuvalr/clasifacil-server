@@ -1,5 +1,5 @@
 import { randomUUID } from 'crypto';
-import { isValidPhoneNumber, getCountries, CountryCode } from 'libphonenumber-js';
+import { isValidPhoneNumber } from 'libphonenumber-js';
 import { inject, injectable } from 'inversify';
 import { TYPES } from '../container/types';
 import { PostgresHandler, TransactionHandle } from '../handlers/postgres-handler';
@@ -16,31 +16,7 @@ import { EnrollmentAndCredit } from '../entities/enrollment-and-credit.entity';
 import { Student } from '../entities/student.entity';
 import { Household } from '../entities/household.entity';
 import { ValidationError, ValidationErrorDetail } from './types/validation-error';
-
-export class OperatorHasActiveClassesError extends Error {
-	public constructor() {
-		super('Cannot change operator type while active classes exist');
-		this.name = 'OperatorHasActiveClassesError';
-	}
-}
-
-export class OperatorTimezoneLockedError extends Error {
-	public constructor() {
-		super('Cannot change timezone once the operator has any class - contact an admin for manual correction');
-		this.name = 'OperatorTimezoneLockedError';
-	}
-}
-
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const VALID_COUNTRY_CODES: ReadonlySet<string> = new Set(getCountries());
-const VALID_TIMEZONES: ReadonlySet<string> = new Set(Intl.supportedValuesOf('timeZone'));
-
-function isKnownCountryCode(value: string): value is CountryCode {
-	return VALID_COUNTRY_CODES.has(value);
-}
-
-export type EnrollmentWithHouseholdDetails = EnrollmentAndCredit & { student: Student | null; household: Household | null };
-export type SessionWithEnrollmentDetails = Session & { enrollments: EnrollmentWithHouseholdDetails[] };
+import { OperatorHasActiveClassesError, OperatorTimezoneLockedError, SessionWithEnrollmentDetails, EMAIL_PATTERN, VALID_TIMEZONES, isKnownCountryCode } from './types/operators.server.types';
 
 // Admin: creating and managing operators.
 @injectable()
@@ -84,12 +60,8 @@ export class OperatorsServer {
 			Promise.all(studentIds.map((studentId: number) => this.students.findById(studentId))),
 			Promise.all(householdIds.map((householdId: number) => this.households.findById(householdId))),
 		]);
-		const studentsById = new Map<number, Student>(
-			studentResults.filter((student: Student | null): student is Student => student !== null).map((student: Student) => [student.id, student]),
-		);
-		const householdsById = new Map<number, Household>(
-			householdResults.filter((household: Household | null): household is Household => household !== null).map((household: Household) => [household.id, household]),
-		);
+		const studentsById = new Map<number, Student>(studentResults.filter((student: Student | null): student is Student => student !== null).map((student: Student) => [student.id, student]));
+		const householdsById = new Map<number, Household>(householdResults.filter((household: Household | null): household is Household => household !== null).map((household: Household) => [household.id, household]));
 
 		return {
 			operator,
@@ -107,14 +79,7 @@ export class OperatorsServer {
 	// Creates the operators row and its login-capable users row (role: 'operator', associatedEntityId: the new operator's id) together -
 	// if either insert fails, both roll back, so an operator can never be left without a way to log in. auth_uid is generated here (not
 	// accepted from the client) since it's a uuid-typed, unique login identifier - the caller has no business choosing it.
-	public async create(data: {
-		name: string;
-		email: string;
-		phone: string;
-		countryCode: string;
-		type: 'schedule' | 'assigned';
-		timezone: string;
-	}): Promise<{ operator: Operator; user: User }> {
+	public async create(data: { name: string; email: string; phone: string; countryCode: string; type: 'schedule' | 'assigned'; timezone: string }): Promise<{ operator: Operator; user: User }> {
 		const details = await this.validateCreate(data);
 		if (details.length > 0) {
 			throw new ValidationError(details);
@@ -123,10 +88,7 @@ export class OperatorsServer {
 		const authUid = randomUUID();
 
 		return this.db.transaction(async (transaction: TransactionHandle) => {
-			const operator = await this.operators.create(
-				{ name: data.name, email: data.email, phone: data.phone, countryCode: data.countryCode, type: data.type, timezone: data.timezone },
-				transaction,
-			);
+			const operator = await this.operators.create({ name: data.name, email: data.email, phone: data.phone, countryCode: data.countryCode, type: data.type, timezone: data.timezone }, transaction);
 			const user = await this.users.create({ authUid, email: data.email, role: 'operator', associatedEntityId: operator.id }, transaction);
 			return { operator, user };
 		});
@@ -191,11 +153,7 @@ export class OperatorsServer {
 	// hasAnyClass is injected as a callback (rather than this server depending on ClassRepository directly) to avoid
 	// a circular dependency between operators.server.ts and classes.server.ts - same pattern as changeType's
 	// hasActiveClasses callback.
-	public async update(
-		id: number,
-		data: { name?: string; email?: string; phone?: string; countryCode?: string; timezone?: string },
-		hasAnyClass: (operatorId: number) => Promise<boolean>,
-	): Promise<Operator | null> {
+	public async update(id: number, data: { name?: string; email?: string; phone?: string; countryCode?: string; timezone?: string }, hasAnyClass: (operatorId: number) => Promise<boolean>): Promise<Operator | null> {
 		const operator = await this.operators.findById(id);
 		if (!operator) {
 			return null;

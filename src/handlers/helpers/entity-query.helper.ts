@@ -74,8 +74,7 @@ export class EntityQueryHelper {
 
 		// No fields to change (e.g. a PUT with an empty/all-optional body) - still touch updated_at rather than
 		// building a SET clause with nothing before it, which would be a SQL syntax error.
-		const setClause =
-			columnNames.length > 0 ? columnNames.map((name: string, index: number) => `"${name}" = $${index + 2}`).join(', ') + ', updated_at = NOW()' : 'updated_at = NOW()';
+		const setClause = columnNames.length > 0 ? columnNames.map((name: string, index: number) => `"${name}" = $${index + 2}`).join(', ') + ', updated_at = NOW()' : 'updated_at = NOW()';
 
 		const sql = `UPDATE "${entity.tableName}" SET ${setClause} WHERE id = $1 RETURNING *`;
 		const result = await db.query(sql, [id, ...values]);
