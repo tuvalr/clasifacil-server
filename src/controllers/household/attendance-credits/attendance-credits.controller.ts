@@ -1,9 +1,10 @@
-import { Request, Response } from 'express';
 import { inject, injectable } from 'inversify';
 import { TYPES } from '../../../container/types';
 import { AttendanceCreditsServer } from '../../../servers/attendance-credits.server';
 import { RouteHandlers } from '../../shared/route-handlers';
 import { BaseController } from '../../shared/base.controller';
+import { Results } from '../../shared/results';
+import { Result } from '../../shared/types/result.type';
 import { ListOwnCreditsResponse } from './types/list-own-credits-response.type';
 import { CancelEnrollmentResponse } from './types/cancel-enrollment-response.type';
 import { toPublic } from '../../../utils/to-public';
@@ -36,7 +37,7 @@ export class HouseholdAttendanceCreditsController extends BaseController {
 		 *       404: { description: Not found }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.post('/:enrollmentId/cancel', RouteHandlers.wrap(this.cancelEnrollment.bind(this)));
+		this.internalRouter.post('/:enrollmentId/cancel', RouteHandlers.wrapResult(['enrollmentId'], this.cancelEnrollment.bind(this)));
 
 		/**
 		 * @openapi
@@ -60,25 +61,22 @@ export class HouseholdAttendanceCreditsController extends BaseController {
 		 *       404: { description: Household not found }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.get('/households/:householdId/credits', RouteHandlers.wrap(this.listCredits.bind(this)));
+		this.internalRouter.get('/households/:householdId/credits', RouteHandlers.wrapResult(['householdId'], this.listCredits.bind(this)));
 	}
 
-	private async listCredits(req: Request<{ householdId: string }>, res: Response<ListOwnCreditsResponse>): Promise<void> {
-		const credits = await this.attendanceCreditsServer.listCredits(Number(req.params.householdId));
+	private async listCredits(householdId: string, _body: unknown, _query: unknown): Promise<Result<ListOwnCreditsResponse>> {
+		const credits = await this.attendanceCreditsServer.listCredits(Number(householdId));
 		if (!credits) {
-			res.status(404).end();
-			return;
+			return Results.notFound();
 		}
-		res.json(credits.map(toPublic));
+		return Results.ok(credits.map(toPublic));
 	}
 
-	private async cancelEnrollment(req: Request<{ enrollmentId: string }>, res: Response<CancelEnrollmentResponse>): Promise<void> {
-		const enrollmentId = Number(req.params.enrollmentId);
-		const updated = await this.attendanceCreditsServer.cancel(enrollmentId);
+	private async cancelEnrollment(enrollmentId: string, _body: unknown, _query: unknown): Promise<Result<CancelEnrollmentResponse>> {
+		const updated = await this.attendanceCreditsServer.cancel(Number(enrollmentId));
 		if (!updated) {
-			res.status(404).end();
-			return;
+			return Results.notFound();
 		}
-		res.json(toPublic(updated));
+		return Results.ok(toPublic(updated));
 	}
 }
