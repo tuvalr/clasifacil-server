@@ -46,7 +46,7 @@ export class AdminOperatorsController extends BaseController {
 		 *       401: { $ref: '#/components/responses/Unauthorized' }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.get('/', RouteHandlers.wrapResult([], this.listOperators.bind(this)));
+		this.internalRouter.get('/', RouteHandlers.wrapNoParams(this.listOperators.bind(this)));
 
 		/**
 		 * @openapi
@@ -70,7 +70,7 @@ export class AdminOperatorsController extends BaseController {
 		 *       404: { description: Not found }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.get('/:id', RouteHandlers.wrapResult(['id'], this.getOperatorById.bind(this)));
+		this.internalRouter.get('/:id', RouteHandlers.wrapOneParam('id', this.getOperatorById.bind(this)));
 
 		/**
 		 * @openapi
@@ -125,7 +125,7 @@ export class AdminOperatorsController extends BaseController {
 		 *       401: { $ref: '#/components/responses/Unauthorized' }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.post('/', RouteHandlers.wrapResult([], this.createOperator.bind(this)));
+		this.internalRouter.post('/', RouteHandlers.wrapNoParamsBody(this.createOperator.bind(this)));
 
 		/**
 		 * @openapi
@@ -179,7 +179,7 @@ export class AdminOperatorsController extends BaseController {
 		 *       404: { description: Not found }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.put('/:id', RouteHandlers.wrapResult(['id'], this.updateOperator.bind(this)));
+		this.internalRouter.put('/:id', RouteHandlers.wrapOneParamBody('id', this.updateOperator.bind(this)));
 
 		/**
 		 * @openapi
@@ -200,7 +200,7 @@ export class AdminOperatorsController extends BaseController {
 		 *       404: { description: Not found }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.delete('/:id', RouteHandlers.wrapResult(['id'], this.deleteOperator.bind(this)));
+		this.internalRouter.delete('/:id', RouteHandlers.wrapOneParam('id', this.deleteOperator.bind(this)));
 
 		/**
 		 * @openapi
@@ -235,7 +235,7 @@ export class AdminOperatorsController extends BaseController {
 		 *       404: { description: Not found }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.post('/:id/pause', RouteHandlers.wrapResult(['id'], this.pauseOperator.bind(this)));
+		this.internalRouter.post('/:id/pause', RouteHandlers.wrapOneParamBody('id', this.pauseOperator.bind(this)));
 
 		/**
 		 * @openapi
@@ -259,7 +259,7 @@ export class AdminOperatorsController extends BaseController {
 		 *       404: { description: Not found }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.post('/:id/resume', RouteHandlers.wrapResult(['id'], this.resumeOperator.bind(this)));
+		this.internalRouter.post('/:id/resume', RouteHandlers.wrapOneParam('id', this.resumeOperator.bind(this)));
 
 		/**
 		 * @openapi
@@ -296,15 +296,15 @@ export class AdminOperatorsController extends BaseController {
 		 *       409: { description: 'Operator has active classes' }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.post('/:id/change-type', RouteHandlers.wrapResult(['id'], this.changeOperatorType.bind(this)));
+		this.internalRouter.post('/:id/change-type', RouteHandlers.wrapOneParamBody('id', this.changeOperatorType.bind(this)));
 	}
 
-	private async listOperators(_body: unknown, _query: unknown): Promise<Result<ListOperatorsResponse>> {
+	private async listOperators(): Promise<Result<ListOperatorsResponse>> {
 		const operators = await this.operatorsServer.listAll();
 		return Results.ok(operators.map(toPublic));
 	}
 
-	private async getOperatorById(id: string, _body: unknown, _query: unknown): Promise<Result<GetOperatorDetailsResponse>> {
+	private async getOperatorById(id: string): Promise<Result<GetOperatorDetailsResponse>> {
 		const details = await this.operatorsServer.getByIdWithDetails(Number(id));
 		if (!details) {
 			return Results.notFound();
@@ -322,7 +322,7 @@ export class AdminOperatorsController extends BaseController {
 		});
 	}
 
-	private async createOperator(body: CreateOperatorBody, _query: unknown): Promise<Result<CreateOperatorResponse>> {
+	private async createOperator(body: CreateOperatorBody): Promise<Result<CreateOperatorResponse>> {
 		const { name, email, phone, countryCode, type, timezone } = body;
 		try {
 			const result = await this.operatorsServer.create({ name, email, phone, countryCode, type, timezone });
@@ -335,7 +335,7 @@ export class AdminOperatorsController extends BaseController {
 		}
 	}
 
-	private async updateOperator(id: string, body: UpdateOperatorBody, _query: unknown): Promise<Result<GetOperatorResponse>> {
+	private async updateOperator(id: string, body: UpdateOperatorBody): Promise<Result<GetOperatorResponse>> {
 		const { name, email, phone, countryCode, timezone } = body;
 		try {
 			const operator = await this.operatorsServer.update(Number(id), { name, email, phone, countryCode, timezone }, (operatorId: number) => this.classRepository.existsAnyForOperator(operatorId));
@@ -354,7 +354,7 @@ export class AdminOperatorsController extends BaseController {
 		}
 	}
 
-	private async deleteOperator(id: string, _body: unknown, _query: unknown): Promise<Result<never>> {
+	private async deleteOperator(id: string): Promise<Result<never>> {
 		const operator = await this.operatorsServer.delete(Number(id));
 		if (!operator) {
 			return Results.notFound();
@@ -362,7 +362,7 @@ export class AdminOperatorsController extends BaseController {
 		return Results.noContent();
 	}
 
-	private async pauseOperator(id: string, body: PauseOperatorBody, _query: unknown): Promise<Result<GetOperatorResponse>> {
+	private async pauseOperator(id: string, body: PauseOperatorBody): Promise<Result<GetOperatorResponse>> {
 		const pausedUntil = body?.pausedUntil ? new Date(body.pausedUntil) : null;
 		const operator = await this.operatorsServer.pause(Number(id), pausedUntil);
 		if (!operator) {
@@ -371,7 +371,7 @@ export class AdminOperatorsController extends BaseController {
 		return Results.ok(toPublic(operator));
 	}
 
-	private async resumeOperator(id: string, _body: unknown, _query: unknown): Promise<Result<GetOperatorResponse>> {
+	private async resumeOperator(id: string): Promise<Result<GetOperatorResponse>> {
 		const operator = await this.operatorsServer.resume(Number(id));
 		if (!operator) {
 			return Results.notFound();
@@ -379,7 +379,7 @@ export class AdminOperatorsController extends BaseController {
 		return Results.ok(toPublic(operator));
 	}
 
-	private async changeOperatorType(id: string, body: ChangeOperatorTypeBody, _query: unknown): Promise<Result<GetOperatorResponse>> {
+	private async changeOperatorType(id: string, body: ChangeOperatorTypeBody): Promise<Result<GetOperatorResponse>> {
 		try {
 			const operator = await this.operatorsServer.changeType(Number(id), body.type, (operatorId: number) => this.classRepository.existsActiveForOperator(operatorId));
 			if (!operator) {

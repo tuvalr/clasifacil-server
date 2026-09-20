@@ -1,4 +1,3 @@
-import { Request, Response } from 'express';
 import { inject, injectable } from 'inversify';
 import { TYPES } from '../../../container/types';
 import { OperatorsServer } from '../../../servers/operators.server';
@@ -16,7 +15,6 @@ import { GetOperatorSettingsResponse } from './types/get-operator-settings-respo
 import { UpdateOperatorSettingsBody } from './types/update-operator-settings-body.type';
 import { UpdateOperatorSettingsResponse } from './types/update-operator-settings-response.type';
 import { UpdateOperatorAvatarResponse } from './types/update-operator-avatar-response.type';
-import { AvatarErrorResponse } from './types/avatar-error-response.type';
 
 @injectable()
 export class OperatorSettingsController extends BaseController {
@@ -49,7 +47,7 @@ export class OperatorSettingsController extends BaseController {
 		 *       404: { description: Not found }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.get('/:id', RouteHandlers.wrapResult(['id'], this.getSettings.bind(this)));
+		this.internalRouter.get('/:id', RouteHandlers.wrapOneParam('id', this.getSettings.bind(this)));
 
 		/**
 		 * @openapi
@@ -102,7 +100,7 @@ export class OperatorSettingsController extends BaseController {
 		 *       404: { description: Not found }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.put('/:id', RouteHandlers.wrapResult(['id'], this.updateSettings.bind(this)));
+		this.internalRouter.put('/:id', RouteHandlers.wrapOneParamBody('id', this.updateSettings.bind(this)));
 
 		/**
 		 * @openapi
@@ -139,10 +137,10 @@ export class OperatorSettingsController extends BaseController {
 		 *       404: { description: Not found }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.put('/:id/avatar', avatarUpload, RouteHandlers.wrap(this.updateAvatar.bind(this)));
+		this.internalRouter.put('/:id/avatar', avatarUpload, RouteHandlers.wrapOneParamFile('id', this.updateAvatar.bind(this)));
 	}
 
-	private async getSettings(id: string, _body: unknown, _query: unknown): Promise<Result<GetOperatorSettingsResponse>> {
+	private async getSettings(id: string): Promise<Result<GetOperatorSettingsResponse>> {
 		const operator = await this.operatorsServer.findById(Number(id));
 		if (!operator) {
 			return Results.notFound();
@@ -150,7 +148,7 @@ export class OperatorSettingsController extends BaseController {
 		return Results.ok(toPublic(operator));
 	}
 
-	private async updateSettings(id: string, body: UpdateOperatorSettingsBody, _query: unknown): Promise<Result<UpdateOperatorSettingsResponse>> {
+	private async updateSettings(id: string, body: UpdateOperatorSettingsBody): Promise<Result<UpdateOperatorSettingsResponse>> {
 		const { name, email, phone, countryCode, timezone } = body;
 		try {
 			const operator = await this.operatorsServer.update(Number(id), { name, email, phone, countryCode, timezone }, (operatorId: number) => this.classRepository.existsAnyForOperator(operatorId));
@@ -169,17 +167,15 @@ export class OperatorSettingsController extends BaseController {
 		}
 	}
 
-	private async updateAvatar(req: Request<{ id: string }>, res: Response<UpdateOperatorAvatarResponse | AvatarErrorResponse>): Promise<void> {
-		if (!req.file) {
-			res.status(400).json({ error: 'No avatar file provided' });
-			return;
+	private async updateAvatar(id: string, file: Express.Multer.File | undefined): Promise<Result<UpdateOperatorAvatarResponse>> {
+		if (!file) {
+			return Results.badRequest('No avatar file provided');
 		}
 
-		const result = await this.avatarsServer.updateOperatorAvatar(Number(req.params.id), { buffer: req.file.buffer, mimetype: req.file.mimetype });
+		const result = await this.avatarsServer.updateOperatorAvatar(Number(id), { buffer: file.buffer, mimetype: file.mimetype });
 		if (!result) {
-			res.status(404).end();
-			return;
+			return Results.notFound();
 		}
-		res.json(result);
+		return Results.ok(result);
 	}
 }

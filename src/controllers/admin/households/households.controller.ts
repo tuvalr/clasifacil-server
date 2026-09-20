@@ -38,7 +38,7 @@ export class AdminHouseholdsController extends BaseController {
 		 *       401: { $ref: '#/components/responses/Unauthorized' }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.get('/', RouteHandlers.wrapResult([], this.listHouseholds.bind(this)));
+		this.internalRouter.get('/', RouteHandlers.wrapNoParams(this.listHouseholds.bind(this)));
 
 		/**
 		 * @openapi
@@ -62,7 +62,7 @@ export class AdminHouseholdsController extends BaseController {
 		 *       404: { description: Not found }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.get('/:id', RouteHandlers.wrapResult(['id'], this.getHouseholdById.bind(this)));
+		this.internalRouter.get('/:id', RouteHandlers.wrapOneParam('id', this.getHouseholdById.bind(this)));
 
 		/**
 		 * @openapi
@@ -111,7 +111,7 @@ export class AdminHouseholdsController extends BaseController {
 		 *       401: { $ref: '#/components/responses/Unauthorized' }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.post('/', RouteHandlers.wrapResult([], this.createHousehold.bind(this)));
+		this.internalRouter.post('/', RouteHandlers.wrapNoParamsBody(this.createHousehold.bind(this)));
 
 		/**
 		 * @openapi
@@ -136,7 +136,7 @@ export class AdminHouseholdsController extends BaseController {
 		 *       409: { description: 'Household has an active booking with an operator' }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.delete('/:id', RouteHandlers.wrapResult(['id'], this.deleteHousehold.bind(this)));
+		this.internalRouter.delete('/:id', RouteHandlers.wrapOneParam('id', this.deleteHousehold.bind(this)));
 
 		/**
 		 * @openapi
@@ -171,7 +171,7 @@ export class AdminHouseholdsController extends BaseController {
 		 *       404: { description: Not found }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.post('/:id/pause', RouteHandlers.wrapResult(['id'], this.pauseHousehold.bind(this)));
+		this.internalRouter.post('/:id/pause', RouteHandlers.wrapOneParamBody('id', this.pauseHousehold.bind(this)));
 
 		/**
 		 * @openapi
@@ -195,15 +195,15 @@ export class AdminHouseholdsController extends BaseController {
 		 *       404: { description: Not found }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.post('/:id/resume', RouteHandlers.wrapResult(['id'], this.resumeHousehold.bind(this)));
+		this.internalRouter.post('/:id/resume', RouteHandlers.wrapOneParam('id', this.resumeHousehold.bind(this)));
 	}
 
-	private async listHouseholds(_body: unknown, _query: unknown): Promise<Result<ListHouseholdsResponse>> {
+	private async listHouseholds(): Promise<Result<ListHouseholdsResponse>> {
 		const households = await this.householdsServer.listAll();
 		return Results.ok(households.map(toPublic));
 	}
 
-	private async getHouseholdById(id: string, _body: unknown, _query: unknown): Promise<Result<GetHouseholdDetailsResponse>> {
+	private async getHouseholdById(id: string): Promise<Result<GetHouseholdDetailsResponse>> {
 		const details = await this.householdsServer.getByIdWithDetails(Number(id));
 		if (!details) {
 			return Results.notFound();
@@ -217,7 +217,7 @@ export class AdminHouseholdsController extends BaseController {
 		});
 	}
 
-	private async createHousehold(body: CreateHouseholdBody, _query: unknown): Promise<Result<CreateHouseholdResponse>> {
+	private async createHousehold(body: CreateHouseholdBody): Promise<Result<CreateHouseholdResponse>> {
 		const { name, email } = body;
 		try {
 			const result = await this.householdsServer.create({ name, email });
@@ -230,7 +230,7 @@ export class AdminHouseholdsController extends BaseController {
 		}
 	}
 
-	private async deleteHousehold(id: string, _body: unknown, _query: unknown): Promise<Result<never>> {
+	private async deleteHousehold(id: string): Promise<Result<never>> {
 		try {
 			const household = await this.householdsServer.delete(Number(id));
 			if (!household) {
@@ -245,7 +245,7 @@ export class AdminHouseholdsController extends BaseController {
 		}
 	}
 
-	private async pauseHousehold(id: string, body: PauseHouseholdBody, _query: unknown): Promise<Result<GetHouseholdResponse>> {
+	private async pauseHousehold(id: string, body: PauseHouseholdBody): Promise<Result<GetHouseholdResponse>> {
 		const pausedUntil = body?.pausedUntil ? new Date(body.pausedUntil) : null;
 		const household = await this.householdsServer.pause(Number(id), pausedUntil);
 		if (!household) {
@@ -254,7 +254,7 @@ export class AdminHouseholdsController extends BaseController {
 		return Results.ok(toPublic(household));
 	}
 
-	private async resumeHousehold(id: string, _body: unknown, _query: unknown): Promise<Result<GetHouseholdResponse>> {
+	private async resumeHousehold(id: string): Promise<Result<GetHouseholdResponse>> {
 		const household = await this.householdsServer.resume(Number(id));
 		if (!household) {
 			return Results.notFound();

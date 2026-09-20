@@ -43,7 +43,7 @@ export class ClassesController extends BaseController {
 		 *       404: { description: Operator not found }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.get('/', RouteHandlers.wrapResult([], this.listClasses.bind(this)));
+		this.internalRouter.get('/', RouteHandlers.wrapNoParamsQuery(this.listClasses.bind(this)));
 
 		/**
 		 * @openapi
@@ -67,7 +67,7 @@ export class ClassesController extends BaseController {
 		 *       404: { description: Not found }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.get('/:id', RouteHandlers.wrapResult(['id'], this.getClassById.bind(this)));
+		this.internalRouter.get('/:id', RouteHandlers.wrapOneParam('id', this.getClassById.bind(this)));
 
 		/**
 		 * @openapi
@@ -121,7 +121,7 @@ export class ClassesController extends BaseController {
 		 *       401: { $ref: '#/components/responses/Unauthorized' }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.post('/', RouteHandlers.wrapResult([], this.createClass.bind(this)));
+		this.internalRouter.post('/', RouteHandlers.wrapNoParamsBody(this.createClass.bind(this)));
 
 		/**
 		 * @openapi
@@ -159,7 +159,7 @@ export class ClassesController extends BaseController {
 		 *       404: { description: Not found }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.put('/:id', RouteHandlers.wrapResult(['id'], this.updateClass.bind(this)));
+		this.internalRouter.put('/:id', RouteHandlers.wrapOneParamBody('id', this.updateClass.bind(this)));
 
 		/**
 		 * @openapi
@@ -181,7 +181,7 @@ export class ClassesController extends BaseController {
 		 *       409: { description: 'Class has active student enrollments' }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.delete('/:id', RouteHandlers.wrapResult(['id'], this.deleteClass.bind(this)));
+		this.internalRouter.delete('/:id', RouteHandlers.wrapOneParam('id', this.deleteClass.bind(this)));
 
 		/**
 		 * @openapi
@@ -208,7 +208,7 @@ export class ClassesController extends BaseController {
 		 *       404: { description: Not found }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.post('/:id/stop', RouteHandlers.wrapResult(['id'], this.stopClass.bind(this)));
+		this.internalRouter.post('/:id/stop', RouteHandlers.wrapOneParam('id', this.stopClass.bind(this)));
 
 		/**
 		 * @openapi
@@ -232,7 +232,7 @@ export class ClassesController extends BaseController {
 		 *       404: { description: Not found }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.post('/:id/unstop', RouteHandlers.wrapResult(['id'], this.unstopClass.bind(this)));
+		this.internalRouter.post('/:id/unstop', RouteHandlers.wrapOneParam('id', this.unstopClass.bind(this)));
 
 		/**
 		 * @openapi
@@ -265,7 +265,7 @@ export class ClassesController extends BaseController {
 		 *       404: { description: Class not found }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.post('/:id/assign-students', RouteHandlers.wrapResult(['id'], this.assignStudents.bind(this)));
+		this.internalRouter.post('/:id/assign-students', RouteHandlers.wrapOneParamBody('id', this.assignStudents.bind(this)));
 
 		/**
 		 * @openapi
@@ -293,7 +293,7 @@ export class ClassesController extends BaseController {
 		 *       401: { $ref: '#/components/responses/Unauthorized' }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.post('/:id/unassign-students', RouteHandlers.wrapResult(['id'], this.unassignStudents.bind(this)));
+		this.internalRouter.post('/:id/unassign-students', RouteHandlers.wrapOneParamBody('id', this.unassignStudents.bind(this)));
 	}
 
 	// Internal helper, not an exposed route. "Class not found" is the only ValidationError raised once a
@@ -304,7 +304,7 @@ export class ClassesController extends BaseController {
 	}
 
 	// Lists all classes belonging to the given operator.
-	private async listClasses(_body: unknown, query: { operatorId?: string }): Promise<Result<ListClassesResponse>> {
+	private async listClasses(query: { operatorId?: string }): Promise<Result<ListClassesResponse>> {
 		const operatorId = Number(query.operatorId);
 		if (!query.operatorId || Number.isNaN(operatorId)) {
 			return Results.badRequest('operatorId is required');
@@ -317,7 +317,7 @@ export class ClassesController extends BaseController {
 	}
 
 	// Fetches a single class by id.
-	private async getClassById(id: string, _body: unknown, _query: unknown): Promise<Result<GetClassResponse>> {
+	private async getClassById(id: string): Promise<Result<GetClassResponse>> {
 		const foundClass = await this.classesServer.findById(Number(id));
 		if (!foundClass) {
 			return Results.notFound();
@@ -326,7 +326,7 @@ export class ClassesController extends BaseController {
 	}
 
 	// Creates a new recurring class definition, including atomic student assignment for assigned-type operators.
-	private async createClass(body: CreateClassBody, _query: unknown): Promise<Result<ClassMutationResponse>> {
+	private async createClass(body: CreateClassBody): Promise<Result<ClassMutationResponse>> {
 		try {
 			const created = await this.classesServer.create(body);
 			return Results.created(toPublic(created));
@@ -339,7 +339,7 @@ export class ClassesController extends BaseController {
 	}
 
 	// Updates a class's stored recurring pattern (title, day/time, capacity) - never touches existing sessions.
-	private async updateClass(id: string, body: UpdateClassBody, _query: unknown): Promise<Result<ClassMutationResponse>> {
+	private async updateClass(id: string, body: UpdateClassBody): Promise<Result<ClassMutationResponse>> {
 		try {
 			const updated = await this.classesServer.update(Number(id), body);
 			if (!updated) {
@@ -355,7 +355,7 @@ export class ClassesController extends BaseController {
 	}
 
 	// Soft-deletes a class; rejected with 409 if it still has active student enrollments.
-	private async deleteClass(id: string, _body: unknown, _query: unknown): Promise<Result<never>> {
+	private async deleteClass(id: string): Promise<Result<never>> {
 		try {
 			const deleted = await this.classesServer.delete(Number(id));
 			if (!deleted) {
@@ -371,7 +371,7 @@ export class ClassesController extends BaseController {
 	}
 
 	// Stops a class, blocking new derived occurrences past this point; reversible via unstop.
-	private async stopClass(id: string, _body: unknown, _query: unknown): Promise<Result<ClassMutationResponse>> {
+	private async stopClass(id: string): Promise<Result<ClassMutationResponse>> {
 		const stopped = await this.classesServer.stop(Number(id));
 		if (!stopped) {
 			return Results.notFound();
@@ -380,7 +380,7 @@ export class ClassesController extends BaseController {
 	}
 
 	// Reverses a previous stop, resuming derived occurrences.
-	private async unstopClass(id: string, _body: unknown, _query: unknown): Promise<Result<ClassMutationResponse>> {
+	private async unstopClass(id: string): Promise<Result<ClassMutationResponse>> {
 		const unstopped = await this.classesServer.unstop(Number(id));
 		if (!unstopped) {
 			return Results.notFound();
@@ -389,7 +389,7 @@ export class ClassesController extends BaseController {
 	}
 
 	// Bulk-assigns students to a class's standing roster; each studentId succeeds or fails independently.
-	private async assignStudents(id: string, body: AssignStudentsBody, _query: unknown): Promise<Result<AssignStudentsResponse>> {
+	private async assignStudents(id: string, body: AssignStudentsBody): Promise<Result<AssignStudentsResponse>> {
 		try {
 			const results = await this.classesServer.assignStudents(Number(id), body.studentIds);
 			return Results.ok(
@@ -407,7 +407,7 @@ export class ClassesController extends BaseController {
 	}
 
 	// Bulk-removes students from a class's standing roster.
-	private async unassignStudents(id: string, body: AssignStudentsBody, _query: unknown): Promise<Result<never>> {
+	private async unassignStudents(id: string, body: AssignStudentsBody): Promise<Result<never>> {
 		try {
 			await this.classesServer.unassignStudents(Number(id), body.studentIds);
 			return Results.noContent();

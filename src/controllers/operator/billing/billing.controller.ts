@@ -39,7 +39,7 @@ export class BillingController extends BaseController {
 		 *       404: { description: Operator not found }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.get('/', RouteHandlers.wrapResult([], this.listInvoices.bind(this)));
+		this.internalRouter.get('/', RouteHandlers.wrapNoParamsQuery(this.listInvoices.bind(this)));
 
 		/**
 		 * @openapi
@@ -63,7 +63,7 @@ export class BillingController extends BaseController {
 		 *       404: { description: Not found }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.get('/:id', RouteHandlers.wrapResult(['id'], this.getInvoiceById.bind(this)));
+		this.internalRouter.get('/:id', RouteHandlers.wrapOneParam('id', this.getInvoiceById.bind(this)));
 
 		/**
 		 * @openapi
@@ -87,7 +87,7 @@ export class BillingController extends BaseController {
 		 *       404: { description: Not found }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.post('/:id/record-offline-payment', RouteHandlers.wrapResult(['id'], this.recordOfflinePayment.bind(this)));
+		this.internalRouter.post('/:id/record-offline-payment', RouteHandlers.wrapOneParam('id', this.recordOfflinePayment.bind(this)));
 
 		// TODO: requires a class-pack balance table (PRD Model 3: "10-class pack for €130", decremented per booking) - no such table exists yet.
 		this.internalRouter.get('/class-packs/:householdId', RouteHandlers.notImplemented);
@@ -97,7 +97,7 @@ export class BillingController extends BaseController {
 		this.internalRouter.post('/stripe/connect', RouteHandlers.notImplemented);
 	}
 
-	private async listInvoices(_body: unknown, query: ListOperatorInvoicesQuery): Promise<Result<ListOperatorInvoicesResponse>> {
+	private async listInvoices(query: ListOperatorInvoicesQuery): Promise<Result<ListOperatorInvoicesResponse>> {
 		const operatorId = Number(query.operatorId);
 		if (!query.operatorId || Number.isNaN(operatorId)) {
 			return Results.badRequest('operatorId is required');
@@ -110,7 +110,7 @@ export class BillingController extends BaseController {
 		return Results.ok(invoices.map(toPublic));
 	}
 
-	private async getInvoiceById(id: string, _body: unknown, _query: unknown): Promise<Result<GetInvoiceResponse>> {
+	private async getInvoiceById(id: string): Promise<Result<GetInvoiceResponse>> {
 		const invoice = await this.billingServer.findById(Number(id));
 		if (!invoice) {
 			return Results.notFound();
@@ -118,7 +118,7 @@ export class BillingController extends BaseController {
 		return Results.ok(toPublic(invoice));
 	}
 
-	private async recordOfflinePayment(id: string, _body: unknown, _query: unknown): Promise<Result<RecordOfflinePaymentResponse>> {
+	private async recordOfflinePayment(id: string): Promise<Result<RecordOfflinePaymentResponse>> {
 		const invoice = await this.billingServer.recordOfflinePayment(Number(id));
 		if (!invoice) {
 			return Results.notFound();

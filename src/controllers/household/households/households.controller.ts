@@ -43,7 +43,7 @@ export class HouseholdHouseholdsController extends BaseController {
 		 *       404: { description: Not found }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.get('/:id', RouteHandlers.wrapResult(['id'], this.getHouseholdById.bind(this)));
+		this.internalRouter.get('/:id', RouteHandlers.wrapOneParam('id', this.getHouseholdById.bind(this)));
 
 		/**
 		 * @openapi
@@ -75,7 +75,7 @@ export class HouseholdHouseholdsController extends BaseController {
 		 *       404: { description: Not found }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.put('/:id', RouteHandlers.wrapResult(['id'], this.updateHousehold.bind(this)));
+		this.internalRouter.put('/:id', RouteHandlers.wrapOneParamBody('id', this.updateHousehold.bind(this)));
 
 		/**
 		 * @openapi
@@ -99,7 +99,7 @@ export class HouseholdHouseholdsController extends BaseController {
 		 *       404: { description: Not found }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.get('/:id/students', RouteHandlers.wrapResult(['id'], this.listStudents.bind(this)));
+		this.internalRouter.get('/:id/students', RouteHandlers.wrapOneParam('id', this.listStudents.bind(this)));
 
 		/**
 		 * @openapi
@@ -134,7 +134,7 @@ export class HouseholdHouseholdsController extends BaseController {
 		 *       404: { description: Household not found }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.post('/:id/students', RouteHandlers.wrapResult(['id'], this.createStudent.bind(this)));
+		this.internalRouter.post('/:id/students', RouteHandlers.wrapOneParamBody('id', this.createStudent.bind(this)));
 
 		/**
 		 * @openapi
@@ -170,7 +170,7 @@ export class HouseholdHouseholdsController extends BaseController {
 		 *       404: { description: Not found }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.put('/:id/students/:studentId', RouteHandlers.wrapResult(['id', 'studentId'], this.updateStudent.bind(this)));
+		this.internalRouter.put('/:id/students/:studentId', RouteHandlers.wrapTwoParamsBody(['id', 'studentId'], this.updateStudent.bind(this)));
 
 		// PRD UC1 edge case: "Archiving a Student Profile" - retain historical attendance/invoice logs, remove from active roster
 		// selectors. This is exactly PostgresHandler's soft-delete, so it IS implemented.
@@ -196,7 +196,7 @@ export class HouseholdHouseholdsController extends BaseController {
 		 *       404: { description: Not found }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.post('/:id/students/:studentId/archive', RouteHandlers.wrapResult(['id', 'studentId'], this.archiveStudent.bind(this)));
+		this.internalRouter.post('/:id/students/:studentId/archive', RouteHandlers.wrapTwoParams(['id', 'studentId'], this.archiveStudent.bind(this)));
 
 		// TODO: requires a co-household-owner/secondary-adult table (PRD: "grant secondary view/booking access to a co-household-owner or
 		// caregiver via email invite") - no such table exists yet.
@@ -205,7 +205,7 @@ export class HouseholdHouseholdsController extends BaseController {
 		this.internalRouter.post('/:id/co-household-owners/invite', RouteHandlers.notImplemented);
 	}
 
-	private async getHouseholdById(id: string, _body: unknown, _query: unknown): Promise<Result<GetOwnHouseholdResponse>> {
+	private async getHouseholdById(id: string): Promise<Result<GetOwnHouseholdResponse>> {
 		const household = await this.householdsServer.getById(Number(id));
 		if (!household) {
 			return Results.notFound();
@@ -213,7 +213,7 @@ export class HouseholdHouseholdsController extends BaseController {
 		return Results.ok(toPublic(household));
 	}
 
-	private async updateHousehold(id: string, body: UpdateHouseholdBody, _query: unknown): Promise<Result<UpdateHouseholdResponse>> {
+	private async updateHousehold(id: string, body: UpdateHouseholdBody): Promise<Result<UpdateHouseholdResponse>> {
 		const { name, email } = body;
 		const household = await this.householdsServer.update(Number(id), { name, email });
 		if (!household) {
@@ -222,7 +222,7 @@ export class HouseholdHouseholdsController extends BaseController {
 		return Results.ok(toPublic(household));
 	}
 
-	private async listStudents(id: string, _body: unknown, _query: unknown): Promise<Result<ListOwnStudentsResponse>> {
+	private async listStudents(id: string): Promise<Result<ListOwnStudentsResponse>> {
 		const students = await this.householdsServer.listStudents(Number(id));
 		if (!students) {
 			return Results.notFound();
@@ -230,7 +230,7 @@ export class HouseholdHouseholdsController extends BaseController {
 		return Results.ok(students.map(toPublic));
 	}
 
-	private async createStudent(id: string, body: CreateStudentBody, _query: unknown): Promise<Result<CreateStudentResponse>> {
+	private async createStudent(id: string, body: CreateStudentBody): Promise<Result<CreateStudentResponse>> {
 		const { fullName, dateOfBirth, notes } = body;
 		const student = await this.householdsServer.createStudent({
 			householdId: Number(id),
@@ -244,7 +244,7 @@ export class HouseholdHouseholdsController extends BaseController {
 		return Results.created(toPublic(student));
 	}
 
-	private async updateStudent(_id: string, studentId: string, body: UpdateStudentBody, _query: unknown): Promise<Result<UpdateStudentResponse>> {
+	private async updateStudent(_id: string, studentId: string, body: UpdateStudentBody): Promise<Result<UpdateStudentResponse>> {
 		const { fullName, notes } = body;
 		const student = await this.householdsServer.updateStudent(Number(studentId), { fullName, notes });
 		if (!student) {
@@ -253,7 +253,7 @@ export class HouseholdHouseholdsController extends BaseController {
 		return Results.ok(toPublic(student));
 	}
 
-	private async archiveStudent(_id: string, studentId: string, _body: unknown, _query: unknown): Promise<Result<never>> {
+	private async archiveStudent(_id: string, studentId: string): Promise<Result<never>> {
 		const student = await this.householdsServer.archiveStudent(Number(studentId));
 		if (!student) {
 			return Results.notFound();

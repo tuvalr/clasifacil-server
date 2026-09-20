@@ -36,7 +36,7 @@ export class AttendanceCreditsController extends BaseController {
 		 *       404: { description: Not found }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.get('/session/:sessionId', RouteHandlers.wrapResult(['sessionId'], this.listCreditsBySession.bind(this)));
+		this.internalRouter.get('/session/:sessionId', RouteHandlers.wrapOneParam('sessionId', this.listCreditsBySession.bind(this)));
 
 		// TODO: requires a cancellation-policy-window column (PRD: "e.g. >24 hours before session start") on operators or sessions -
 		// no such column exists yet.
@@ -47,7 +47,7 @@ export class AttendanceCreditsController extends BaseController {
 		this.internalRouter.post('/expire-tokens', RouteHandlers.notImplemented);
 	}
 
-	private async listCreditsBySession(sessionId: string, _body: unknown, _query: unknown): Promise<Result<ListSessionCreditsResponse>> {
+	private async listCreditsBySession(sessionId: string): Promise<Result<ListSessionCreditsResponse>> {
 		const enrollments = await this.attendanceCreditsServer.listBySession(Number(sessionId));
 		if (!enrollments) {
 			return Results.notFound();

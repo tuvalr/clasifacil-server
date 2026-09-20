@@ -11,7 +11,7 @@ export const START_TIME_FORMAT = /^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/;
 // Runtime type guard for the assign/unassign-students request body's studentIds: it arrives as untyped JSON, so
 // the `number[]` signature on ClassesServer's methods only guards call sites within this codebase, not an actual
 // HTTP request. Without this check, a missing/malformed studentIds (undefined, a single number, a string, etc.)
-// would reach a `for...of` loop and throw a raw TypeError, forwarded by RouteHandlers.wrap to the generic error
+// would reach a `for...of` loop and throw a raw TypeError, forwarded by the route wrapper to the generic error
 // handler as a 500 instead of a clean 400 - the same gotcha OperatorsServer.validateCreate and
 // ClassesServer.validateRequired work around elsewhere.
 export function isNumberArray(value: unknown): value is number[] {

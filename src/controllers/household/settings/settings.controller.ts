@@ -1,4 +1,3 @@
-import { Request, Response } from 'express';
 import { inject, injectable } from 'inversify';
 import { TYPES } from '../../../container/types';
 import { HouseholdsServer } from '../../../servers/households.server';
@@ -13,7 +12,6 @@ import { GetHouseholdSettingsResponse } from './types/get-household-settings-res
 import { UpdateHouseholdSettingsBody } from './types/update-household-settings-body.type';
 import { UpdateHouseholdSettingsResponse } from './types/update-household-settings-response.type';
 import { UpdateHouseholdAvatarResponse } from './types/update-household-avatar-response.type';
-import { AvatarErrorResponse } from './types/avatar-error-response.type';
 
 @injectable()
 export class HouseholdSettingsController extends BaseController {
@@ -45,7 +43,7 @@ export class HouseholdSettingsController extends BaseController {
 		 *       404: { description: Not found }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.get('/:id', RouteHandlers.wrapResult(['id'], this.getSettings.bind(this)));
+		this.internalRouter.get('/:id', RouteHandlers.wrapOneParam('id', this.getSettings.bind(this)));
 
 		/**
 		 * @openapi
@@ -77,7 +75,7 @@ export class HouseholdSettingsController extends BaseController {
 		 *       404: { description: Not found }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.put('/:id', RouteHandlers.wrapResult(['id'], this.updateSettings.bind(this)));
+		this.internalRouter.put('/:id', RouteHandlers.wrapOneParamBody('id', this.updateSettings.bind(this)));
 
 		/**
 		 * @openapi
@@ -114,10 +112,10 @@ export class HouseholdSettingsController extends BaseController {
 		 *       404: { description: Not found }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.put('/:id/avatar', avatarUpload, RouteHandlers.wrap(this.updateAvatar.bind(this)));
+		this.internalRouter.put('/:id/avatar', avatarUpload, RouteHandlers.wrapOneParamFile('id', this.updateAvatar.bind(this)));
 	}
 
-	private async getSettings(id: string, _body: unknown, _query: unknown): Promise<Result<GetHouseholdSettingsResponse>> {
+	private async getSettings(id: string): Promise<Result<GetHouseholdSettingsResponse>> {
 		const household = await this.householdsServer.getById(Number(id));
 		if (!household) {
 			return Results.notFound();
@@ -125,7 +123,7 @@ export class HouseholdSettingsController extends BaseController {
 		return Results.ok(toPublic(household));
 	}
 
-	private async updateSettings(id: string, body: UpdateHouseholdSettingsBody, _query: unknown): Promise<Result<UpdateHouseholdSettingsResponse>> {
+	private async updateSettings(id: string, body: UpdateHouseholdSettingsBody): Promise<Result<UpdateHouseholdSettingsResponse>> {
 		const { name, email } = body;
 		const household = await this.householdsServer.update(Number(id), { name, email });
 		if (!household) {
@@ -134,17 +132,15 @@ export class HouseholdSettingsController extends BaseController {
 		return Results.ok(toPublic(household));
 	}
 
-	private async updateAvatar(req: Request<{ id: string }>, res: Response<UpdateHouseholdAvatarResponse | AvatarErrorResponse>): Promise<void> {
-		if (!req.file) {
-			res.status(400).json({ error: 'No avatar file provided' });
-			return;
+	private async updateAvatar(id: string, file: Express.Multer.File | undefined): Promise<Result<UpdateHouseholdAvatarResponse>> {
+		if (!file) {
+			return Results.badRequest('No avatar file provided');
 		}
 
-		const result = await this.avatarsServer.updateHouseholdAvatar(Number(req.params.id), { buffer: req.file.buffer, mimetype: req.file.mimetype });
+		const result = await this.avatarsServer.updateHouseholdAvatar(Number(id), { buffer: file.buffer, mimetype: file.mimetype });
 		if (!result) {
-			res.status(404).end();
-			return;
+			return Results.notFound();
 		}
-		res.json(result);
+		return Results.ok(result);
 	}
 }

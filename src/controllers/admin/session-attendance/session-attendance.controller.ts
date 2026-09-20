@@ -31,10 +31,10 @@ export class AdminSessionAttendanceController extends BaseController {
 		 *       401: { $ref: '#/components/responses/Unauthorized' }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.post('/archive', RouteHandlers.wrapResult([], this.archive.bind(this)));
+		this.internalRouter.post('/archive', RouteHandlers.wrapNoParams(this.archive.bind(this)));
 	}
 
-	private async archive(_body: unknown, _query: unknown): Promise<Result<ArchiveAttendanceResponse>> {
+	private async archive(): Promise<Result<ArchiveAttendanceResponse>> {
 		const archivedCount = await this.sessionAttendanceServer.archive();
 		return Results.ok({ archivedCount });
 	}

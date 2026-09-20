@@ -32,7 +32,7 @@ export class HouseholdsController extends BaseController {
 		 *       401: { $ref: '#/components/responses/Unauthorized' }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.get('/', RouteHandlers.wrapResult([], this.listHouseholds.bind(this)));
+		this.internalRouter.get('/', RouteHandlers.wrapNoParams(this.listHouseholds.bind(this)));
 
 		/**
 		 * @openapi
@@ -56,7 +56,7 @@ export class HouseholdsController extends BaseController {
 		 *       404: { description: Not found }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.get('/:id', RouteHandlers.wrapResult(['id'], this.getHouseholdById.bind(this)));
+		this.internalRouter.get('/:id', RouteHandlers.wrapOneParam('id', this.getHouseholdById.bind(this)));
 
 		/**
 		 * @openapi
@@ -80,7 +80,7 @@ export class HouseholdsController extends BaseController {
 		 *       404: { description: Not found }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.get('/:id/students', RouteHandlers.wrapResult(['id'], this.listStudents.bind(this)));
+		this.internalRouter.get('/:id/students', RouteHandlers.wrapOneParam('id', this.listStudents.bind(this)));
 
 		/**
 		 * @openapi
@@ -100,7 +100,7 @@ export class HouseholdsController extends BaseController {
 		 *       404: { description: Not found }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.post('/:id/archive', RouteHandlers.wrapResult(['id'], this.archiveHousehold.bind(this)));
+		this.internalRouter.post('/:id/archive', RouteHandlers.wrapOneParam('id', this.archiveHousehold.bind(this)));
 
 		/**
 		 * @openapi
@@ -120,19 +120,19 @@ export class HouseholdsController extends BaseController {
 		 *       404: { description: Not found }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.post('/:id/restore', RouteHandlers.wrapResult(['id'], this.restoreHousehold.bind(this)));
+		this.internalRouter.post('/:id/restore', RouteHandlers.wrapOneParam('id', this.restoreHousehold.bind(this)));
 		// TODO: requires a co-household-owner/secondary-adult table (PRD UC1: "grant
 		// secondary view/booking access to a co-household-owner via email invite") -
 		// no such table exists yet.
 		this.internalRouter.post('/:id/invite-co-household-owner', RouteHandlers.notImplemented);
 	}
 
-	private async listHouseholds(_body: unknown, _query: unknown): Promise<Result<ListHouseholdsResponse>> {
+	private async listHouseholds(): Promise<Result<ListHouseholdsResponse>> {
 		const households = await this.householdsServer.listAll();
 		return Results.ok(households.map(toPublic));
 	}
 
-	private async getHouseholdById(id: string, _body: unknown, _query: unknown): Promise<Result<GetHouseholdResponse>> {
+	private async getHouseholdById(id: string): Promise<Result<GetHouseholdResponse>> {
 		const household = await this.householdsServer.getById(Number(id));
 		if (!household) {
 			return Results.notFound();
@@ -140,7 +140,7 @@ export class HouseholdsController extends BaseController {
 		return Results.ok(toPublic(household));
 	}
 
-	private async listStudents(id: string, _body: unknown, _query: unknown): Promise<Result<ListHouseholdStudentsResponse>> {
+	private async listStudents(id: string): Promise<Result<ListHouseholdStudentsResponse>> {
 		const students = await this.householdsServer.listStudents(Number(id));
 		if (!students) {
 			return Results.notFound();
@@ -148,7 +148,7 @@ export class HouseholdsController extends BaseController {
 		return Results.ok(students.map(toPublic));
 	}
 
-	private async archiveHousehold(id: string, _body: unknown, _query: unknown): Promise<Result<never>> {
+	private async archiveHousehold(id: string): Promise<Result<never>> {
 		const household = await this.householdsServer.archive(Number(id));
 		if (!household) {
 			return Results.notFound();
@@ -156,7 +156,7 @@ export class HouseholdsController extends BaseController {
 		return Results.noContent();
 	}
 
-	private async restoreHousehold(id: string, _body: unknown, _query: unknown): Promise<Result<never>> {
+	private async restoreHousehold(id: string): Promise<Result<never>> {
 		const household = await this.householdsServer.restore(Number(id));
 		if (!household) {
 			return Results.notFound();

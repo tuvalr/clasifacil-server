@@ -76,7 +76,7 @@ export class ClassOccurrencesController extends BaseController {
 		 *       404: { description: Not found }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.get('/:id/occurrences/future', RouteHandlers.wrapResult(['id'], this.listFuture.bind(this)));
+		this.internalRouter.get('/:id/occurrences/future', RouteHandlers.wrapOneParamQuery('id', this.listFuture.bind(this)));
 
 		/**
 		 * @openapi
@@ -113,7 +113,7 @@ export class ClassOccurrencesController extends BaseController {
 		 *       404: { description: Not found }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.get('/:id/occurrences/past', RouteHandlers.wrapResult(['id'], this.listPast.bind(this)));
+		this.internalRouter.get('/:id/occurrences/past', RouteHandlers.wrapOneParamQuery('id', this.listPast.bind(this)));
 
 		/**
 		 * @openapi
@@ -150,7 +150,7 @@ export class ClassOccurrencesController extends BaseController {
 		 *       404: { description: Not found }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.patch('/:id/occurrences/:date/reschedule', RouteHandlers.wrapResult(['id', 'date'], this.rescheduleOccurrence.bind(this)));
+		this.internalRouter.patch('/:id/occurrences/:date/reschedule', RouteHandlers.wrapTwoParamsBody(['id', 'date'], this.rescheduleOccurrence.bind(this)));
 
 		/**
 		 * @openapi
@@ -174,7 +174,7 @@ export class ClassOccurrencesController extends BaseController {
 		 *       404: { description: Not found }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.post('/:id/occurrences/:date/cancel', RouteHandlers.wrapResult(['id', 'date'], this.cancelOccurrence.bind(this)));
+		this.internalRouter.post('/:id/occurrences/:date/cancel', RouteHandlers.wrapTwoParams(['id', 'date'], this.cancelOccurrence.bind(this)));
 
 		/**
 		 * @openapi
@@ -219,7 +219,7 @@ export class ClassOccurrencesController extends BaseController {
 		 *       404: { description: Not found }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.put('/:id/occurrences/:date/attendance', RouteHandlers.wrapResult(['id', 'date'], this.recordOccurrenceAttendance.bind(this)));
+		this.internalRouter.put('/:id/occurrences/:date/attendance', RouteHandlers.wrapTwoParamsBody(['id', 'date'], this.recordOccurrenceAttendance.bind(this)));
 
 		/**
 		 * @openapi
@@ -252,7 +252,7 @@ export class ClassOccurrencesController extends BaseController {
 		 *       401: { $ref: '#/components/responses/Unauthorized' }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.post('/:id/makeup-session', RouteHandlers.wrapResult(['id'], this.createMakeupSession.bind(this)));
+		this.internalRouter.post('/:id/makeup-session', RouteHandlers.wrapOneParamBody('id', this.createMakeupSession.bind(this)));
 	}
 
 	// Internal helper, not an exposed route.
@@ -261,7 +261,7 @@ export class ClassOccurrencesController extends BaseController {
 	}
 
 	// Lists a class's future occurrences (virtual and materialized) in a date range.
-	private async listFuture(id: string, _body: unknown, query: ListOccurrencesQuery): Promise<Result<ListOccurrencesResponse>> {
+	private async listFuture(id: string, query: ListOccurrencesQuery): Promise<Result<ListOccurrencesResponse>> {
 		try {
 			const result = await this.classOccurrencesServer.listFuture(Number(id), query.from, query.to);
 			if (!result) {
@@ -277,7 +277,7 @@ export class ClassOccurrencesController extends BaseController {
 	}
 
 	// Lists a class's past occurrences in a date range, including synthesized not_recorded attendance.
-	private async listPast(id: string, _body: unknown, query: ListOccurrencesQuery): Promise<Result<ListOccurrencesResponse>> {
+	private async listPast(id: string, query: ListOccurrencesQuery): Promise<Result<ListOccurrencesResponse>> {
 		try {
 			const result = await this.classOccurrencesServer.listPast(Number(id), query.from, query.to);
 			if (!result) {
@@ -293,7 +293,7 @@ export class ClassOccurrencesController extends BaseController {
 	}
 
 	// Reschedules one occurrence to a new startTime, materializing it first if it was still virtual.
-	private async rescheduleOccurrence(id: string, date: string, body: RescheduleOccurrenceBody, _query: unknown): Promise<Result<GetSessionResponse>> {
+	private async rescheduleOccurrence(id: string, date: string, body: RescheduleOccurrenceBody): Promise<Result<GetSessionResponse>> {
 		try {
 			const rescheduled = await this.classOccurrencesServer.rescheduleOccurrence(Number(id), date, body?.startTime);
 			if (!rescheduled) {
@@ -312,7 +312,7 @@ export class ClassOccurrencesController extends BaseController {
 	}
 
 	// Cancels one occurrence (materializing it first if needed); re-cancelling an already-cancelled date is an idempotent no-op.
-	private async cancelOccurrence(id: string, date: string, _body: unknown, _query: unknown): Promise<Result<never>> {
+	private async cancelOccurrence(id: string, date: string): Promise<Result<never>> {
 		try {
 			const cancelled = await this.classOccurrencesServer.cancelOccurrence(Number(id), date);
 			if (!cancelled) {
@@ -328,7 +328,7 @@ export class ClassOccurrencesController extends BaseController {
 	}
 
 	// Records or corrects attendance for one occurrence (materializing it first if needed); accepts any studentId, including trial students.
-	private async recordOccurrenceAttendance(id: string, date: string, body: SessionAttendanceBody, _query: unknown): Promise<Result<SessionAttendanceResponse>> {
+	private async recordOccurrenceAttendance(id: string, date: string, body: SessionAttendanceBody): Promise<Result<SessionAttendanceResponse>> {
 		try {
 			const classId = Number(id);
 			const session = await this.classOccurrencesServer.materializeOccurrence(classId, new Date(`${date}T00:00:00.000Z`));
@@ -356,7 +356,7 @@ export class ClassOccurrencesController extends BaseController {
 	}
 
 	// Creates a make-up session tied to this class, with roster auto-filled from its current standing members.
-	private async createMakeupSession(id: string, body: MakeupSessionBody, _query: unknown): Promise<Result<GetSessionResponse>> {
+	private async createMakeupSession(id: string, body: MakeupSessionBody): Promise<Result<GetSessionResponse>> {
 		try {
 			const session = await this.classOccurrencesServer.createMakeupSession(Number(id), body?.startTime);
 			return Results.created(toPublic(session));

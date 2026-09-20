@@ -60,7 +60,7 @@ export class BookingController extends BaseController {
 		 *                 waitlisted: { type: boolean }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.post('/sessions/:sessionId/book', RouteHandlers.wrapResult(['sessionId'], this.book.bind(this)));
+		this.internalRouter.post('/sessions/:sessionId/book', RouteHandlers.wrapOneParamBody('sessionId', this.book.bind(this)));
 
 		/**
 		 * @openapi
@@ -84,7 +84,7 @@ export class BookingController extends BaseController {
 		 *       404: { description: Household not found }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.get('/households/:householdId/enrollments', RouteHandlers.wrapResult(['householdId'], this.listEnrollments.bind(this)));
+		this.internalRouter.get('/households/:householdId/enrollments', RouteHandlers.wrapOneParam('householdId', this.listEnrollments.bind(this)));
 
 		// TODO: requires a real wait-list (PRD: "queue-based wait-list ordered strictly by timestamp", automated promotion with a
 		// time-sensitive claim window on cancellation) - status is a free-text column with no queue-position or claim-deadline tracking.
@@ -93,7 +93,7 @@ export class BookingController extends BaseController {
 		this.internalRouter.post('/waitlist/:enrollmentId/claim', RouteHandlers.notImplemented);
 	}
 
-	private async listEnrollments(householdId: string, _body: unknown, _query: unknown): Promise<Result<ListOwnEnrollmentsResponse>> {
+	private async listEnrollments(householdId: string): Promise<Result<ListOwnEnrollmentsResponse>> {
 		const enrollments = await this.sessionsServer.listEnrollments(Number(householdId));
 		if (!enrollments) {
 			return Results.notFound();
@@ -101,7 +101,7 @@ export class BookingController extends BaseController {
 		return Results.ok(enrollments.map(toPublic));
 	}
 
-	private async book(sessionIdParam: string, body: BookSessionBody, _query: unknown): Promise<Result<BookSessionResponse>> {
+	private async book(sessionIdParam: string, body: BookSessionBody): Promise<Result<BookSessionResponse>> {
 		const sessionId = Number(sessionIdParam);
 		const { studentId, householdId } = body;
 

@@ -36,7 +36,7 @@ export class HouseholdBillingController extends BaseController {
 		 *       404: { description: Household not found }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.get('/households/:householdId/invoices', RouteHandlers.wrapResult(['householdId'], this.listInvoices.bind(this)));
+		this.internalRouter.get('/households/:householdId/invoices', RouteHandlers.wrapOneParam('householdId', this.listInvoices.bind(this)));
 
 		// Model 1: Pay-Per-Class (Drop-in) card checkout. TODO: requires a payment-processor integration (Stripe) - no Stripe SDK is
 		// installed and invoices_and_payments.stripe_charge_id, while present, has no write path yet.
@@ -48,7 +48,7 @@ export class HouseholdBillingController extends BaseController {
 		this.internalRouter.post('/households/:householdId/class-packs/purchase', RouteHandlers.notImplemented);
 	}
 
-	private async listInvoices(householdId: string, _body: unknown, _query: unknown): Promise<Result<ListOwnInvoicesResponse>> {
+	private async listInvoices(householdId: string): Promise<Result<ListOwnInvoicesResponse>> {
 		const invoices = await this.billingServer.findByHouseholdId(Number(householdId));
 		if (!invoices) {
 			return Results.notFound();

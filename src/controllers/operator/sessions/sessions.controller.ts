@@ -51,7 +51,7 @@ export class SessionsController extends BaseController {
 		 *       404: { description: Operator not found }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.get('/', RouteHandlers.wrapResult([], this.listSessions.bind(this)));
+		this.internalRouter.get('/', RouteHandlers.wrapNoParamsQuery(this.listSessions.bind(this)));
 
 		/**
 		 * @openapi
@@ -75,7 +75,7 @@ export class SessionsController extends BaseController {
 		 *       404: { description: Not found }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.get('/:id', RouteHandlers.wrapResult(['id'], this.getSessionById.bind(this)));
+		this.internalRouter.get('/:id', RouteHandlers.wrapOneParam('id', this.getSessionById.bind(this)));
 
 		/**
 		 * @openapi
@@ -103,7 +103,7 @@ export class SessionsController extends BaseController {
 		 *       404: { description: Not found }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.get('/:id/roster', RouteHandlers.wrapResult(['id'], this.getRoster.bind(this)));
+		this.internalRouter.get('/:id/roster', RouteHandlers.wrapOneParam('id', this.getRoster.bind(this)));
 
 		/**
 		 * @openapi
@@ -134,7 +134,7 @@ export class SessionsController extends BaseController {
 		 *       404: { description: Operator not found }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.post('/', RouteHandlers.wrapResult([], this.createSession.bind(this)));
+		this.internalRouter.post('/', RouteHandlers.wrapNoParamsBody(this.createSession.bind(this)));
 
 		/**
 		 * @openapi
@@ -154,7 +154,7 @@ export class SessionsController extends BaseController {
 		 *       404: { description: Not found }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.post('/:id/cancel', RouteHandlers.wrapResult(['id'], this.cancelSession.bind(this)));
+		this.internalRouter.post('/:id/cancel', RouteHandlers.wrapOneParam('id', this.cancelSession.bind(this)));
 
 		/**
 		 * @openapi
@@ -188,7 +188,7 @@ export class SessionsController extends BaseController {
 		 *       404: { description: Not found }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.patch('/:id/reschedule', RouteHandlers.wrapResult(['id'], this.rescheduleSession.bind(this)));
+		this.internalRouter.patch('/:id/reschedule', RouteHandlers.wrapOneParamBody('id', this.rescheduleSession.bind(this)));
 
 		/**
 		 * @openapi
@@ -224,7 +224,7 @@ export class SessionsController extends BaseController {
 		 *       404: { description: Not found }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.get('/:id/attendance', RouteHandlers.wrapResult(['id'], this.getAttendance.bind(this)));
+		this.internalRouter.get('/:id/attendance', RouteHandlers.wrapOneParam('id', this.getAttendance.bind(this)));
 
 		/**
 		 * @openapi
@@ -277,10 +277,10 @@ export class SessionsController extends BaseController {
 		 *       404: { description: Not found }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.put('/:id/attendance', RouteHandlers.wrapResult(['id'], this.recordAttendance.bind(this)));
+		this.internalRouter.put('/:id/attendance', RouteHandlers.wrapOneParamBody('id', this.recordAttendance.bind(this)));
 	}
 
-	private async listSessions(_body: unknown, query: ListSessionsQuery): Promise<Result<ListSessionsResponse>> {
+	private async listSessions(query: ListSessionsQuery): Promise<Result<ListSessionsResponse>> {
 		const operatorId = Number(query.operatorId);
 		if (!query.operatorId || Number.isNaN(operatorId)) {
 			return Results.badRequest('operatorId is required');
@@ -293,7 +293,7 @@ export class SessionsController extends BaseController {
 		return Results.ok(sessions.map(toPublic));
 	}
 
-	private async getSessionById(id: string, _body: unknown, _query: unknown): Promise<Result<GetSessionResponse>> {
+	private async getSessionById(id: string): Promise<Result<GetSessionResponse>> {
 		const session = await this.sessionsServer.findById(Number(id));
 		if (!session) {
 			return Results.notFound();
@@ -301,7 +301,7 @@ export class SessionsController extends BaseController {
 		return Results.ok(toPublic(session));
 	}
 
-	private async getRoster(id: string, _body: unknown, _query: unknown): Promise<Result<GetSessionRosterResponse>> {
+	private async getRoster(id: string): Promise<Result<GetSessionRosterResponse>> {
 		const roster = await this.sessionsServer.getRoster(Number(id));
 		if (!roster) {
 			return Results.notFound();
@@ -309,7 +309,7 @@ export class SessionsController extends BaseController {
 		return Results.ok({ enrollments: roster.enrollments.map(toPublic), classMemberStudentIds: roster.classMemberStudentIds });
 	}
 
-	private async createSession(body: CreateSessionBody, _query: unknown): Promise<Result<CreateSessionResponse>> {
+	private async createSession(body: CreateSessionBody): Promise<Result<CreateSessionResponse>> {
 		const { operatorId, title, startTime, capacityLimit } = body;
 		try {
 			const session = await this.sessionsServer.create({ operatorId, title, startTime: new Date(startTime), capacityLimit });
@@ -325,7 +325,7 @@ export class SessionsController extends BaseController {
 		}
 	}
 
-	private async cancelSession(id: string, _body: unknown, _query: unknown): Promise<Result<never>> {
+	private async cancelSession(id: string): Promise<Result<never>> {
 		const session = await this.sessionsServer.cancel(Number(id));
 		if (!session) {
 			return Results.notFound();
@@ -333,7 +333,7 @@ export class SessionsController extends BaseController {
 		return Results.noContent();
 	}
 
-	private async rescheduleSession(id: string, body: RescheduleSessionBody, _query: unknown): Promise<Result<GetSessionResponse>> {
+	private async rescheduleSession(id: string, body: RescheduleSessionBody): Promise<Result<GetSessionResponse>> {
 		try {
 			const rescheduled = await this.sessionsServer.reschedule(Number(id), body.startTime);
 			if (!rescheduled) {
@@ -349,7 +349,7 @@ export class SessionsController extends BaseController {
 	}
 
 	// Returns recorded attendance for a true one-off session; 404 if the session itself doesn't exist.
-	private async getAttendance(id: string, _body: unknown, _query: unknown): Promise<Result<SessionAttendanceResponse>> {
+	private async getAttendance(id: string): Promise<Result<SessionAttendanceResponse>> {
 		const sessionId = Number(id);
 		const session = await this.sessionsServer.findById(sessionId);
 		if (!session) {
@@ -359,7 +359,7 @@ export class SessionsController extends BaseController {
 		return Results.ok(rows.map((row: SessionAttendance): SessionAttendanceResponseItem => ({ studentId: row.studentId, status: row.status })));
 	}
 
-	private async recordAttendance(id: string, body: SessionAttendanceBody, _query: unknown): Promise<Result<SessionAttendanceResponse>> {
+	private async recordAttendance(id: string, body: SessionAttendanceBody): Promise<Result<SessionAttendanceResponse>> {
 		try {
 			const result = await this.sessionAttendanceServer.recordForSessionId(Number(id), null, body?.attendance);
 			if (!result) {

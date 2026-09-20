@@ -37,7 +37,7 @@ export class HouseholdAttendanceCreditsController extends BaseController {
 		 *       404: { description: Not found }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.post('/:enrollmentId/cancel', RouteHandlers.wrapResult(['enrollmentId'], this.cancelEnrollment.bind(this)));
+		this.internalRouter.post('/:enrollmentId/cancel', RouteHandlers.wrapOneParam('enrollmentId', this.cancelEnrollment.bind(this)));
 
 		/**
 		 * @openapi
@@ -61,10 +61,10 @@ export class HouseholdAttendanceCreditsController extends BaseController {
 		 *       404: { description: Household not found }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.get('/households/:householdId/credits', RouteHandlers.wrapResult(['householdId'], this.listCredits.bind(this)));
+		this.internalRouter.get('/households/:householdId/credits', RouteHandlers.wrapOneParam('householdId', this.listCredits.bind(this)));
 	}
 
-	private async listCredits(householdId: string, _body: unknown, _query: unknown): Promise<Result<ListOwnCreditsResponse>> {
+	private async listCredits(householdId: string): Promise<Result<ListOwnCreditsResponse>> {
 		const credits = await this.attendanceCreditsServer.listCredits(Number(householdId));
 		if (!credits) {
 			return Results.notFound();
@@ -72,7 +72,7 @@ export class HouseholdAttendanceCreditsController extends BaseController {
 		return Results.ok(credits.map(toPublic));
 	}
 
-	private async cancelEnrollment(enrollmentId: string, _body: unknown, _query: unknown): Promise<Result<CancelEnrollmentResponse>> {
+	private async cancelEnrollment(enrollmentId: string): Promise<Result<CancelEnrollmentResponse>> {
 		const updated = await this.attendanceCreditsServer.cancel(Number(enrollmentId));
 		if (!updated) {
 			return Results.notFound();
