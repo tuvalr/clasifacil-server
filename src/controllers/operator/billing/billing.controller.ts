@@ -1,4 +1,3 @@
-import { Request, Response } from 'express';
 import { inject, injectable } from 'inversify';
 import { TYPES } from '../../../container/types';
 import { BillingServer } from '../../../servers/billing.server';
@@ -9,6 +8,8 @@ import { ListOperatorInvoicesResponse } from './types/list-operator-invoices-res
 import { GetInvoiceResponse } from './types/get-invoice-response.type';
 import { RecordOfflinePaymentResponse } from './types/record-offline-payment-response.type';
 import { toPublic } from '../../../utils/to-public';
+import { Results } from '../../shared/results';
+import { Result } from '../../shared/types/result.type';
 
 // UC4: Flexible Multi-Tier Payment & Billing Engine
 @injectable()
@@ -38,7 +39,7 @@ export class BillingController extends BaseController {
 		 *       404: { description: Operator not found }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.get('/', RouteHandlers.wrap(this.listInvoices.bind(this)));
+		this.internalRouter.get('/', RouteHandlers.wrapResult([], this.listInvoices.bind(this)));
 
 		/**
 		 * @openapi
@@ -62,7 +63,7 @@ export class BillingController extends BaseController {
 		 *       404: { description: Not found }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.get('/:id', RouteHandlers.wrap(this.getInvoiceById.bind(this)));
+		this.internalRouter.get('/:id', RouteHandlers.wrapResult(['id'], this.getInvoiceById.bind(this)));
 
 		/**
 		 * @openapi
@@ -86,7 +87,7 @@ export class BillingController extends BaseController {
 		 *       404: { description: Not found }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.post('/:id/record-offline-payment', RouteHandlers.wrap(this.recordOfflinePayment.bind(this)));
+		this.internalRouter.post('/:id/record-offline-payment', RouteHandlers.wrapResult(['id'], this.recordOfflinePayment.bind(this)));
 
 		// TODO: requires a class-pack balance table (PRD Model 3: "10-class pack for €130", decremented per booking) - no such table exists yet.
 		this.internalRouter.get('/class-packs/:householdId', RouteHandlers.notImplemented);
@@ -96,36 +97,32 @@ export class BillingController extends BaseController {
 		this.internalRouter.post('/stripe/connect', RouteHandlers.notImplemented);
 	}
 
-	private async listInvoices(req: Request<unknown, ListOperatorInvoicesResponse, unknown, ListOperatorInvoicesQuery>, res: Response<ListOperatorInvoicesResponse>): Promise<void> {
-		const operatorId = Number(req.query.operatorId);
-		if (!req.query.operatorId || Number.isNaN(operatorId)) {
-			res.status(400).end();
-			return;
+	private async listInvoices(_body: unknown, query: ListOperatorInvoicesQuery): Promise<Result<ListOperatorInvoicesResponse>> {
+		const operatorId = Number(query.operatorId);
+		if (!query.operatorId || Number.isNaN(operatorId)) {
+			return Results.badRequest('operatorId is required');
 		}
 
 		const invoices = await this.billingServer.findByOperatorId(operatorId);
 		if (!invoices) {
-			res.status(404).end();
-			return;
+			return Results.notFound();
 		}
-		res.json(invoices.map(toPublic));
+		return Results.ok(invoices.map(toPublic));
 	}
 
-	private async getInvoiceById(req: Request<{ id: string }>, res: Response<GetInvoiceResponse>): Promise<void> {
-		const invoice = await this.billingServer.findById(Number(req.params.id));
+	private async getInvoiceById(id: string, _body: unknown, _query: unknown): Promise<Result<GetInvoiceResponse>> {
+		const invoice = await this.billingServer.findById(Number(id));
 		if (!invoice) {
-			res.status(404).end();
-			return;
+			return Results.notFound();
 		}
-		res.json(toPublic(invoice));
+		return Results.ok(toPublic(invoice));
 	}
 
-	private async recordOfflinePayment(req: Request<{ id: string }>, res: Response<RecordOfflinePaymentResponse>): Promise<void> {
-		const invoice = await this.billingServer.recordOfflinePayment(Number(req.params.id));
+	private async recordOfflinePayment(id: string, _body: unknown, _query: unknown): Promise<Result<RecordOfflinePaymentResponse>> {
+		const invoice = await this.billingServer.recordOfflinePayment(Number(id));
 		if (!invoice) {
-			res.status(404).end();
-			return;
+			return Results.notFound();
 		}
-		res.json(toPublic(invoice));
+		return Results.ok(toPublic(invoice));
 	}
 }

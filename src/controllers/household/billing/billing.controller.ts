@@ -1,4 +1,3 @@
-import { Request, Response } from 'express';
 import { inject, injectable } from 'inversify';
 import { TYPES } from '../../../container/types';
 import { BillingServer } from '../../../servers/billing.server';
@@ -6,6 +5,8 @@ import { RouteHandlers } from '../../shared/route-handlers';
 import { BaseController } from '../../shared/base.controller';
 import { ListOwnInvoicesResponse } from './types/list-own-invoices-response.type';
 import { toPublic } from '../../../utils/to-public';
+import { Results } from '../../shared/results';
+import { Result } from '../../shared/types/result.type';
 
 // UC4: Flexible Multi-Tier Payment & Billing Engine
 @injectable()
@@ -35,7 +36,7 @@ export class HouseholdBillingController extends BaseController {
 		 *       404: { description: Household not found }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.get('/households/:householdId/invoices', RouteHandlers.wrap(this.listInvoices.bind(this)));
+		this.internalRouter.get('/households/:householdId/invoices', RouteHandlers.wrapResult(['householdId'], this.listInvoices.bind(this)));
 
 		// Model 1: Pay-Per-Class (Drop-in) card checkout. TODO: requires a payment-processor integration (Stripe) - no Stripe SDK is
 		// installed and invoices_and_payments.stripe_charge_id, while present, has no write path yet.
@@ -47,12 +48,11 @@ export class HouseholdBillingController extends BaseController {
 		this.internalRouter.post('/households/:householdId/class-packs/purchase', RouteHandlers.notImplemented);
 	}
 
-	private async listInvoices(req: Request<{ householdId: string }>, res: Response<ListOwnInvoicesResponse>): Promise<void> {
-		const invoices = await this.billingServer.findByHouseholdId(Number(req.params.householdId));
+	private async listInvoices(householdId: string, _body: unknown, _query: unknown): Promise<Result<ListOwnInvoicesResponse>> {
+		const invoices = await this.billingServer.findByHouseholdId(Number(householdId));
 		if (!invoices) {
-			res.status(404).end();
-			return;
+			return Results.notFound();
 		}
-		res.json(invoices.map(toPublic));
+		return Results.ok(invoices.map(toPublic));
 	}
 }
