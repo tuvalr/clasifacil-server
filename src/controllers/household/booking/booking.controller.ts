@@ -1,9 +1,11 @@
-import { Request, Response } from 'express';
 import { inject, injectable } from 'inversify';
 import { TYPES } from '../../../container/types';
 import { SessionsServer } from '../../../servers/sessions.server';
 import { RouteHandlers } from '../../shared/route-handlers';
 import { BaseController } from '../../shared/base.controller';
+import { Results } from '../../shared/results';
+import { Result } from '../../shared/types/result.type';
+import { BookingConflictError } from '../../../servers/types/sessions.server.types';
 import { BookSessionBody } from './types/book-session-body.type';
 import { BookSessionResponse } from './types/book-session-response.type';
 import { ListOwnEnrollmentsResponse } from './types/list-own-enrollments-response.type';
@@ -58,7 +60,7 @@ export class BookingController extends BaseController {
 		 *                 waitlisted: { type: boolean }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.post('/sessions/:sessionId/book', RouteHandlers.wrap(this.book.bind(this)));
+		this.internalRouter.post('/sessions/:sessionId/book', RouteHandlers.wrapResult(['sessionId'], this.book.bind(this)));
 
 		/**
 		 * @openapi
@@ -82,7 +84,7 @@ export class BookingController extends BaseController {
 		 *       404: { description: Household not found }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
-		this.internalRouter.get('/households/:householdId/enrollments', RouteHandlers.wrap(this.listEnrollments.bind(this)));
+		this.internalRouter.get('/households/:householdId/enrollments', RouteHandlers.wrapResult(['householdId'], this.listEnrollments.bind(this)));
 
 		// TODO: requires a real wait-list (PRD: "queue-based wait-list ordered strictly by timestamp", automated promotion with a
 		// time-sensitive claim window on cancellation) - status is a free-text column with no queue-position or claim-deadline tracking.
@@ -91,28 +93,29 @@ export class BookingController extends BaseController {
 		this.internalRouter.post('/waitlist/:enrollmentId/claim', RouteHandlers.notImplemented);
 	}
 
-	private async listEnrollments(req: Request<{ householdId: string }>, res: Response<ListOwnEnrollmentsResponse>): Promise<void> {
-		const enrollments = await this.sessionsServer.listEnrollments(Number(req.params.householdId));
+	private async listEnrollments(householdId: string, _body: unknown, _query: unknown): Promise<Result<ListOwnEnrollmentsResponse>> {
+		const enrollments = await this.sessionsServer.listEnrollments(Number(householdId));
 		if (!enrollments) {
-			res.status(404).end();
-			return;
+			return Results.notFound();
 		}
-		res.json(enrollments.map(toPublic));
+		return Results.ok(enrollments.map(toPublic));
 	}
 
-	private async book(req: Request<{ sessionId: string }, BookSessionResponse, BookSessionBody>, res: Response<BookSessionResponse>): Promise<void> {
-		const sessionId = Number(req.params.sessionId);
-		const { studentId, householdId } = req.body;
+	private async book(sessionIdParam: string, body: BookSessionBody, _query: unknown): Promise<Result<BookSessionResponse>> {
+		const sessionId = Number(sessionIdParam);
+		const { studentId, householdId } = body;
 
-		const result = await this.sessionsServer.book(sessionId, studentId, householdId);
-		if (!result) {
-			res.status(404).end();
-			return;
+		try {
+			const result = await this.sessionsServer.book(sessionId, studentId, householdId);
+			if (!result) {
+				return Results.notFound();
+			}
+			return Results.created(toPublic(result));
+		} catch (error) {
+			if (error instanceof BookingConflictError) {
+				return Results.conflict(error.message, { waitlisted: error.waitlisted });
+			}
+			throw error;
 		}
-		if ('conflict' in result) {
-			res.status(409).json({ error: 'Session at capacity', waitlisted: result.waitlisted });
-			return;
-		}
-		res.status(201).json(toPublic(result));
 	}
 }
