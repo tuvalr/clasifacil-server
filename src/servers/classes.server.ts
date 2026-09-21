@@ -263,7 +263,7 @@ export class ClassesServer {
 
 		const activeCount = await this.classEnrollments.countActiveByClassId(foundClass.id);
 		if (activeCount >= foundClass.maxSize) {
-			return { studentId, success: false, error: 'Class is at its maximum size' };
+			return { studentId, success: false, error: `Class is at its maximum size of ${foundClass.maxSize} students` };
 		}
 
 		const enrollment = existing ? await this.classEnrollments.setStatus(existing.id, 'active') : await this.classEnrollments.create(foundClass.id, studentId);
