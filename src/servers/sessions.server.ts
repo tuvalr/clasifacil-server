@@ -132,11 +132,11 @@ export class SessionsServer {
 	// ClassesServer.createMakeupSession's startTime check.
 	public async reschedule(sessionId: number, startTime: unknown): Promise<Session | null> {
 		if (typeof startTime !== 'string' || startTime.length === 0) {
-			throw new ValidationError([{ field: 'startTime', message: 'startTime is required' }]);
+			throw new ValidationError([{ field: 'startTime', message: 'Start time is required' }]);
 		}
 		const parsedStartTime = new Date(startTime);
 		if (Number.isNaN(parsedStartTime.getTime())) {
-			throw new ValidationError([{ field: 'startTime', message: 'startTime must be a valid date' }]);
+			throw new ValidationError([{ field: 'startTime', message: 'Start time must be a valid date' }]);
 		}
 
 		const session = await this.sessions.findById(sessionId);

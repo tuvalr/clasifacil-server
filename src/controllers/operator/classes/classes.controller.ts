@@ -157,7 +157,7 @@ export class ClassesController extends BaseController {
 		 *       400: { $ref: '#/components/responses/BadRequest' }
 		 *       401: { $ref: '#/components/responses/Unauthorized' }
 		 *       404: { description: Not found }
-		 *       409: { description: 'maxSize is less than the number of students currently assigned to this class' }
+		 *       409: { description: 'The maximum class size is less than the number of students currently assigned to this class' }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
 		this.internalRouter.put('/:id', RouteHandlers.wrapOneParamBody('id', this.updateClass.bind(this)));
@@ -308,7 +308,7 @@ export class ClassesController extends BaseController {
 	private async listClasses(query: { operatorId?: string }): Promise<Result<ListClassesResponse>> {
 		const operatorId = Number(query.operatorId);
 		if (!query.operatorId || Number.isNaN(operatorId)) {
-			return Results.badRequest('operatorId is required');
+			return Results.badRequest('Operator is required');
 		}
 		const classes = await this.classesServer.listByOperatorId(operatorId);
 		if (!classes) {

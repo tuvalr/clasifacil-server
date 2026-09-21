@@ -31,11 +31,11 @@ export class SessionAttendanceServer {
 		}
 
 		if (!Array.isArray(entries)) {
-			throw new ValidationError([{ field: 'attendance', message: 'attendance must be an array' }]);
+			throw new ValidationError([{ field: 'attendance', message: 'Attendance must be provided as a list' }]);
 		}
 		for (const entry of entries) {
 			if (typeof entry !== 'object' || entry === null || typeof (entry as { studentId?: unknown }).studentId !== 'number') {
-				throw new ValidationError([{ field: 'attendance', message: 'each entry requires a numeric studentId' }]);
+				throw new ValidationError([{ field: 'attendance', message: 'Each entry requires a valid student' }]);
 			}
 			const status = (entry as { status?: unknown }).status;
 			if (typeof status !== 'string' || !VALID_STATUSES.has(status)) {

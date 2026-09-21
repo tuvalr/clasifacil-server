@@ -283,7 +283,7 @@ export class SessionsController extends BaseController {
 	private async listSessions(query: ListSessionsQuery): Promise<Result<ListSessionsResponse>> {
 		const operatorId = Number(query.operatorId);
 		if (!query.operatorId || Number.isNaN(operatorId)) {
-			return Results.badRequest('operatorId is required');
+			return Results.badRequest('Operator is required');
 		}
 
 		const sessions = await this.sessionsServer.findByOperatorId(operatorId);

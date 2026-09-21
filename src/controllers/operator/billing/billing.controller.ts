@@ -100,7 +100,7 @@ export class BillingController extends BaseController {
 	private async listInvoices(query: ListOperatorInvoicesQuery): Promise<Result<ListOperatorInvoicesResponse>> {
 		const operatorId = Number(query.operatorId);
 		if (!query.operatorId || Number.isNaN(operatorId)) {
-			return Results.badRequest('operatorId is required');
+			return Results.badRequest('Operator is required');
 		}
 
 		const invoices = await this.billingServer.findByOperatorId(operatorId);

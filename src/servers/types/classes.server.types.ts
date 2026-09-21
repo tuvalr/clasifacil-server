@@ -27,7 +27,7 @@ export class ClassHasActiveEnrollmentsError extends Error {
 
 export class ClassMaxSizeBelowEnrolledCountError extends Error {
 	public constructor() {
-		super('maxSize cannot be less than the number of students currently assigned to this class');
+		super('The maximum class size cannot be lower than the number of students currently assigned to this class');
 		this.name = 'ClassMaxSizeBelowEnrolledCountError';
 	}
 }

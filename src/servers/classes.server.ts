@@ -59,12 +59,12 @@ export class ClassesServer {
 		// validateRequired's other fields; a non-number studentId would otherwise reach classEnrollments.create and
 		// fail as a raw 500 instead of a clean 400.
 		if (data.studentId !== undefined && typeof data.studentId !== 'number') {
-			throw new ValidationError([{ field: 'studentId', message: 'studentId must be a number' }]);
+			throw new ValidationError([{ field: 'studentId', message: 'Student must be a valid selection' }]);
 		}
 		// color is optional and unenforced in format - but if present it must be a string or null, same reasoning as
 		// studentId above.
 		if (data.color !== undefined && data.color !== null && typeof data.color !== 'string') {
-			throw new ValidationError([{ field: 'color', message: 'color must be a string or null' }]);
+			throw new ValidationError([{ field: 'color', message: 'Color must be valid text or left empty' }]);
 		}
 		// Narrowed by validateRequired and the studentId/color checks above: every required field is confirmed
 		// present and of the correct type, and studentId/color (if present) are of the correct type.
@@ -92,7 +92,7 @@ export class ClassesServer {
 		let student = null;
 		if (operator.type === 'assigned') {
 			if (narrowed.studentId == null) {
-				throw new ValidationError([{ field: 'studentId', message: 'studentId is required for assigned-type operators' }]);
+				throw new ValidationError([{ field: 'studentId', message: 'A student is required for assigned-type operators' }]);
 			}
 			if (narrowed.maxSize !== 1) {
 				throw new ValidationError([{ field: 'maxSize', message: 'Must be 1 for assigned-type operators' }]);
@@ -102,7 +102,7 @@ export class ClassesServer {
 				throw new ValidationError([{ field: 'studentId', message: 'Student not found' }]);
 			}
 		} else if (narrowed.studentId != null) {
-			throw new ValidationError([{ field: 'studentId', message: 'studentId is only accepted for assigned-type operators - use assign-students instead' }]);
+			throw new ValidationError([{ field: 'studentId', message: 'A student can only be provided for assigned-type operators - use assign-students instead' }]);
 		}
 
 		const details = this.validate(narrowed);
@@ -224,7 +224,7 @@ export class ClassesServer {
 	// slots in submission order and 409s the rest.
 	public async assignStudents(classId: number, studentIds: unknown): Promise<AssignStudentResult[]> {
 		if (!isNumberArray(studentIds)) {
-			throw new ValidationError([{ field: 'studentIds', message: 'studentIds must be an array of numbers' }]);
+			throw new ValidationError([{ field: 'studentIds', message: 'Please provide a valid list of students' }]);
 		}
 
 		const foundClass = await this.classes.findById(classId);
@@ -263,7 +263,7 @@ export class ClassesServer {
 
 		const activeCount = await this.classEnrollments.countActiveByClassId(foundClass.id);
 		if (activeCount >= foundClass.maxSize) {
-			return { studentId, success: false, error: 'Class is at maxSize' };
+			return { studentId, success: false, error: 'Class is at its maximum size' };
 		}
 
 		const enrollment = existing ? await this.classEnrollments.setStatus(existing.id, 'active') : await this.classEnrollments.create(foundClass.id, studentId);
@@ -272,7 +272,7 @@ export class ClassesServer {
 
 	public async unassignStudents(classId: number, studentIds: unknown): Promise<void> {
 		if (!isNumberArray(studentIds)) {
-			throw new ValidationError([{ field: 'studentIds', message: 'studentIds must be an array of numbers' }]);
+			throw new ValidationError([{ field: 'studentIds', message: 'Please provide a valid list of students' }]);
 		}
 
 		const foundClass = await this.classes.findById(classId);
@@ -303,24 +303,24 @@ export class ClassesServer {
 	private validateRequired(data: { operatorId?: unknown; title?: unknown; dayOfWeek?: unknown; startTime?: unknown; durationMinutes?: unknown; maxSize?: unknown }): ValidationErrorDetail[] {
 		const details: ValidationErrorDetail[] = [];
 		if (typeof data.operatorId !== 'number') {
-			details.push({ field: 'operatorId', message: 'operatorId is required' });
+			details.push({ field: 'operatorId', message: 'Operator is required' });
 		}
 		if (typeof data.title !== 'string' || data.title.length === 0) {
-			details.push({ field: 'title', message: 'title is required' });
+			details.push({ field: 'title', message: 'Title is required' });
 		}
 		if (typeof data.dayOfWeek !== 'number') {
-			details.push({ field: 'dayOfWeek', message: 'dayOfWeek is required' });
+			details.push({ field: 'dayOfWeek', message: 'Day of week is required' });
 		}
 		if (typeof data.startTime !== 'string' || data.startTime.length === 0) {
-			details.push({ field: 'startTime', message: 'startTime is required' });
+			details.push({ field: 'startTime', message: 'Start time is required' });
 		} else if (!START_TIME_FORMAT.test(data.startTime)) {
-			details.push({ field: 'startTime', message: 'startTime must be a valid 24-hour time in HH:MM or HH:MM:SS format' });
+			details.push({ field: 'startTime', message: 'Start time must be a valid 24-hour time in HH:MM or HH:MM:SS format' });
 		}
 		if (typeof data.durationMinutes !== 'number') {
-			details.push({ field: 'durationMinutes', message: 'durationMinutes is required' });
+			details.push({ field: 'durationMinutes', message: 'Duration is required' });
 		}
 		if (typeof data.maxSize !== 'number') {
-			details.push({ field: 'maxSize', message: 'maxSize is required' });
+			details.push({ field: 'maxSize', message: 'Maximum class size is required' });
 		}
 		return details;
 	}
@@ -333,27 +333,27 @@ export class ClassesServer {
 	private validateUpdateTypes(data: { title?: unknown; dayOfWeek?: unknown; startTime?: unknown; durationMinutes?: unknown; minSize?: unknown; maxSize?: unknown; color?: unknown }): ValidationErrorDetail[] {
 		const details: ValidationErrorDetail[] = [];
 		if (data.title !== undefined && typeof data.title !== 'string') {
-			details.push({ field: 'title', message: 'title must be a string' });
+			details.push({ field: 'title', message: 'Title must be text' });
 		}
 		if (data.dayOfWeek !== undefined && typeof data.dayOfWeek !== 'number') {
-			details.push({ field: 'dayOfWeek', message: 'dayOfWeek must be a number' });
+			details.push({ field: 'dayOfWeek', message: 'Day of week must be a valid number' });
 		}
 		if (data.startTime !== undefined) {
 			if (typeof data.startTime !== 'string' || !START_TIME_FORMAT.test(data.startTime)) {
-				details.push({ field: 'startTime', message: 'startTime must be a valid 24-hour time in HH:MM or HH:MM:SS format' });
+				details.push({ field: 'startTime', message: 'Start time must be a valid 24-hour time in HH:MM or HH:MM:SS format' });
 			}
 		}
 		if (data.durationMinutes !== undefined && typeof data.durationMinutes !== 'number') {
-			details.push({ field: 'durationMinutes', message: 'durationMinutes must be a number' });
+			details.push({ field: 'durationMinutes', message: 'Duration must be a valid number' });
 		}
 		if (data.minSize !== undefined && data.minSize !== null && typeof data.minSize !== 'number') {
-			details.push({ field: 'minSize', message: 'minSize must be a number or null' });
+			details.push({ field: 'minSize', message: 'Minimum class size must be a valid number or left empty' });
 		}
 		if (data.maxSize !== undefined && typeof data.maxSize !== 'number') {
-			details.push({ field: 'maxSize', message: 'maxSize must be a number' });
+			details.push({ field: 'maxSize', message: 'Maximum class size must be a valid number' });
 		}
 		if (data.color !== undefined && data.color !== null && typeof data.color !== 'string') {
-			details.push({ field: 'color', message: 'color must be a string or null' });
+			details.push({ field: 'color', message: 'Color must be valid text or left empty' });
 		}
 		return details;
 	}
@@ -370,7 +370,7 @@ export class ClassesServer {
 			details.push({ field: 'maxSize', message: 'Must be at least 1' });
 		}
 		if (data.minSize != null && data.minSize > data.maxSize) {
-			details.push({ field: 'minSize', message: 'Must not be greater than maxSize' });
+			details.push({ field: 'minSize', message: 'The minimum class size must not be greater than the maximum class size' });
 		}
 		return details;
 	}

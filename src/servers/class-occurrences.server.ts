@@ -221,11 +221,11 @@ export class ClassOccurrencesServer {
 		}
 		const parsedDate = parseDateOnly(date, 'date');
 		if (typeof newStartTime !== 'string' || newStartTime.length === 0) {
-			throw new ValidationError([{ field: 'startTime', message: 'startTime is required' }]);
+			throw new ValidationError([{ field: 'startTime', message: 'Start time is required' }]);
 		}
 		const parsedNewStartTime = new Date(newStartTime);
 		if (Number.isNaN(parsedNewStartTime.getTime())) {
-			throw new ValidationError([{ field: 'startTime', message: 'startTime must be a valid date' }]);
+			throw new ValidationError([{ field: 'startTime', message: 'Start time must be a valid date' }]);
 		}
 		const session = await this.materializeOccurrence(classId, parsedDate);
 		// A cancelled date reported as "not found" for reschedule mirrors the existing numeric-id-addressed
@@ -274,11 +274,11 @@ export class ClassOccurrencesServer {
 			throw new ValidationError([{ field: 'classId', message: 'Class not found' }]);
 		}
 		if (typeof startTime !== 'string' || startTime.length === 0) {
-			throw new ValidationError([{ field: 'startTime', message: 'startTime is required' }]);
+			throw new ValidationError([{ field: 'startTime', message: 'Start time is required' }]);
 		}
 		const parsedStartTime = new Date(startTime);
 		if (Number.isNaN(parsedStartTime.getTime())) {
-			throw new ValidationError([{ field: 'startTime', message: 'startTime must be a valid date' }]);
+			throw new ValidationError([{ field: 'startTime', message: 'Start time must be a valid date' }]);
 		}
 
 		const session = await this.sessions.create({
