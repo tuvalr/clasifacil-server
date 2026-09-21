@@ -368,7 +368,7 @@ export class ClassesServer {
 	private async validateTitle(operatorId: number, title: string, excludeId: number | null): Promise<ValidationErrorDetail[]> {
 		const existing = await this.classes.findByOperatorIdAndTitle(operatorId, title);
 		if (existing && existing.id !== excludeId) {
-			return [{ field: 'title', message: 'This operator already has a class with this title' }];
+			return [{ field: 'title', message: 'You already have a class with this title' }];
 		}
 		return [];
 	}
