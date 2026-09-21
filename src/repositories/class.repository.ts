@@ -47,13 +47,4 @@ export class ClassRepository {
 		const rows = await this.db.queryActive(ClassEntity, 'operator_id = $1', [operatorId]);
 		return rows.length > 0;
 	}
-
-	// Unlike every other query in this repository, deliberately ignores is_deleted - used only to decide whether an
-	// operator's timezone may still be changed. Once any class has ever existed for this operator (even one since
-	// soft-deleted), its historical sessions/occurrences were already computed under the operator's timezone at the
-	// time, so the timezone must not change afterward (see OperatorsServer.update's timezone-lock guard).
-	public async existsAnyForOperator(operatorId: number): Promise<boolean> {
-		const rows = await this.db.query<{ count: string }>('SELECT COUNT(*) AS count FROM "classes" WHERE operator_id = $1', [operatorId]);
-		return Number(rows[0]?.count ?? 0) > 0;
-	}
 }

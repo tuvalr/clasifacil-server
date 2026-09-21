@@ -96,7 +96,7 @@ export class OperatorSettingsController extends BaseController {
 		 *                       field: { type: string }
 		 *                       message: { type: string }
 		 *       401: { $ref: '#/components/responses/Unauthorized' }
-		 *       409: { description: 'timezone cannot be changed once the operator has any class' }
+		 *       409: { description: 'timezone cannot be changed once the operator has any active (non-deleted) class' }
 		 *       404: { description: Not found }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
@@ -151,7 +151,7 @@ export class OperatorSettingsController extends BaseController {
 	private async updateSettings(id: string, body: UpdateOperatorSettingsBody): Promise<Result<UpdateOperatorSettingsResponse>> {
 		const { name, email, phone, countryCode, timezone } = body;
 		try {
-			const operator = await this.operatorsServer.update(Number(id), { name, email, phone, countryCode, timezone }, (operatorId: number) => this.classRepository.existsAnyForOperator(operatorId));
+			const operator = await this.operatorsServer.update(Number(id), { name, email, phone, countryCode, timezone }, (operatorId: number) => this.classRepository.existsActiveForOperator(operatorId));
 			if (!operator) {
 				return Results.notFound();
 			}
