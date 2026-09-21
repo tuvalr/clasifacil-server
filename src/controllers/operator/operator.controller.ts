@@ -19,6 +19,7 @@ import { BillingController } from './billing/billing.controller';
 import { RemindersController } from './reminders/reminders.controller';
 import { AutopayController } from './autopay/autopay.controller';
 import { OperatorSettingsController } from './settings/settings.controller';
+import { WarningsController } from './warnings/warnings.controller';
 import { GetOperatorDetailsResponse } from './types/get-operator-details-response.type';
 
 @injectable()
@@ -34,6 +35,7 @@ export class OperatorController extends BaseController {
 		@inject(TYPES.RemindersController) remindersController: RemindersController,
 		@inject(TYPES.AutopayController) autopayController: AutopayController,
 		@inject(TYPES.OperatorSettingsController) settingsController: OperatorSettingsController,
+		@inject(TYPES.WarningsController) warningsController: WarningsController,
 	) {
 		super();
 
@@ -47,6 +49,7 @@ export class OperatorController extends BaseController {
 		this.internalRouter.use('/reminders', remindersController.router);
 		this.internalRouter.use('/autopay', autopayController.router);
 		this.internalRouter.use('/settings', settingsController.router);
+		this.internalRouter.use('/warnings', warningsController.router);
 
 		/**
 		 * @openapi

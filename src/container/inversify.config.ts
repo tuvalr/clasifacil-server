@@ -39,6 +39,7 @@ import { ClassOccurrencesServer } from '../servers/class-occurrences.server';
 import { NightlyBackfillJob } from '../jobs/nightly-backfill.job';
 import { SessionAttendanceServer } from '../servers/session-attendance.server';
 import { AvatarsServer } from '../servers/avatars.server';
+import { WarningsServer } from '../servers/warnings.server';
 import { AvatarStorage } from '../servers/types/avatar-storage';
 import { LocalDiskAvatarStorage } from '../servers/local-disk-avatar-storage';
 import { AdminController } from '../controllers/admin/admin.controller';
@@ -62,6 +63,7 @@ import { HouseholdBillingController } from '../controllers/household/billing/bil
 import { HouseholdAutopayController } from '../controllers/household/autopay/autopay.controller';
 import { HouseholdSettingsController } from '../controllers/household/settings/settings.controller';
 import { OperatorSettingsController } from '../controllers/operator/settings/settings.controller';
+import { WarningsController } from '../controllers/operator/warnings/warnings.controller';
 
 async function bootstrap(): Promise<void> {
 	const logger: Logger = new PinoLogger();
@@ -101,6 +103,7 @@ async function bootstrap(): Promise<void> {
 	container.bind<SessionAttendanceServer>(TYPES.SessionAttendanceServer).to(SessionAttendanceServer).inSingletonScope();
 	container.bind<AvatarStorage>(TYPES.AvatarStorage).to(LocalDiskAvatarStorage).inSingletonScope();
 	container.bind<AvatarsServer>(TYPES.AvatarsServer).to(AvatarsServer).inSingletonScope();
+	container.bind<WarningsServer>(TYPES.WarningsServer).to(WarningsServer).inSingletonScope();
 
 	container.bind<AdminOperatorsController>(TYPES.AdminOperatorsController).to(AdminOperatorsController).inSingletonScope();
 	container.bind<AdminHouseholdsController>(TYPES.AdminHouseholdsController).to(AdminHouseholdsController).inSingletonScope();
@@ -122,6 +125,7 @@ async function bootstrap(): Promise<void> {
 	container.bind<HouseholdAutopayController>(TYPES.HouseholdAutopayController).to(HouseholdAutopayController).inSingletonScope();
 	container.bind<HouseholdSettingsController>(TYPES.HouseholdSettingsController).to(HouseholdSettingsController).inSingletonScope();
 	container.bind<OperatorSettingsController>(TYPES.OperatorSettingsController).to(OperatorSettingsController).inSingletonScope();
+	container.bind<WarningsController>(TYPES.WarningsController).to(WarningsController).inSingletonScope();
 	container.bind<HouseholdController>(TYPES.HouseholdController).to(HouseholdController).inSingletonScope();
 
 	container.bind<App>(TYPES.App).to(App).inSingletonScope();

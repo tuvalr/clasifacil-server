@@ -32,6 +32,7 @@ export const TYPES = {
 	SessionAttendanceServer: Symbol.for('SessionAttendanceServer'),
 	AvatarsServer: Symbol.for('AvatarsServer'),
 	AvatarStorage: Symbol.for('AvatarStorage'),
+	WarningsServer: Symbol.for('WarningsServer'),
 
 	AdminController: Symbol.for('AdminController'),
 	AdminOperatorsController: Symbol.for('AdminOperatorsController'),
@@ -54,4 +55,5 @@ export const TYPES = {
 	HouseholdAutopayController: Symbol.for('HouseholdAutopayController'),
 	HouseholdSettingsController: Symbol.for('HouseholdSettingsController'),
 	OperatorSettingsController: Symbol.for('OperatorSettingsController'),
+	WarningsController: Symbol.for('WarningsController'),
 };

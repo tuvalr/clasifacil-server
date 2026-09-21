@@ -31,6 +31,7 @@ export const swaggerSpec = swaggerJsdoc({
 			{ name: 'Operator - Households' },
 			{ name: 'Operator - Sessions' },
 			{ name: 'Operator - Settings' },
+			{ name: 'Operator - Warnings' },
 		],
 		components: {
 			schemas: {
@@ -256,6 +257,20 @@ export const swaggerSpec = swaggerJsdoc({
 						paymentType: { type: 'string' },
 						status: { type: 'string' },
 						stripeChargeId: { type: 'string', nullable: true },
+					},
+				},
+				// General-purpose operator warnings feed, computed live (never persisted) - `type` discriminates which
+				// other fields are populated. Currently only class_below_min_size exists; a future warning kind adds
+				// another `type` value and its own fields here.
+				Warning: {
+					type: 'object',
+					properties: {
+						type: { type: 'string', enum: ['class_below_min_size'] },
+						classId: { type: 'integer', description: 'Present when type is class_below_min_size' },
+						title: { type: 'string', description: 'Present when type is class_below_min_size' },
+						enrolledCount: { type: 'integer', description: 'Present when type is class_below_min_size' },
+						minSize: { type: 'integer', description: 'Present when type is class_below_min_size' },
+						shortfall: { type: 'integer', description: 'minSize - enrolledCount. Present when type is class_below_min_size' },
 					},
 				},
 			},
