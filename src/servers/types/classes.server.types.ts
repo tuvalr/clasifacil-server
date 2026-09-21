@@ -25,6 +25,13 @@ export class ClassHasActiveEnrollmentsError extends Error {
 	}
 }
 
+export class ClassMaxSizeBelowEnrolledCountError extends Error {
+	public constructor() {
+		super('maxSize cannot be less than the number of students currently assigned to this class');
+		this.name = 'ClassMaxSizeBelowEnrolledCountError';
+	}
+}
+
 export interface AssignStudentSuccess {
 	studentId: number;
 	success: true;

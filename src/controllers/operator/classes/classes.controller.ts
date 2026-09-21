@@ -1,7 +1,7 @@
 import { inject, injectable } from 'inversify';
 import { TYPES } from '../../../container/types';
 import { ClassesServer } from '../../../servers/classes.server';
-import { ClassHasActiveEnrollmentsError, AssignStudentResult } from '../../../servers/types/classes.server.types';
+import { ClassHasActiveEnrollmentsError, ClassMaxSizeBelowEnrolledCountError, AssignStudentResult } from '../../../servers/types/classes.server.types';
 import { ValidationError, ValidationErrorDetail } from '../../../servers/types/validation-error';
 import { RouteHandlers } from '../../shared/route-handlers';
 import { Results } from '../../shared/results';
@@ -157,6 +157,7 @@ export class ClassesController extends BaseController {
 		 *       400: { $ref: '#/components/responses/BadRequest' }
 		 *       401: { $ref: '#/components/responses/Unauthorized' }
 		 *       404: { description: Not found }
+		 *       409: { description: 'maxSize is less than the number of students currently assigned to this class' }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
 		this.internalRouter.put('/:id', RouteHandlers.wrapOneParamBody('id', this.updateClass.bind(this)));
@@ -349,6 +350,9 @@ export class ClassesController extends BaseController {
 		} catch (error) {
 			if (error instanceof ValidationError) {
 				return Results.validationError(error.details);
+			}
+			if (error instanceof ClassMaxSizeBelowEnrolledCountError) {
+				return Results.conflict(error.message);
 			}
 			throw error;
 		}

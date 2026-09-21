@@ -6,7 +6,7 @@ import { ClassEnrollmentRepository } from '../repositories/class-enrollment.repo
 import { StudentRepository } from '../repositories/student.repository';
 import { Class } from '../entities/class.entity';
 import { ValidationError, ValidationErrorDetail } from './types/validation-error';
-import { ClassHasActiveEnrollmentsError, AssignStudentResult, ClassWithEnrolledCount, MAX_DAY_OF_WEEK, START_TIME_FORMAT, isNumberArray } from './types/classes.server.types';
+import { ClassHasActiveEnrollmentsError, ClassMaxSizeBelowEnrolledCountError, AssignStudentResult, ClassWithEnrolledCount, MAX_DAY_OF_WEEK, START_TIME_FORMAT, isNumberArray } from './types/classes.server.types';
 
 // UC-Scheduling: recurring weekly classes (schedule-type operators) and recurring 1:1 slots (assigned-type
 // operators) share this same table - see docs/superpowers/specs/2026-09-12-operator-scheduling-design.md.
@@ -169,6 +169,17 @@ export class ClassesServer {
 		if (details.length > 0) {
 			throw new ValidationError(details);
 		}
+
+		// Shrinking maxSize below the number of students already assigned would silently strand the excess roster
+		// (still enrolled, but over the new cap) - reject the whole update instead, matching delete's
+		// ClassHasActiveEnrollmentsError precedent of refusing rather than leaving inconsistent enrollment state.
+		if (narrowed.maxSize !== undefined && narrowed.maxSize < existing.maxSize) {
+			const activeCount = await this.classEnrollments.countActiveByClassId(id);
+			if (narrowed.maxSize < activeCount) {
+				throw new ClassMaxSizeBelowEnrolledCountError();
+			}
+		}
+
 		return this.classes.update(id, narrowed);
 	}
 
