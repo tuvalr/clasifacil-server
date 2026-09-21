@@ -52,7 +52,7 @@ export class SessionsServer {
 			if (!foundClass) {
 				return session;
 			}
-			return { ...session, title: session.isMakeupSession ? `${foundClass.title} - Makeup` : foundClass.title };
+			return { ...session, title: foundClass.title };
 		});
 	}
 

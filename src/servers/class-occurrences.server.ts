@@ -77,19 +77,19 @@ export class ClassOccurrencesServer {
 
 		// Class-linked sessions never store their own title (see materializeOccurrence's title: null) - display
 		// title is always resolved live from the parent class's current title, computed once per call here since
-		// foundClass is already loaded for the whole list.
-		const regularDisplayTitle = foundClass.title;
-		const makeupDisplayTitle = `${foundClass.title} - Makeup`;
+		// foundClass is already loaded for the whole list. isMakeupSession is a separate field the frontend uses
+		// to render the "Makeup" indicator - the title itself is never annotated.
+		const displayTitle = foundClass.title;
 
 		const occurrences: Occurrence[] = materialized.map((session: Session) => ({
 			session,
 			isVirtual: false,
-			displayTitle: session.isMakeupSession ? makeupDisplayTitle : regularDisplayTitle,
+			displayTitle,
 		}));
 		for (const date of virtualDates) {
 			const key = date.toISOString().slice(0, 10);
 			if (!originalDateKeys.has(key)) {
-				occurrences.push({ classId, startTime: date, isVirtual: true, displayTitle: regularDisplayTitle });
+				occurrences.push({ classId, startTime: date, isVirtual: true, displayTitle });
 			}
 		}
 		occurrences.sort((a: Occurrence, b: Occurrence) => {
@@ -236,7 +236,7 @@ export class ClassOccurrencesServer {
 		// The DB row's title stays null (see materializeOccurrence) - this patches only the in-memory object
 		// returned to the caller so the response shows the class-linked display title, same resolution as
 		// buildOccurrenceList uses for the occurrence-list endpoints.
-		return { ...updated, title: updated.isMakeupSession ? `${foundClass.title} - Makeup` : foundClass.title };
+		return { ...updated, title: foundClass.title };
 	}
 
 	public async cancelOccurrence(classId: number, date: unknown): Promise<Session | null> {
@@ -295,6 +295,6 @@ export class ClassOccurrencesServer {
 
 		// The DB row's title stays null (see materializeOccurrence) - this patches only the in-memory object
 		// returned to the caller so the response shows the class-linked display title.
-		return { ...session, title: `${foundClass.title} - Makeup` };
+		return { ...session, title: foundClass.title };
 	}
 }
