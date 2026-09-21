@@ -65,12 +65,13 @@ export class SessionRepository {
 		return this.db.findById(SessionEntity, id);
 	}
 
-	public async create(data: { operatorId: number; title: string | null; startTime: Date; capacityLimit: number; classId?: number | null; originalDate?: Date | null; isMakeupSession?: boolean }): Promise<Session> {
+	public async create(data: { operatorId: number; title: string | null; startTime: Date; capacityLimit: number; classId?: number | null; originalDate?: Date | null; isMakeupSession?: boolean; durationMinutes?: number | null }): Promise<Session> {
 		return this.db.insert(SessionEntity, {
 			...data,
 			classId: data.classId ?? null,
 			originalDate: data.originalDate ?? null,
 			isMakeupSession: data.isMakeupSession ?? false,
+			durationMinutes: data.durationMinutes ?? null,
 			currentRosterCount: 0,
 			isDeleted: false,
 		});

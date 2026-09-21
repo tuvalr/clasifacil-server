@@ -8,6 +8,7 @@ export interface OccurrenceResponseItem {
 	classId?: number;
 	sessionId?: number;
 	startTime: string;
+	endTime: string;
 	isMakeupSession?: boolean;
 	title: string | null;
 	attendance?: OccurrenceAttendanceEntry[];

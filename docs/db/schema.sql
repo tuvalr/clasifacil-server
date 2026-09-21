@@ -105,6 +105,11 @@ CREATE TABLE sessions (
 	                                       -- true identity, so a rescheduled-away slot never reappears as virtual.
 	                                       -- NULL for true one-off sessions and makeup sessions (no pattern date).
 	is_makeup_session      BOOLEAN       NOT NULL DEFAULT FALSE,
+	duration_minutes       INTEGER,       -- copied from the parent class's duration_minutes at materialization
+	                                       -- time (or set directly for a makeup session) and frozen from then on -
+	                                       -- a later change to the class's duration_minutes must not retroactively
+	                                       -- change a past or already-materialized occurrence's end time. NULL for
+	                                       -- a true one-off session (class_id IS NULL, not a makeup).
 	is_deleted             BOOLEAN       NOT NULL DEFAULT FALSE,
 	deleted_at             TIMESTAMPTZ,
 	created_at             TIMESTAMPTZ   DEFAULT CURRENT_TIMESTAMP,

@@ -173,6 +173,7 @@ export const swaggerSpec = swaggerJsdoc({
 						currentRosterCount: { type: 'integer', nullable: true },
 						classId: { type: 'integer', nullable: true },
 						isMakeupSession: { type: 'boolean' },
+						durationMinutes: { type: 'integer', nullable: true, description: "Frozen at materialization from the class's durationMinutes at that time; null only for a true one-off session" },
 					},
 				},
 				// A class occurrence is either virtual (derived on-the-fly from the class's recurring pattern, never
@@ -186,6 +187,7 @@ export const swaggerSpec = swaggerJsdoc({
 						classId: { type: 'integer', nullable: true, description: 'Present only when isVirtual is true' },
 						sessionId: { type: 'integer', nullable: true, description: 'Present only when isVirtual is false' },
 						startTime: { type: 'string', format: 'date-time' },
+						endTime: { type: 'string', format: 'date-time', description: "Derived from the class's durationMinutes - frozen as of materialization for a materialized occurrence, live for a virtual one" },
 						isMakeupSession: { type: 'boolean', nullable: true, description: 'Present only when isVirtual is false' },
 						title: { type: 'string', nullable: true },
 						attendance: {

@@ -85,11 +85,19 @@ export class ClassOccurrencesServer {
 			session,
 			isVirtual: false,
 			displayTitle,
+			// A materialized session's durationMinutes was frozen at materialization time (see
+			// materializeOccurrence/createMakeupSession) - a later change to the class's durationMinutes must not
+			// retroactively move a past or already-materialized occurrence's end time. Falls back to the class's
+			// current duration only for a pre-existing row created before this column existed.
+			displayEndTime: new Date(session.startTime.getTime() + (session.durationMinutes ?? foundClass.durationMinutes) * 60000),
 		}));
 		for (const date of virtualDates) {
 			const key = date.toISOString().slice(0, 10);
 			if (!originalDateKeys.has(key)) {
-				occurrences.push({ classId, startTime: date, isVirtual: true, displayTitle });
+				// Never-materialized dates have no frozen duration yet, so this always reflects the class's current
+				// durationMinutes - correct, since this virtual slot doesn't become a real row (and its duration
+				// doesn't freeze) until it's materialized.
+				occurrences.push({ classId, startTime: date, isVirtual: true, displayTitle, displayEndTime: new Date(date.getTime() + foundClass.durationMinutes * 60000) });
 			}
 		}
 		occurrences.sort((a: Occurrence, b: Occurrence) => {
@@ -202,6 +210,7 @@ export class ClassOccurrencesServer {
 			classId: foundClass.id,
 			originalDate: date,
 			isMakeupSession: false,
+			durationMinutes: foundClass.durationMinutes,
 		});
 	}
 
@@ -279,6 +288,7 @@ export class ClassOccurrencesServer {
 			capacityLimit: foundClass.maxSize,
 			classId: foundClass.id,
 			isMakeupSession: true,
+			durationMinutes: foundClass.durationMinutes,
 		});
 
 		const classMembers = await this.classEnrollments.findActiveByClassId(classId);

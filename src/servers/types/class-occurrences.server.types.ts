@@ -35,6 +35,7 @@ export interface VirtualOccurrence {
 	startTime: Date;
 	isVirtual: true;
 	displayTitle: string;
+	displayEndTime: Date;
 	attendance?: OccurrenceAttendanceEntry[];
 }
 
@@ -42,6 +43,7 @@ export interface MaterializedOccurrence {
 	session: Session;
 	isVirtual: false;
 	displayTitle: string;
+	displayEndTime: Date;
 	attendance?: OccurrenceAttendanceEntry[];
 }
 

@@ -363,6 +363,7 @@ function toOccurrenceResponseItem(occurrence: Occurrence): OccurrenceResponseIte
 			isVirtual: true,
 			classId: occurrence.classId,
 			startTime: occurrence.startTime.toISOString(),
+			endTime: occurrence.displayEndTime.toISOString(),
 			title: occurrence.displayTitle,
 			attendance: occurrence.attendance,
 		};
@@ -372,6 +373,7 @@ function toOccurrenceResponseItem(occurrence: Occurrence): OccurrenceResponseIte
 		isVirtual: false,
 		sessionId: occurrence.session.id,
 		startTime: occurrence.session.startTime.toISOString(),
+		endTime: occurrence.displayEndTime.toISOString(),
 		isMakeupSession: occurrence.session.isMakeupSession,
 		title: occurrence.displayTitle,
 		attendance: occurrence.attendance,
