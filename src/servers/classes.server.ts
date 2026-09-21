@@ -106,6 +106,7 @@ export class ClassesServer {
 		}
 
 		const details = this.validate(narrowed);
+		details.push(...(await this.validateTitle(narrowed.operatorId, narrowed.title, null)));
 		if (details.length > 0) {
 			throw new ValidationError(details);
 		}
@@ -166,6 +167,9 @@ export class ClassesServer {
 			maxSize: narrowed.maxSize ?? existing.maxSize,
 		};
 		const details = this.validate(merged);
+		if (narrowed.title !== undefined) {
+			details.push(...(await this.validateTitle(existing.operatorId, narrowed.title, id)));
+		}
 		if (details.length > 0) {
 			throw new ValidationError(details);
 		}
@@ -356,6 +360,17 @@ export class ClassesServer {
 			details.push({ field: 'color', message: 'Color must be valid text or left empty' });
 		}
 		return details;
+	}
+
+	// excludeId: a re-fetched match is this class's own current row (title unchanged) rather than a genuine
+	// collision - pass the class's own id on update so it doesn't flag against itself; null on create, where no
+	// such row can exist yet. Same excludeId pattern as OperatorsServer.validateName/validateEmail.
+	private async validateTitle(operatorId: number, title: string, excludeId: number | null): Promise<ValidationErrorDetail[]> {
+		const existing = await this.classes.findByOperatorIdAndTitle(operatorId, title);
+		if (existing && existing.id !== excludeId) {
+			return [{ field: 'title', message: 'This operator already has a class with this title' }];
+		}
+		return [];
 	}
 
 	private validate(data: { dayOfWeek: number; durationMinutes: number; minSize?: number | null; maxSize: number }): ValidationErrorDetail[] {
