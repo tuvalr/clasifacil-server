@@ -18,6 +18,29 @@ export function isNumberArray(value: unknown): value is number[] {
 	return Array.isArray(value) && value.every((item: unknown): boolean => typeof item === 'number');
 }
 
+function startTimeToMinutes(startTime: string): number {
+	const [hours, minutes]: number[] = startTime.split(':').map(Number);
+	return hours * 60 + minutes;
+}
+
+// True if two classes on the same dayOfWeek would have a student physically in both at once - a straight
+// interval-overlap check (a.start < b.end && b.start < a.end) on each class's local wall-clock [start, start +
+// duration) window. Different dayOfWeek never overlaps, regardless of time. Both classes' startTime/durationMinutes
+// are always the same operator's local wall-clock values when they share an operator, but this check is also used
+// across different operators (a student isn't scoped to one) - comparing local wall-clock times across operators in
+// different timezones is a known simplification (see ClassesServer.hasScheduleConflict), acceptable because this
+// project's operators are all assumed to be in the same market/timezone today.
+export function classesOverlap(a: { dayOfWeek: number; startTime: string; durationMinutes: number }, b: { dayOfWeek: number; startTime: string; durationMinutes: number }): boolean {
+	if (a.dayOfWeek !== b.dayOfWeek) {
+		return false;
+	}
+	const aStart = startTimeToMinutes(a.startTime);
+	const aEnd = aStart + a.durationMinutes;
+	const bStart = startTimeToMinutes(b.startTime);
+	const bEnd = bStart + b.durationMinutes;
+	return aStart < bEnd && bStart < aEnd;
+}
+
 export class ClassHasActiveEnrollmentsError extends Error {
 	public constructor() {
 		super('Cannot delete a class with active student enrollments');
@@ -29,6 +52,13 @@ export class ClassMaxSizeBelowEnrolledCountError extends Error {
 	public constructor() {
 		super('The maximum class size cannot be lower than the number of students currently assigned to this class');
 		this.name = 'ClassMaxSizeBelowEnrolledCountError';
+	}
+}
+
+export class StudentScheduleConflictError extends Error {
+	public constructor() {
+		super('This student is already enrolled in another class at an overlapping time');
+		this.name = 'StudentScheduleConflictError';
 	}
 }
 

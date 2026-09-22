@@ -1,7 +1,7 @@
 import { inject, injectable } from 'inversify';
 import { TYPES } from '../../../container/types';
 import { ClassesServer } from '../../../servers/classes.server';
-import { ClassHasActiveEnrollmentsError, ClassMaxSizeBelowEnrolledCountError, AssignStudentResult } from '../../../servers/types/classes.server.types';
+import { ClassHasActiveEnrollmentsError, ClassMaxSizeBelowEnrolledCountError, StudentScheduleConflictError, AssignStudentResult } from '../../../servers/types/classes.server.types';
 import { ValidationError, ValidationErrorDetail } from '../../../servers/types/validation-error';
 import { RouteHandlers } from '../../shared/route-handlers';
 import { Results } from '../../shared/results';
@@ -119,6 +119,7 @@ export class ClassesController extends BaseController {
 		 *                       field: { type: string }
 		 *                       message: { type: string }
 		 *       401: { $ref: '#/components/responses/Unauthorized' }
+		 *       409: { description: 'For assigned-type operators only - the student is already enrolled in another class at an overlapping time' }
 		 *       500: { $ref: '#/components/responses/InternalError' }
 		 */
 		this.internalRouter.post('/', RouteHandlers.wrapNoParamsBody(this.createClass.bind(this)));
@@ -334,6 +335,9 @@ export class ClassesController extends BaseController {
 		} catch (error) {
 			if (error instanceof ValidationError) {
 				return Results.validationError(error.details);
+			}
+			if (error instanceof StudentScheduleConflictError) {
+				return Results.conflict(error.message);
 			}
 			throw error;
 		}

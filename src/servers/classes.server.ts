@@ -6,7 +6,17 @@ import { ClassEnrollmentRepository } from '../repositories/class-enrollment.repo
 import { StudentRepository } from '../repositories/student.repository';
 import { Class } from '../entities/class.entity';
 import { ValidationError, ValidationErrorDetail } from './types/validation-error';
-import { ClassHasActiveEnrollmentsError, ClassMaxSizeBelowEnrolledCountError, AssignStudentResult, ClassWithEnrolledCount, MAX_DAY_OF_WEEK, START_TIME_FORMAT, isNumberArray } from './types/classes.server.types';
+import {
+	ClassHasActiveEnrollmentsError,
+	ClassMaxSizeBelowEnrolledCountError,
+	StudentScheduleConflictError,
+	AssignStudentResult,
+	ClassWithEnrolledCount,
+	MAX_DAY_OF_WEEK,
+	START_TIME_FORMAT,
+	isNumberArray,
+	classesOverlap,
+} from './types/classes.server.types';
 
 // UC-Scheduling: recurring weekly classes (schedule-type operators) and recurring 1:1 slots (assigned-type
 // operators) share this same table - see docs/superpowers/specs/2026-09-12-operator-scheduling-design.md.
@@ -100,6 +110,9 @@ export class ClassesServer {
 			student = await this.students.findById(narrowed.studentId);
 			if (!student) {
 				throw new ValidationError([{ field: 'studentId', message: 'Student not found' }]);
+			}
+			if (await this.hasScheduleConflict(student.id, narrowed)) {
+				throw new StudentScheduleConflictError();
 			}
 		} else if (narrowed.studentId != null) {
 			throw new ValidationError([{ field: 'studentId', message: 'A student can only be provided for assigned-type operators - use assign-students instead' }]);
@@ -270,6 +283,10 @@ export class ClassesServer {
 			return { studentId, success: false, error: `Class is at its maximum size of ${foundClass.maxSize} students` };
 		}
 
+		if (await this.hasScheduleConflict(studentId, foundClass)) {
+			return { studentId, success: false, error: 'This student is already enrolled in another class at an overlapping time' };
+		}
+
 		const enrollment = existing ? await this.classEnrollments.setStatus(existing.id, 'active') : await this.classEnrollments.create(foundClass.id, studentId);
 		return { studentId, success: true, enrollment };
 	}
@@ -360,6 +377,16 @@ export class ClassesServer {
 			details.push({ field: 'color', message: 'Color must be valid text or left empty' });
 		}
 		return details;
+	}
+
+	// A student can't physically attend two overlapping classes - checked against every class the student is
+	// currently actively enrolled in, across all operators (students aren't scoped to one operator). Comparison
+	// uses local wall-clock dayOfWeek/startTime/durationMinutes directly (classesOverlap), not converted to any
+	// timezone - acceptable today since a student's own classes are assumed to share a timezone context, but this
+	// would need revisiting if operators serving the same student ever span different timezones.
+	private async hasScheduleConflict(studentId: number, candidate: { dayOfWeek: number; startTime: string; durationMinutes: number }): Promise<boolean> {
+		const enrolledClasses = await this.classes.findActiveByStudentId(studentId);
+		return enrolledClasses.some((enrolledClass: Class): boolean => classesOverlap(candidate, enrolledClass));
 	}
 
 	// excludeId: a re-fetched match is this class's own current row (title unchanged) rather than a genuine

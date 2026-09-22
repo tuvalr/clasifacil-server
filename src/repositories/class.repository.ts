@@ -2,6 +2,7 @@ import { inject, injectable } from 'inversify';
 import { TYPES } from '../container/types';
 import { PostgresHandler, TransactionHandle } from '../handlers/postgres-handler';
 import { Class, ClassEntity } from '../entities/class.entity';
+import { snakeToCamel } from '../utils/case-mapper';
 
 @injectable()
 export class ClassRepository {
@@ -14,6 +15,21 @@ export class ClassRepository {
 	public async findByOperatorIdAndTitle(operatorId: number, title: string): Promise<Class | null> {
 		const rows = await this.db.queryActive(ClassEntity, 'operator_id = $1 AND title = $2', [operatorId, title]);
 		return rows[0] ?? null;
+	}
+
+	// Every class a student is actively enrolled in (status = 'active' on class_enrollments), across all operators -
+	// a student can't physically attend two overlapping classes regardless of which operator runs each one. Used
+	// by ClassesServer's schedule-overlap guard. Excludes soft-deleted and stopped classes: a stopped class has no
+	// occurrences to conflict with, and a deleted one shouldn't have any active enrollment left anyway, but the
+	// filter is kept explicit rather than relied upon.
+	public async findActiveByStudentId(studentId: number): Promise<Class[]> {
+		const rows = await this.db.query<Record<string, unknown>>(
+			`SELECT c.* FROM classes c
+			 JOIN class_enrollments ce ON ce.class_id = c.id
+			 WHERE ce.student_id = $1 AND ce.status = 'active' AND c.is_deleted = FALSE AND c.status = 'active'`,
+			[studentId],
+		);
+		return rows.map((row: Record<string, unknown>) => snakeToCamel<Class>(row));
 	}
 
 	// Every non-stopped class across all operators, regardless of operator.type (schedule or recurring
